@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "estude-app",
+    "slug": "estude-app",
+    "version": "1.0.0",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./src/assets/logo/logo-light.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    }
+  }
+}
