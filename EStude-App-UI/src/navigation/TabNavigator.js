@@ -3,8 +3,8 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Text, View } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 
-import HomeScreen from "../screens/HomeScreen";
-import AttendanceScreen from "../screens/AttendanceScreen";
+import HomeStudentScreen from "../screens/HomeScreen";
+import AttendanceScreen from "../screens/Attendances/AttendanceScreen";
 import AILearningScreen from "../screens/AILearningScreen";
 import NotificationScreen from "../screens/NotificationScreen";
 import ProfileScreen from "../screens/ProfileScreen";
@@ -16,7 +16,7 @@ export default function TabNavigator() {
     <Tab.Navigator screenOptions={{ headerShown: false }}>
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={HomeStudentScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="home" color={color} size={size} />
@@ -41,7 +41,7 @@ export default function TabNavigator() {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="laptop" color={color} size={size} />
           ),
-          tabBarLabel: "Học Máy",
+          tabBarLabel: "Công cụ AI",
         }}
       />
       <Tab.Screen

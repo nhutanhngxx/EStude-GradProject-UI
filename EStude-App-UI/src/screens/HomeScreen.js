@@ -10,14 +10,17 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Dữ liệu mẫu (mock)
-const user = {
-  name: "Nguyễn Minh Khoa",
+const student = {
+  userId: 101,
+  fullName: "Nguyễn Nhựt Anh",
   avatar: "https://i.pravatar.cc/150?img=12",
-  grade: "12A3",
-};
-
-const academicOverview = {
+  studentCode: "S12345",
+  class: { classId: 10, name: "12A3", term: "2025-2026", classSize: 42 },
+  school: {
+    schoolId: 1,
+    schoolCode: "IUH001",
+    schoolName: "Đại học Công nghiệp TP.HCM",
+  },
   gpa: 8.7,
   rank: 5,
   totalStudents: 42,
@@ -26,44 +29,44 @@ const academicOverview = {
   subjectsAtRisk: 2,
 };
 
-const todayPlan = [
-  {
-    id: "1",
-    time: "07:30 - 09:00",
-    subject: "Toán - Hình học không gian",
-    room: "P.302",
-    status: "upcoming",
-  },
-  {
-    id: "2",
-    time: "09:15 - 10:45",
-    subject: "Vật lý - Điện xoay chiều",
-    room: "P.204",
-    status: "in_progress",
-  },
-  {
-    id: "3",
-    time: "14:00 - 16:00",
-    subject: "Ôn tập - Lịch sử Việt Nam",
-    room: "Thư viện",
-    status: "upcoming",
-  },
-];
+const classSubject = {
+  classSubjectId: 1001,
+  subject: { name: "Toán - Hình học không gian" },
+  teacher: { fullName: "Nguyễn Văn A" },
+  schedule: [
+    {
+      scheduleId: 1,
+      date: "2025-08-24",
+      startPeriod: "07:30",
+      endPeriod: "09:00",
+      room: "P.302",
+      status: "SCHEDULED",
+    },
+    {
+      scheduleId: 2,
+      date: "2025-08-24",
+      startPeriod: "09:15",
+      endPeriod: "10:45",
+      room: "P.204",
+      status: "COMPLETED",
+    },
+  ],
+};
 
-const attendanceOverview = [
-  { id: "a1", subject: "Toán", present: 12, late: 1, absent: 0, total: 13 },
-  { id: "a2", subject: "Vật lý", present: 11, late: 0, absent: 2, total: 13 },
-  { id: "a3", subject: "Hóa học", present: 10, late: 2, absent: 1, total: 13 },
+const attendanceRecord = [
+  { id: 1, subject: "Toán", present: 12, late: 1, absent: 0, total: 13 },
+  { id: 2, subject: "Vật lý", present: 11, late: 0, absent: 2, total: 13 },
+  { id: 3, subject: "Hóa học", present: 10, late: 2, absent: 1, total: 13 },
 ];
 
 const quickActions = [
-  { id: "qa1", label: "Điểm danh", hint: "QR / GPS", icon: "🪪" },
-  { id: "qa2", label: "Nộp bài", hint: "Bài tập hôm nay", icon: "📤" },
+  { id: "qa1", label: "Môn học", hint: "Môn đang học", icon: "🪪" },
+  { id: "qa2", label: "Nộp bài", hint: "Bài hôm nay", icon: "📤" },
   { id: "qa3", label: "Lịch học", hint: "Tuần này", icon: "📅" },
   { id: "qa4", label: "Tra cứu điểm", hint: "Theo môn", icon: "📊" },
 ];
 
-// Component hiển thị thanh tiến độ
+// Component ProgressBar
 const ProgressBar = ({ value }) => {
   const width = Math.max(0, Math.min(100, value));
   return (
@@ -73,10 +76,19 @@ const ProgressBar = ({ value }) => {
   );
 };
 
-export default function HomeStudentScreen() {
+export default function HomeStudentScreen({ navigation }) {
   const creditPercent = Math.round(
-    (academicOverview.passedCredits / academicOverview.requiredCredits) * 100
+    (student.passedCredits / student.requiredCredits) * 100
   );
+
+  // Lấy lịch học hôm nay từ schedule
+  const todayPlan = classSubject.schedule.map((s) => ({
+    id: s.scheduleId.toString(),
+    time: `${s.startPeriod} - ${s.endPeriod}`,
+    subject: classSubject.subject.name,
+    room: s.room,
+    status: s.status === "COMPLETED" ? "in_progress" : "upcoming",
+  }));
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -90,13 +102,52 @@ export default function HomeStudentScreen() {
           <View>
             <Text style={styles.brand}>EStude</Text>
             <Text style={styles.greeting}>
-              Xin chào, <Text style={styles.highlight}>{user.name}</Text> 👋
+              Xin chào, <Text style={styles.highlight}>{student.fullName}</Text>{" "}
+              👋
             </Text>
             <Text style={styles.subGreeting}>
-              Lớp {user.grade} • Học tốt mỗi ngày
+              Lớp {student.class.name} • Học tốt mỗi ngày
             </Text>
           </View>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          <Image source={{ uri: student.avatar }} style={styles.avatar} />
+        </View>
+
+        {/* Tác vụ nhanh */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Tác vụ nhanh</Text>
+          <View style={styles.quickActionRow}>
+            {quickActions.slice(0, 3).map((action) => (
+              <TouchableOpacity
+                key={action.id}
+                style={styles.quickAction}
+                onPress={() => {
+                  switch (action.id) {
+                    case "qa1":
+                      navigation.navigate("SubjectList");
+                      break;
+                    case "qa2":
+                      navigation.navigate("NopBai");
+                      break;
+                    case "qa3":
+                      navigation.navigate("ScheduleList");
+                      break;
+                  }
+                }}
+              >
+                <Text style={styles.quickIcon}>{action.icon}</Text>
+                <Text style={styles.quickLabel}>{action.label}</Text>
+                <Text style={styles.quickHint}>{action.hint}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.quickAction, styles.allAction]}
+              onPress={() => navigation.navigate("FullChucNang")}
+            >
+              <Text style={styles.quickIcon}>📂</Text>
+              <Text style={styles.quickLabel}>Tất cả</Text>
+              <Text style={styles.quickHint}>Xem thêm</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tổng quan học tập */}
@@ -110,22 +161,17 @@ export default function HomeStudentScreen() {
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Điểm TB</Text>
-              <Text style={styles.statValue}>
-                {academicOverview.gpa.toFixed(2)}
-              </Text>
+              <Text style={styles.statValue}>{student.gpa.toFixed(2)}</Text>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Thứ hạng</Text>
-              <Text style={styles.statValue}>#{academicOverview.rank}</Text>
-              <Text style={styles.statNote}>
-                trong {academicOverview.totalStudents}
-              </Text>
+              <Text style={styles.statValue}>#{student.rank}</Text>
+              <Text style={styles.statNote}>trong {student.totalStudents}</Text>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Tín chỉ</Text>
               <Text style={styles.statValue}>
-                {academicOverview.passedCredits}/
-                {academicOverview.requiredCredits}
+                {student.passedCredits}/{student.requiredCredits}
               </Text>
             </View>
           </View>
@@ -134,9 +180,17 @@ export default function HomeStudentScreen() {
           <Text style={styles.progressText}>{creditPercent}% hoàn thành</Text>
         </View>
 
-        {/* Kế hoạch học hôm nay */}
+        {/* Lịch học hôm nay */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Kế hoạch học hôm nay</Text>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Lịch học hôm nay</Text>
+            <TouchableOpacity
+              style={styles.detailButton}
+              onPress={() => navigation.navigate("ScheduleList")}
+            >
+              <Text style={styles.link}>Xem chi tiết</Text>
+            </TouchableOpacity>
+          </View>
           {todayPlan.map((item) => (
             <View key={item.id} style={styles.planItem}>
               <View>
@@ -163,7 +217,7 @@ export default function HomeStudentScreen() {
         {/* Tổng quan điểm danh */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Tổng quan điểm danh</Text>
-          {attendanceOverview.map((item) => (
+          {attendanceRecord.map((item) => (
             <View key={item.id} style={styles.attendanceRow}>
               <Text style={styles.attendanceSubject}>{item.subject}</Text>
               <Text style={styles.attendanceDetail}>
@@ -172,39 +226,47 @@ export default function HomeStudentScreen() {
             </View>
           ))}
         </View>
-
-        {/* Tác vụ nhanh */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tác vụ nhanh</Text>
-          <View style={styles.quickActionRow}>
-            {quickActions.map((action) => (
-              <TouchableOpacity key={action.id} style={styles.quickAction}>
-                <Text style={styles.quickIcon}>{action.icon}</Text>
-                <Text style={styles.quickLabel}>{action.label}</Text>
-                <Text style={styles.quickHint}>{action.hint}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { flex: 1, padding: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  brand: { fontSize: 20, fontWeight: "bold", color: "#00cc66" },
-  greeting: { fontSize: 16, color: "#333" },
-  highlight: { fontWeight: "bold" },
-  subGreeting: { fontSize: 14, color: "#777" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
+  brand: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#00cc66",
+  },
+  greeting: {
+    fontSize: 16,
+    color: "#333",
+  },
+  highlight: {
+    fontWeight: "bold",
+  },
+  subGreeting: {
+    fontSize: 14,
+    color: "#777",
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   card: {
     backgroundColor: "#fff",
     padding: 16,
@@ -212,7 +274,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     elevation: 2,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
@@ -221,26 +286,53 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
-  cardTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 8 },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
   link: { color: "#007bff" },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  stat: { alignItems: "center" },
-  statLabel: { fontSize: 12, color: "#666" },
-  statValue: { fontSize: 16, fontWeight: "bold", color: "#000" },
-  statNote: { fontSize: 12, color: "#999" },
-  blockTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
+  stat: {
+    alignItems: "center",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#666",
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000",
+  },
+  statNote: {
+    fontSize: 12,
+    color: "#999",
+  },
+  blockTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
   progressWrap: {
     height: 8,
     backgroundColor: "#eee",
     borderRadius: 4,
     overflow: "hidden",
   },
-  progressFill: { height: "100%", backgroundColor: "#00cc66" },
-  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#00cc66",
+  },
+  progressText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+  },
   planItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -249,8 +341,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  planSubject: { fontSize: 14, fontWeight: "bold" },
-  planTime: { fontSize: 12, color: "#666" },
+  planSubject: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  planTime: {
+    fontSize: 12,
+    color: "#666",
+  },
   statusBadge: {
     paddingVertical: 4,
     paddingHorizontal: 8,
@@ -264,7 +362,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 6,
   },
-  attendanceSubject: { fontWeight: "bold" },
+  attendanceSubject: {
+    fontWeight: "bold",
+  },
   attendanceDetail: { color: "#555" },
   quickActionRow: {
     flexDirection: "row",
@@ -272,14 +372,33 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   quickAction: {
-    width: "48%",
+    width: "23%",
     backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     marginTop: 8,
     alignItems: "center",
+    justifyContent: "center",
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
-  quickIcon: { fontSize: 24, marginBottom: 6 },
-  quickLabel: { fontWeight: "bold", fontSize: 14 },
-  quickHint: { fontSize: 12, color: "#666" },
+  quickIcon: {
+    fontSize: 26,
+    marginBottom: 4,
+  },
+  quickLabel: {
+    fontWeight: "bold",
+    fontSize: 13,
+    textAlign: "center",
+  },
+  quickHint: {
+    fontSize: 11,
+    color: "#666",
+    textAlign: "center",
+  },
+  allAction: {},
 });

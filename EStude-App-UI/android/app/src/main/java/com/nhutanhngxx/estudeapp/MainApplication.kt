@@ -1,4 +1,4 @@
-package com.estudeapp
+package com.nhutanhngxx.estudeapp
 
 import android.app.Application
 import android.content.res.Configuration

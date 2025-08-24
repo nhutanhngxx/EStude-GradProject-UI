@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const user = {
-  name: "Nguyễn Minh Khoa",
+  name: "Nguyễn Nhựt Anh",
   avatar: "https://i.pravatar.cc/150?img=12",
   grade: "12A3",
 };

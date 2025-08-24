@@ -14,7 +14,7 @@ export default function SettingsScreen({ navigation }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.sectionTitle}>Cài đặt chung</Text>
 
@@ -65,13 +65,13 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { padding: 16 },
+  container: { paddingHorizontal: 16 },
   sectionTitle: {
     fontSize: 14,
     color: "#777",

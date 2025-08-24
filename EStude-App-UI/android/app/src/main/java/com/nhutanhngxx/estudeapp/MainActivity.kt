@@ -1,4 +1,4 @@
-package com.estudeapp
+package com.nhutanhngxx.estudeapp
 
 import android.os.Build
 import android.os.Bundle

@@ -1,13 +1,25 @@
 {
   "expo": {
-    "name": "estude-app",
+    "name": "Estude App",
     "slug": "estude-app",
     "version": "1.0.0",
-    "newArchEnabled": true,
+    "orientation": "portrait",
+    "icon": "./src/assets/images/icon.png",
     "splash": {
-      "image": "./src/assets/logo/logo-light.png",
+      "image": "./src/assets/images/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "package": "com.nhutanhngxx.estudeapp",
+      "versionCode": 1,
+      "permissions": []
+    },
+    "assetBundlePatterns": ["**/*"],
+    "extra": {
+      "eas": {
+        "projectId": "1b7728d1-a063-4482-9c70-f96753161e12"
+      }
     }
   }
 }

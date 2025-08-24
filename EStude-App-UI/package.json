@@ -8,29 +8,33 @@
   },
   "main": "index.js",
   "scripts": {
-    "start": "expo start --dev-client",
+    "start": "expo start",
+    "start:dev": "expo start --dev-client",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
+    "@react-native-picker/picker": "^2.11.1",
     "@react-navigation/bottom-tabs": "6.5.20",
     "@react-navigation/native": "6.1.16",
     "@react-navigation/native-stack": "6.9.12",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "react-native": "0.79.2",
+    "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
-    "react-native-screens": "~4.10.0",
-    "react-native-web": "^0.20.0"
+    "react-native-screens": "~4.11.1",
+    "react-native-web": "^0.20.0",
+    "expo-dev-client": "~5.2.4",
+    "expo": "~53.0.22"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
-    "expo": "^53.0.9",
+    "expo": "53.0.22",
     "metro": "^0.82.4"
   },
   "private": true

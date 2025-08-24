@@ -1,78 +1,73 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Image } from "react-native";
 import {
   View,
   Text,
-  Modal,
   TouchableOpacity,
-  FlatList,
-  StyleSheet,
   ScrollView,
+  StyleSheet,
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+// Thông tin người dùng
 const user = {
-  name: "Nguyễn Minh Khoa",
+  name: "Nguyễn Nhựt Anh",
   avatar: "https://i.pravatar.cc/150?img=12",
   grade: "12A3",
 };
 
+// Dữ liệu dự đoán theo classSubject
+const predictedScores = [
+  {
+    classSubjectId: "cs1",
+    subject: { name: "Toán" },
+    missing: ["CK"],
+    available: ["GK", "TK"],
+    predicted: 8.5,
+  },
+  {
+    classSubjectId: "cs2",
+    subject: { name: "Văn" },
+    missing: ["CK", "GK"],
+    available: ["TK"],
+    predicted: 7.2,
+  },
+  {
+    classSubjectId: "cs3",
+    subject: { name: "Vật lý" },
+    missing: [],
+    available: ["GK", "CK", "TK"],
+    predicted: 8.8,
+  },
+];
+
+// Dữ liệu lộ trình học theo classSubject
+const learningPaths = [
+  {
+    classSubjectId: "cs1",
+    title: "Ôn tập Toán nâng cao",
+    description: "Tập trung vào hình học và đại số theo lịch học của bạn",
+  },
+  {
+    classSubjectId: "cs2",
+    title: "Văn học - Kỹ năng viết luận",
+    description: "Luyện tập viết văn nghị luận và cảm nhận tác phẩm",
+  },
+  {
+    classSubjectId: "cs3",
+    title: "Vật lý chuyên sâu",
+    description: "Tăng cường kỹ năng giải bài tập trắc nghiệm",
+  },
+];
+
 export default function AILearningScreen({ navigation }) {
-  const [showModal, setShowModal] = useState(true);
-  const [selectedBlock, setSelectedBlock] = useState(null);
-
-  // Fake data dự đoán điểm
-  const predictedScores = [
-    {
-      subject: "Toán",
-      missing: ["CK"],
-      available: ["GK", "TK"],
-      predicted: 8.5,
-    },
-    {
-      subject: "Văn",
-      missing: ["CK", "GK"],
-      available: ["TK"],
-      predicted: 7.2,
-    },
-    {
-      subject: "Vật lý",
-      missing: [],
-      available: ["GK", "CK", "TK"],
-      predicted: 8.8,
-    },
-  ];
-
-  // Fake data lộ trình học
-  const learningPaths = [
-    {
-      title: "Ôn tập Toán nâng cao",
-      description: "Tập trung vào hình học và đại số theo lịch học của bạn",
-    },
-    {
-      title: "Văn học - Kỹ năng viết luận",
-      description: "Luyện tập viết văn nghị luận và cảm nhận tác phẩm",
-    },
-    {
-      title: "Vật lý chuyên sâu",
-      description: "Tăng cường kỹ năng giải bài tập trắc nghiệm",
-    },
-  ];
-
-  const blocks = ["Khối 10", "Khối 11", "Khối 12", "Khối đại học"];
-
-  const handleSelectBlock = (block) => {
-    setSelectedBlock(block);
-    setShowModal(false);
-  };
-
   const renderPredictionCard = (item) => (
     <TouchableOpacity
       style={styles.card}
       onPress={() => navigation.navigate("PredictionDetail", { subject: item })}
     >
-      <Text style={styles.cardTitle}>{item.subject}</Text>
+      <Text style={styles.cardTitle}>{item.subject.name}</Text>
       <Text style={styles.cardText}>
         Cột còn thiếu:{" "}
         {item.missing.length > 0 ? item.missing.join(", ") : "Không"}
@@ -108,12 +103,12 @@ export default function AILearningScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar style="dark-content" />
-
+      <StatusBar barStyle="dark-content" />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
+        {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.brand}>EStude</Text>
@@ -126,37 +121,12 @@ export default function AILearningScreen({ navigation }) {
           </View>
           <Image source={{ uri: user.avatar }} style={styles.avatar} />
         </View>
-        {/* Modal chọn bang/khối */}
-        <Modal visible={showModal} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Chọn bang/khối học</Text>
-              {blocks.map((block) => (
-                <TouchableOpacity
-                  key={block}
-                  style={styles.modalButton}
-                  onPress={() => handleSelectBlock(block)}
-                >
-                  <Text style={styles.modalButtonText}>{block}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </Modal>
 
-        {selectedBlock && (
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionTitle}>📊 Dự đoán kết quả học tập</Text>
-            {predictedScores.map((item, idx) => (
-              <View key={idx}>{renderPredictionCard(item)}</View>
-            ))}
-
-            <Text style={styles.sectionTitle}>🗺 Gợi ý lộ trình học</Text>
-            {learningPaths.map((item, idx) => (
-              <View key={idx}>{renderPathCard(item)}</View>
-            ))}
-          </ScrollView>
-        )}
+        {/* Dự đoán kết quả học tập */}
+        <Text style={styles.sectionTitle}>Dự đoán kết quả học tập</Text>
+        {predictedScores.map((item) => (
+          <View key={item.classSubjectId}>{renderPredictionCard(item)}</View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -199,40 +169,5 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "#2c3e50",
   },
-  cardText: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    width: "80%",
-    alignItems: "center",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
-  },
-  modalButton: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#3498db",
-    marginVertical: 6,
-    width: "100%",
-    alignItems: "center",
-  },
-  modalButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
+  cardText: { fontSize: 14, color: "#555", marginBottom: 4 },
 });

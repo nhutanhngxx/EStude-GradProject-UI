@@ -1,6 +1,16 @@
 import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { View, Text, Button, TextInput, ImageBackground, StyleSheet, Image, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  Text,
+  Button,
+  TextInput,
+  ImageBackground,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 
 export default function LoginScreen({ navigation }) {
   const handleLogin = () => {
@@ -14,26 +24,66 @@ export default function LoginScreen({ navigation }) {
         source={require("../assets/images/background-01.png")}
         style={styles.backgroundImage}
       >
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "space-between", paddingTop: 100, paddingBottom: 30 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: 100,
+            paddingBottom: 30,
+          }}
+        >
           <Image
             source={require("../assets/images/banner-light.png")}
             style={styles.logo}
           />
-          <View style={{
-            width: "80%",
-            alignItems: "center",
-          }}>
+          <View
+            style={{
+              width: "80%",
+              alignItems: "center",
+            }}
+          >
             <TextInput
               placeholder="Nhập Mã định danh hoặc Số điện thoại..."
-              style={{ borderColor: "white", paddingHorizontal: 10, borderRadius: 10, marginBottom: 10, width: "100%", backgroundColor: "white", paddingVertical: 15 }}
+              placeholderTextColor={"gray"}
+              style={{
+                borderColor: "white",
+                paddingHorizontal: 10,
+                borderRadius: 10,
+                marginBottom: 10,
+                width: "100%",
+                backgroundColor: "white",
+                paddingVertical: 15,
+              }}
             />
             <TextInput
               placeholder="Nhập Mật khẩu..."
-              style={{ borderColor: "white", paddingHorizontal: 10, borderRadius: 10, marginBottom: 10, width: "100%", backgroundColor: "white", paddingVertical: 15 }}
+              placeholderTextColor={"gray"}
+              style={{
+                borderColor: "white",
+                paddingHorizontal: 10,
+                borderRadius: 10,
+                marginBottom: 10,
+                width: "100%",
+                backgroundColor: "white",
+                paddingVertical: 15,
+              }}
             />
             <View style={{ width: "100%" }}>
-              <TouchableOpacity onPress={() => Alert.alert("Thông báo", "Chức năng chưa được phát triển")}>
-                <Text style={{ color: "white", textAlign: "right", fontStyle: "italic" }}>Quên mật khẩu?</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert("Thông báo", "Chức năng chưa được phát triển")
+                }
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    textAlign: "right",
+                    fontStyle: "italic",
+                  }}
+                >
+                  Quên mật khẩu?
+                </Text>
               </TouchableOpacity>
             </View>
             <TouchableOpacity
@@ -41,15 +91,16 @@ export default function LoginScreen({ navigation }) {
               onPress={() => {
                 handleLogin();
                 Alert.alert("Thông báo", "Đăng nhập thành công!");
-              }
-              }>
-              <Text style={{ fontSize: 16, color: "white" }}>
-                Đăng nhập
-              </Text>
+              }}
+            >
+              <Text style={{ fontSize: 16, color: "white" }}>Đăng nhập</Text>
             </TouchableOpacity>
           </View>
           <View>
-            <Text style={{ color: "white", textAlign: "center", fontSize: 16 }} onPress={() => navigation.navigate("RoleSelection")}>
+            <Text
+              style={{ color: "white", textAlign: "center", fontSize: 16 }}
+              onPress={() => navigation.navigate("RoleSelection")}
+            >
               Trở lại trang chọn vai trò
             </Text>
           </View>
@@ -70,4 +121,4 @@ const styles = StyleSheet.create({
     height: 100,
     resizeMode: "contain",
   },
-})
+});
