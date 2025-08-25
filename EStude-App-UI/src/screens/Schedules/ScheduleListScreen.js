@@ -280,7 +280,10 @@ const styles = StyleSheet.create({
   weekDate: { fontWeight: "bold", color: "#333" },
   weekDateActive: { color: "#fff", fontWeight: "700" },
 
-  monthGrid: { flexDirection: "row", flexWrap: "wrap" },
+  monthGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
   dayCell: {
     width: "14.28%",
     aspectRatio: 1,

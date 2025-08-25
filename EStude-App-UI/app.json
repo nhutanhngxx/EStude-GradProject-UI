@@ -13,7 +13,7 @@
     "android": {
       "package": "com.nhutanhngxx.estudeapp",
       "versionCode": 1,
-      "permissions": []
+      "permissions": ["INTERNET"]
     },
     "assetBundlePatterns": ["**/*"],
     "extra": {

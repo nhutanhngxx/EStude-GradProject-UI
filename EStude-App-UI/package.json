@@ -2,7 +2,7 @@
   "name": "estude-app",
   "version": "1.0.0",
   "splash": {
-    "image": "./src/assets/images/launcher-app.png",
+    "image": "./src/assets/images/icon.png",
     "resizeMode": "contain",
     "backgroundColor": "#ffffff"
   },
