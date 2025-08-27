@@ -3,11 +3,18 @@
 # dependencies
 node_modules/
 
+# key
+my-release-key.keystore
+android/key.properties
+
 # Expo
 .expo/
 dist/
 web-build/
 expo-env.d.ts
+android/
+ios/
+
 
 # Native
 *.orig.*
@@ -35,6 +42,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-# estude-release-key
-estude-release-key.jks
