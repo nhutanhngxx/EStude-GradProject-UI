@@ -53,11 +53,10 @@ export default function TeacherSidebar() {
         open ? "w-64" : "w-16"
       } bg-white transition-all duration-300 flex flex-col min-h-screen`}
     >
-      {/* Toggle button */}
       <button
         className="px-4 py-6 focus:outline-none"
         onClick={() => {
-          if (window.innerWidth >= 720) setOpen(!open); // chỉ toggle khi màn hình ≥ sm
+          if (window.innerWidth >= 720) setOpen(!open);
         }}
       >
         <FaBars />

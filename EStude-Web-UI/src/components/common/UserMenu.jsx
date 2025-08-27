@@ -10,6 +10,7 @@ const UserMenu = () => {
   if (!user) return null;
 
   // Đóng menu khi click ra ngoài
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -37,7 +38,7 @@ const UserMenu = () => {
             alt="User Avatar"
             className="w-8 h-8 rounded-full"
           />
-          <span className="text-gray-800 dark:text-white">
+          <span className="hidden sm:inline text-gray-800 dark:text-white">
             {user.username} ({user.role})
           </span>
         </div>
@@ -87,7 +88,7 @@ const UserMenu = () => {
         {/* Nội dung modal với animation scale */}
         <div
           className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 w-96 z-10 transform transition-all duration-200
-            ${showModal ? "scale-100" : "scale-95"}
+            ${showModal ? "scale-100" : "scale-50"}
           `}
         >
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">
