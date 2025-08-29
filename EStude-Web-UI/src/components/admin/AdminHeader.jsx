@@ -8,7 +8,8 @@ const AdminHeader = () => {
   const [showSearch, setShowSearch] = useState(false);
 
   return (
-    <header className="flex justify-between items-center bg-white dark:bg-gray-900 px-4 sm:px-6 py-3 shadow-md flex-wrap">
+    // <header className="flex justify-between items-center bg-white dark:bg-gray-900 px-4 sm:px-6 py-3 shadow-md flex-wrap">
+    <header className="relative flex justify-between items-center bg-white dark:bg-blue-900 px-4 py-3 shadow-md">
       {/* Left: Search */}
       <div className="flex items-center gap-2 w-full sm:w-auto">
         {/* Mobile search icon */}
