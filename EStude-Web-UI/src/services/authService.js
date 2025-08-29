@@ -38,11 +38,27 @@ const authService = {
         throw new Error("Đăng nhập thất bại");
       }
 
-      return await response.json();
+      const result = await response.json();
+
+      if (result.success) {
+        localStorage.setItem("accessToken", result.token);
+        localStorage.setItem("user", JSON.stringify(result.data));
+        return {
+          accessToken: result.token,
+          user: result.data,
+        };
+      } else {
+        throw new Error(result.message || "Đăng nhập thất bại");
+      }
     } catch (error) {
       console.log("Có lỗi xảy ra khi đăng nhập:", error);
       return null;
     }
+  },
+
+  logout: () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
   },
 };
 

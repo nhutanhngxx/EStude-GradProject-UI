@@ -8,37 +8,45 @@ import bannerDark from "../assets/banner-dark.png";
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const role = searchParams.get("role") || "student"; // Fallback role Student
+  const role = searchParams.get("role") || "";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { setUser } = useAuth();
   const [error, setError] = useState(null);
+
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
 
     try {
-      const response = await authService.login({ username, password, role });
-
-      if (!response || !response.success) {
-        setError(response?.message || "Đăng nhập thất bại");
+      const success = await login({
+        username,
+        password,
+        role: role.toLowerCase(),
+      });
+      if (!success) {
+        setError("Đăng nhập thất bại");
         return;
       }
 
-      // lưu token vào localStorage
-      localStorage.setItem("accessToken", response.token);
+      alert("Đăng nhập thành công");
 
-      // cập nhật context
-      setUser({
-        username,
-        role,
-        info: response.user, // backend trả về student/teacher/admin
-      });
+      const storedUser = JSON.parse(localStorage.getItem("user"));
+      if (!storedUser) {
+        setError("Không tìm thấy thông tin người dùng");
+        return;
+      }
 
-      // điều hướng sang dashboard theo role
-      navigate(`/${role}`);
+      const roleRoutes = {
+        ADMIN: "/admin",
+        TEACHER: "/teacher",
+        STUDENT: "/student",
+      };
+
+      const redirectPath = roleRoutes[storedUser.role] || "/login";
+      navigate(redirectPath);
     } catch (err) {
       console.error("Lỗi khi đăng nhập:", err);
       setError("Có lỗi xảy ra, vui lòng thử lại");
@@ -46,7 +54,6 @@ export default function Login() {
   };
 
   const handleForgotPassword = () => {
-    // Điều hướng đến trang quên mật khẩu (tạo route riêng /forgot-password)
     navigate("/forgot-password");
   };
 
