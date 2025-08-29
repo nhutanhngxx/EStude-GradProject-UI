@@ -8,6 +8,7 @@ import {
   FaFileAlt,
   FaBell,
 } from "react-icons/fa";
+import bannerLight from "../../assets/banner-light-white.png";
 
 export default function AdminSidebar() {
   const [open, setOpen] = useState(true);
@@ -32,17 +33,30 @@ export default function AdminSidebar() {
     <div
       className={`${
         open ? "w-64" : "w-16"
-      } bg-blue-600 text-white transition-all duration-300 flex flex-col min-h-screen sm:static z-50`}
+      } bg-green-600 text-white transition-all duration-300 flex flex-col min-h-screen sm:static z-50`}
     >
-      {/* Toggle button */}
-      <button
-        className="px-4 py-6 focus:outline-none"
-        onClick={() => {
-          if (window.innerWidth >= 720) setOpen(!open); // chỉ toggle khi màn hình ≥ sm
-        }}
-      >
-        <FaBars />
-      </button>
+      {/* Toggle button + Banner chung hàng ngang */}
+      <div className="flex items-center px-2 py-4 mb-4 border-b border-white/20">
+        {/* Banner */}
+        {open && (
+          <div className="flex-1 flex justify-center">
+            <img
+              src={bannerLight}
+              alt="EStude Banner"
+              className="h-10 object-contain"
+            />
+          </div>
+        )}
+        {/* Nút toggle */}
+        <button
+          className="mr-3 focus:outline-none hover:bg-green-700 p-2 rounded transition flex items-center justify-center"
+          onClick={() => {
+            if (window.innerWidth >= 720) setOpen(!open);
+          }}
+        >
+          <FaBars />
+        </button>
+      </div>
 
       {/* Menu items */}
       <nav className="flex-1">
@@ -52,8 +66,8 @@ export default function AdminSidebar() {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `p-4 flex items-center gap-2 hover:bg-blue-700 transition ${
-                    isActive ? "bg-blue-800" : ""
+                  `p-4 flex items-center gap-2 hover:bg-green-700 transition ${
+                    isActive ? "bg-green-800" : ""
                   }`
                 }
               >

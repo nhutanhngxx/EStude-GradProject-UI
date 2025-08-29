@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RoleSelection from "./pages/RoleSelection";
 import Login from "./pages/Login";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import VerifyOtpPage from "./pages/auth/VerifyOtpPage";
+import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -34,9 +37,12 @@ function App() {
       <Routes>
         <Route path="/" element={<RoleSelection />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/verify-otp" element={<VerifyOtpPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Admin */}
-        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={["ADMIN"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />
@@ -48,7 +54,7 @@ function App() {
         </Route>
 
         {/* Teacher */}
-        <Route element={<ProtectedRoute allowedRoles={["teacher"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={["TEACHER"]} />}>
           <Route path="/teacher" element={<TeacherLayout />}>
             <Route index element={<TeacherDashboard />} />
             <Route path="dashboard" element={<TeacherDashboard />} />
@@ -63,7 +69,7 @@ function App() {
         </Route>
 
         {/* Student */}
-        <Route element={<ProtectedRoute allowedRoles={["student"]} />}>
+        {/* <Route element={<ProtectedRoute allowedRoles={["STUDENT"]} />}>
           <Route path="/student" element={<StudentLayout />}>
             <Route index element={<StudentDashboard />} />
             <Route path="dashboard" element={<StudentDashboard />} />
@@ -71,7 +77,7 @@ function App() {
             <Route path="statistics-reports" element={<StudentReports />} />
             <Route path="notifications" element={<StudentNotifications />} />
           </Route>
-        </Route>
+        </Route> */}
       </Routes>
     </BrowserRouter>
   );
