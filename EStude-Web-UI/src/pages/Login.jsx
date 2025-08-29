@@ -45,6 +45,11 @@ export default function Login() {
     }
   };
 
+  const handleForgotPassword = () => {
+    // Điều hướng đến trang quên mật khẩu (tạo route riêng /forgot-password)
+    navigate("/forgot-password");
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white">
       <div className="flex-1 flex flex-col items-center justify-center px-4">
@@ -83,30 +88,24 @@ export default function Login() {
             className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-4 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
 
-          {/* <div className="relative mb-4">
-            <input
-              type="password"
-              placeholder="Mật khẩu"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border w-full p-3 rounded-xl pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              {showPassword ? "🙈" : "👁️"}
-            </button>
-          </div> */}
-
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Mật khẩu"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-6 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-2 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           />
+
+          {/* Quên mật khẩu */}
+          <div className="flex justify-end mt-2 mb-6 text-sm">
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-green-600 hover:underline"
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
 
           <button
             type="submit"
