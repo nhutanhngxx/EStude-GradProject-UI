@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from "react";
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { username: '...', role: 'admin' }
+  const [user, setUser] = useState(null);
 
   // Hàm logout tạm thời
   const logout = () => {
