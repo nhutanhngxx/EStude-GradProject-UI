@@ -7,6 +7,7 @@ import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminManageSchools from "./pages/admin/ManageSchools";
 import AdminManageAccounts from "./pages/admin/ManageUsers";
 import AdminManageClasses from "./pages/admin/ManageClasses";
 import AdminReports from "./pages/admin/Reports";
@@ -46,6 +47,7 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="schools" element={<AdminManageSchools />} />
             <Route path="users" element={<AdminManageAccounts />} />
             <Route path="classes" element={<AdminManageClasses />} />
             <Route path="statistics-reports" element={<AdminReports />} />
