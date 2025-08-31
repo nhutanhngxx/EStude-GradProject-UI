@@ -101,7 +101,9 @@ const ManageClasses = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div className="w-4/6">
-          <h1 className="text-2xl font-bold">Quản lý Lớp học</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Quản lý Lớp học
+          </h1>
           <p className="text-gray-600">
             Quản lý lớp học là một công cụ giúp giáo viên tổ chức và quản lý tất
             cả các khía cạnh của một lớp học, từ điểm danh, giao bài tập đến
