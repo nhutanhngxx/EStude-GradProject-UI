@@ -1,17 +1,25 @@
-// contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from "react";
 import authService from "../services/authService";
+import passwordService from "../services/passwordService";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authService.isTokenValid()) {
-      const storedUser = JSON.parse(localStorage.getItem("user"));
-      if (storedUser) setUser(storedUser);
+    // Khi component mount, load user và token từ localStorage
+    const token = localStorage.getItem("accessToken");
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+
+    if (token && storedUser) {
+      setUser(storedUser);
+    } else {
+      setUser(null);
     }
+
+    setLoading(false);
   }, []);
 
   const login = async ({ username, password, role }) => {
@@ -32,9 +40,36 @@ export const AuthProvider = ({ children }) => {
     window.location.href = "/";
   };
 
+  const forgotPassword = async (email) => {
+    return await passwordService.sendOtp(email);
+  };
+
+  const verifyOtp = async ({ email, otp }) => {
+    return await passwordService.verifyOtp({ email, otp });
+  };
+
+  const resetPassword = async ({ email, otp, newPassword }) => {
+    return await passwordService.resetPassword({ email, otp, newPassword });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        forgotPassword,
+        verifyOtp,
+        resetPassword,
+        loading,
+      }}
+    >
+      {!loading && children}
+      {loading && (
+        <div className="flex items-center justify-center min-h-screen">
+          <span>Đang tải...</span>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };
