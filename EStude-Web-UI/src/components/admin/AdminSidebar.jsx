@@ -7,6 +7,7 @@ import {
   FaChalkboardTeacher,
   FaFileAlt,
   FaBell,
+  FaSchool,
 } from "react-icons/fa";
 import bannerLight from "../../assets/banner-light-white.png";
 
@@ -15,6 +16,7 @@ export default function AdminSidebar() {
 
   const menuItems = [
     { name: "Tổng quan", path: "/admin/dashboard", icon: <FaHome /> },
+    { name: "Quản lý trường học", path: "/admin/schools", icon: <FaSchool /> },
     { name: "Quản lý người dùng", path: "/admin/users", icon: <FaUsers /> },
     {
       name: "Quản lý lớp học",
@@ -33,30 +35,16 @@ export default function AdminSidebar() {
     <div
       className={`${
         open ? "w-64" : "w-16"
-      } bg-green-600 text-white transition-all duration-300 flex flex-col min-h-screen sm:static z-50`}
+      } bg-green-600 text-white transition-all duration-300 flex flex-col min-h-screen`}
     >
-      {/* Toggle button + Banner chung hàng ngang */}
-      <div className="flex items-center px-2 py-4 mb-4 border-b border-white/20">
-        {/* Banner */}
-        {open && (
-          <div className="flex-1 flex justify-center">
-            <img
-              src={bannerLight}
-              alt="EStude Banner"
-              className="h-10 object-contain"
-            />
-          </div>
-        )}
-        {/* Nút toggle */}
-        <button
-          className="mr-3 focus:outline-none hover:bg-green-700 p-2 rounded transition flex items-center justify-center"
-          onClick={() => {
-            if (window.innerWidth >= 720) setOpen(!open);
-          }}
-        >
-          <FaBars />
-        </button>
-      </div>
+      <button
+        className="px-4 py-6 focus:outline-none"
+        onClick={() => {
+          if (window.innerWidth >= 720) setOpen(!open);
+        }}
+      >
+        <FaBars />
+      </button>
 
       {/* Menu items */}
       <nav className="flex-1">

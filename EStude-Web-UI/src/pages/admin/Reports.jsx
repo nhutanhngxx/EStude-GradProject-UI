@@ -53,7 +53,9 @@ const Reports = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div className="w-4/6">
-          <h1 className="text-2xl font-bold">Phân tích thống kê</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Phân tích thống kê
+          </h1>
           <p className="text-gray-600">
             Phân tích thống kê trong hệ thống quản lý giáo dục giúp nhà trường
             thu thập, xử lý và diễn giải dữ liệu để đưa ra các quyết định sáng

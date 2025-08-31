@@ -12,6 +12,7 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 import { FaBook } from "react-icons/fa6";
+import bannerLight from "../../assets/banner-light.png";
 
 export default function TeacherSidebar() {
   const [open, setOpen] = useState(true);
@@ -70,7 +71,7 @@ export default function TeacherSidebar() {
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `p-4 flex items-center gap-2 hover:bg-blue-100 transition , ${
+                  `p-4 flex items-center gap-2 hover:bg-green-300 transition , ${
                     isActive ? "bg-blue-800 text-white" : ""
                   }`
                 }

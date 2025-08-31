@@ -73,7 +73,9 @@ const Notifications = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Thông báo</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Thông báo
+          </h1>
           <p className="text-gray-600">
             Trang thông báo là nơi đăng tải các tin tức, sự kiện và thông tin
             quan trọng từ Hệ thống đến với người dùng.
