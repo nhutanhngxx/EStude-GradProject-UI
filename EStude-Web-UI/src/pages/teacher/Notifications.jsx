@@ -73,14 +73,17 @@ const Notifications = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Send Notifications</h1>
-          <p className="text-gray-600">Compose and manage notifications</p>
+          <h1 className="text-2xl font-bold mb-2">Quản lý thông báo</h1>
+          <p className="text-gray-600">
+            Trang thông báo là nơi đăng tải các tin tức, sự kiện và thông tin
+            quan trọng từ giáo viên đến học sinh hoặc phụ huynh.
+          </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
         >
-          ✈ Compose
+          Tạo thông báo mới
         </button>
       </div>
 

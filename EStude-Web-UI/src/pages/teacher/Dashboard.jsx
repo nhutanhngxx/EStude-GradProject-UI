@@ -97,8 +97,11 @@ const TeacherDashboard = () => {
   return (
     <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Tiêu đề */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">📊 Teacher Dashboard</h1>
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Bảng điều khiển</h1>
+          <p className="text-gray-600">Chào mừng bạn đến với trang quản trị!</p>
+        </div>
       </div>
 
       {/* Cards thống kê */}
