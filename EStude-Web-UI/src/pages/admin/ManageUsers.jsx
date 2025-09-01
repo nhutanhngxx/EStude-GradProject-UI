@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaEye, FaTrash } from "react-icons/fa";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import adminService from "../../services/adminService";
+import schoolService from "../../services/schoolService";
 
 const Badge = ({ text, color }) => (
   <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
@@ -48,15 +49,43 @@ const ManageAccounts = () => {
   const [modalType, setModalType] = useState(null); // 'add' | 'view' | 'delete' | 'password'
   const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
-  const [filterRole, setFilterRole] = useState("Tất cả");
+  const [filterRole, setFilterRole] = useState("ALL");
   const [generatedPassword, setGeneratedPassword] = useState("");
-  const [schools, setSchools] = useState([
-    { id: 1, name: "Trường Đại học Công nghiệp Tp.HCM" },
-  ]);
-  const [selectedSchool, setSelectedSchool] = useState(schools[0].id);
-  const [selectedRole, setSelectedRole] = useState("Học sinh");
+  const [schools, setSchools] = useState([]);
+  const [selectedSchool, setSelectedSchool] = useState(null);
+  const [selectedRole, setSelectedRole] = useState("STUDENT");
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const result = await schoolService.getAllSchools();
+        if (result) {
+          setSchools(result);
+          setSelectedSchool(result[0]?.id || null);
+        }
+      } catch (error) {
+        console.error("Lỗi khi load danh sách trường:", error);
+      }
+    };
+
+    fetchSchools();
+  }, []);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const result = await adminService.getAllUsers();
+        if (result) {
+          setUsers(result);
+        }
+      } catch (error) {
+        console.error("Lỗi khi load users:", error);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const openModal = (type, user = null) => {
     setSelectedUser(user);
@@ -70,7 +99,7 @@ const ManageAccounts = () => {
   };
 
   const deleteUser = (id) => {
-    setUsers(users.filter((u) => u.id !== id));
+    setUsers(users.filter((u) => u.userId !== id));
     closeModal();
   };
 
@@ -104,24 +133,29 @@ const ManageAccounts = () => {
       schoolId: selectedSchool || undefined,
       fullName: e.target.fullName.value,
       email: e.target.email.value,
-      phone: e.target.phone.value,
+      numberPhone: e.target.numberPhone.value,
       password: password,
       dob: dob,
     };
 
     let result;
 
-    if (role === "Học sinh") {
+    if (role === "STUDENT") {
       result = await adminService.addStudent({
         ...newUser,
         studentCode: "STU" + Date.now(),
       });
-    } else if (role === "Giáo viên") {
+    } else if (role === "TEACHER") {
       result = await adminService.addTeacher({
         ...newUser,
         teacherCode: "TEA" + Date.now(),
-        isAdmin: isAdmin,
-        isHomeroomTeacher: isHomeroomTeacher,
+        isAdmin,
+        isHomeroomTeacher,
+      });
+    } else if (role === "ADMIN") {
+      result = await adminService.addAdmin({
+        ...newUser,
+        adminCode: "ADM" + Date.now(),
       });
     }
 
@@ -129,12 +163,12 @@ const ManageAccounts = () => {
       setUsers([
         ...users,
         {
-          id: result.data?.userId || Date.now(),
-          name: result.data?.fullName || newUser.fullName,
+          userId: result.data?.userId || Date.now(),
+          fullName: result.data?.fullName || newUser.fullName,
           email: result.data?.email || newUser.email,
           role: role,
-          status: "Hoạt động",
-          lastActive: "Vừa xong",
+          numberPhone: result.data?.numberPhone || newUser.numberPhone,
+          dob: newUser.dob.toISOString().split("T")[0],
         },
       ]);
       setGeneratedPassword(password);
@@ -159,14 +193,12 @@ const ManageAccounts = () => {
         id: Date.now() + index,
         fullName: row[0] || "",
         email: row[1] || "",
-        phone: row[2] || "",
-        role: row[3] || "Học sinh",
+        numberPhone: row[2] || "",
+        role: row[3] || "STUDENT",
         dob: row[4] ? new Date(row[4]) : null,
         schoolId: row[5] || null,
         isHomeroomTeacher: row[6] === "✓" || row[6] === "x",
         subject: row[7] || "",
-        status: "Hoạt động",
-        lastActive: "Vừa xong",
       }));
       setExcelUsers(newUsers);
     };
@@ -183,17 +215,22 @@ const ManageAccounts = () => {
         : "12345678";
       const newUser = { ...u, password };
       let result;
-      if (u.role === "Học sinh") {
+      if (u.role === "STUDENT") {
         result = await adminService.addStudent({
           ...newUser,
           studentCode: "STU" + Date.now(),
         });
-      } else if (u.role === "Giáo viên") {
+      } else if (u.role === "TEACHER") {
         result = await adminService.addTeacher({
           ...newUser,
           teacherCode: "TEA" + Date.now(),
           isAdmin: false,
           isHomeroomTeacher: false,
+        });
+      } else if (u.role === "ADMIN") {
+        result = await adminService.addAdmin({
+          ...newUser,
+          adminCode: "ADM" + Date.now(),
         });
       }
       if (result) count++;
@@ -206,13 +243,19 @@ const ManageAccounts = () => {
 
   const filteredUsers = users.filter(
     (u) =>
-      (filterRole === "Tất cả" || u.role === filterRole) &&
-      (u.name.toLowerCase().includes(search.toLowerCase()) ||
+      (filterRole === "ALL" || u.role === filterRole) &&
+      (u.fullName.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const roleLabels = {
+    STUDENT: "Học sinh",
+    TEACHER: "Giáo viên",
+    ADMIN: "Quản trị",
+  };
+
   return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900">
       <div className="flex justify-between items-center mb-4">
         <div className="w-4/6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -244,62 +287,60 @@ const ManageAccounts = () => {
           onChange={(e) => setFilterRole(e.target.value)}
           className="px-4 py-2 border rounded-lg"
         >
-          <option>Tất cả</option>
-          <option>Học sinh</option>
-          <option>Giáo viên</option>
+          <option value="ALL">Tất cả</option>
+          <option value="STUDENT">Học sinh</option>
+          <option value="TEACHER">Giáo viên</option>
+          <option value="ADMIN">Quản trị</option>
         </select>
+
         <button onClick={exportToExcel} className="px-4 py-2 border rounded-lg">
           Xuất Excel
         </button>
       </div>
 
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="overflow-x-auto bg-white dark:bg-gray-900 rounded-lg shadow">
         <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-4 py-2">Người dùng</th>
-              <th className="px-4 py-2">Vai trò</th>
-              <th className="px-4 py-2">Trạng thái</th>
-              <th className="px-4 py-2">Hoạt động gần nhất</th>
-              <th className="px-4 py-2">Tùy chọn</th>
+          <thead>
+            <tr className="bg-gray-100 dark:bg-gray-700">
+              <th className="px-4 py-3 text-left">Người dùng</th>
+              <th className="px-4 py-3 text-left">Vai trò</th>
+              <th className="px-4 py-3 text-left">SĐT</th>
+              <th className="px-4 py-3 text-left">Ngày sinh</th>
+              <th className="px-4 py-3 text-left">Hành động</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.map((u) => (
               <tr
-                key={u.id}
+                key={u.userId}
                 className="border-t hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 <td className="px-4 py-2 flex items-center gap-3">
-                  <Avatar name={u.name} />
+                  <Avatar name={u.fullName} />
                   <div>
-                    <div className="font-medium">{u.name}</div>
+                    <div className="font-medium">{u.fullName}</div>
                     <div className="text-gray-500 text-xs">{u.email}</div>
                   </div>
                 </td>
                 <td className="px-4 py-2">
                   <Badge
-                    text={u.role}
+                    text={roleLabels[u.role] || u.role}
                     color={
-                      u.role === "Học sinh"
+                      u.role === "STUDENT"
                         ? "bg-green-100 text-green-700"
-                        : u.role === "Giáo viên"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-purple-100 text-purple-700"
+                        : u.role === "TEACHER"
+                        ? "bg-purple-100 text-purple-700"
+                        : u.role === "ADMIN"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-blue-100 text-blue-700"
                     }
                   />
                 </td>
+
+                <td className="px-4 py-2">{u.numberPhone}</td>
                 <td className="px-4 py-2">
-                  <Badge
-                    text={u.status}
-                    color={
-                      u.status === "Hoạt động"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
-                    }
-                  />
+                  {u.dob ? new Date(u.dob).toLocaleDateString("vi-VN") : ""}
                 </td>
-                <td className="px-4 py-2">{u.lastActive}</td>
                 <td className="px-4 py-2 flex gap-2">
                   <button
                     onClick={() => openModal("view", u)}
@@ -323,206 +364,83 @@ const ManageAccounts = () => {
       {modalType === "add" && (
         <Modal title="Thêm người dùng mới" onClose={closeModal}>
           <form className="space-y-4" onSubmit={handleAddUser}>
-            {/* Link tải file Excel mẫu */}
-            <div className="text-sm text-gray-700 dark:text-gray-200 flex gap-2 mb-2">
-              <p>Tải file Excel mẫu để thêm nhiều người dùng nhanh:</p>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const wb = XLSX.utils.book_new();
-                  const wsUsersData = [
-                    [
-                      "Họ và tên",
-                      "Email",
-                      "Số điện thoại",
-                      "Vai trò",
-                      "Ngày sinh (YYYY-MM-DD)",
-                      "Mã trường",
-                      "Chủ nhiệm",
-                      "Bộ môn",
-                    ],
-                    [
-                      "Nguyễn Văn A",
-                      "nguyenvana@gmail.com",
-                      "0912345678",
-                      "Học sinh",
-                      "2005-03-15",
-                      "TR001",
-                      "",
-                      "",
-                    ],
-                    [
-                      "Trần Thị B",
-                      "tranthib@gmail.com",
-                      "0987654321",
-                      "Giáo viên",
-                      "1985-07-22",
-                      "TR001",
-                      "x",
-                      "x",
-                    ],
-                  ];
-                  const wsUsers = XLSX.utils.aoa_to_sheet(wsUsersData);
-                  XLSX.utils.book_append_sheet(wb, wsUsers, "Users");
-
-                  const wsSchoolsData = [
-                    ["Mã trường", "Tên trường"],
-                    ["TR001", "Trường Đại học Công nghiệp Tp.HCM"],
-                    ["TR002", "Trường THPT ABC"],
-                  ];
-                  const wsSchools = XLSX.utils.aoa_to_sheet(wsSchoolsData);
-                  XLSX.utils.book_append_sheet(wb, wsSchools, "Schools");
-
-                  const wsRolesData = [
-                    ["Vai trò"],
-                    ["Học sinh"],
-                    ["Giáo viên"],
-                  ];
-                  const wsRoles = XLSX.utils.aoa_to_sheet(wsRolesData);
-                  XLSX.utils.book_append_sheet(wb, wsRoles, "Roles");
-
-                  XLSX.writeFile(wb, "users-template.xlsx");
-                }}
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Tải file mẫu tại đây
-              </a>
-            </div>
-
-            {/* Upload Excel */}
-            <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-200">
-                Upload Excel
-              </label>
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                className="w-full px-4 py-2 border rounded-lg"
-                onChange={handleExcelUpload}
-              />
-            </div>
-
-            {excelUsers.length > 0 && (
-              <div className="overflow-x-auto max-h-64 mt-2">
-                <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
-                  <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
-                    <tr>
-                      <th className="px-4 py-2">Người dùng</th>
-                      <th className="px-4 py-2">Vai trò</th>
-                      <th className="px-4 py-2">Trạng thái</th>
-                      <th className="px-4 py-2">Trường</th>
-                      <th className="px-4 py-2">Chủ nhiệm</th>
-                      <th className="px-4 py-2">Bộ môn</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {excelUsers.map((u) => {
-                      const schoolName =
-                        schools.find((s) => s.id === u.schoolId)?.name ||
-                        u.schoolId;
-                      return (
-                        <tr
-                          key={u.id}
-                          className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                        >
-                          <td className="px-4 py-2 flex items-center gap-3">
-                            <Avatar name={u.fullName} />
-                            <div>
-                              <div className="font-medium">{u.fullName}</div>
-                              <div className="text-gray-500 text-xs">
-                                {u.email}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">
-                            <Badge
-                              text={u.role}
-                              color={
-                                u.role === "Học sinh"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }
-                            />
-                          </td>
-                          <td className="px-4 py-2">
-                            <Badge
-                              text={u.status}
-                              color="bg-green-100 text-green-700"
-                            />
-                          </td>
-                          <td className="px-4 py-2">{schoolName}</td>
-                          <td className="px-4 py-2">
-                            {u.isHomeroomTeacher ? "✓" : ""}
-                          </td>
-                          <td className="px-4 py-2">{u.subject}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Form thêm từng người dùng */}
-            {excelUsers.length === 0 && (
+            <select
+              name="role"
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg"
+            >
+              <option value="STUDENT">Học sinh</option>
+              <option value="TEACHER">Giáo viên</option>
+              <option value="ADMIN">Quản trị</option>
+            </select>
+            {selectedRole === "TEACHER" && (
               <>
-                <select
-                  name="school"
-                  value={selectedSchool || ""}
-                  onChange={(e) =>
-                    setSelectedSchool(
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                  className="w-full px-4 py-2 border rounded-lg"
-                >
-                  <option value="">Chọn trường (tùy chọn)</option>
-                  {schools.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isHomeroomTeacher}
+                    onChange={(e) => setIsHomeroomTeacher(e.target.checked)}
+                  />
+                  Giáo viên chủ nhiệm
+                </label>
 
-                <input
-                  name="fullName"
-                  type="text"
-                  placeholder="Họ và tên"
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email"
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                />
-                <input
-                  name="phone"
-                  type="text"
-                  placeholder="Số điện thoại"
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-                <input
-                  name="dob"
-                  type="date"
-                  placeholder="Ngày sinh"
-                  className="w-full px-4 py-2 border rounded-lg"
-                  required
-                />
-                <select
-                  name="role"
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
-                >
-                  <option>Học sinh</option>
-                  <option>Giáo viên</option>
-                </select>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={isAdmin}
+                    onChange={(e) => setIsAdmin(e.target.checked)}
+                  />
+                  Giáo vụ
+                </label>
               </>
             )}
+            <select
+              name="school"
+              value={selectedSchool || ""}
+              onChange={(e) =>
+                setSelectedSchool(
+                  e.target.value ? Number(e.target.value) : null
+                )
+              }
+              className="w-full px-4 py-2 border rounded-lg"
+              required
+            >
+              <option value="">Chọn trường</option>
+              {schools.map((s) => (
+                <option key={s.schoolId} value={s.schoolId}>
+                  {s.schoolName}
+                </option>
+              ))}
+            </select>
+
+            <input
+              name="fullName"
+              type="text"
+              placeholder="Họ và tên"
+              className="w-full px-4 py-2 border rounded-lg"
+              required
+            />
+            <input
+              name="email"
+              type="email"
+              placeholder="Email"
+              className="w-full px-4 py-2 border rounded-lg"
+              required
+            />
+            <input
+              name="numberPhone"
+              type="text"
+              placeholder="Số điện thoại"
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+            <input
+              name="dob"
+              type="date"
+              placeholder="Ngày sinh"
+              className="w-full px-4 py-2 border rounded-lg"
+              required
+            />
 
             <div className="flex justify-end gap-2 mt-4">
               <button
@@ -533,10 +451,7 @@ const ManageAccounts = () => {
                 Hủy
               </button>
               <button
-                type="button"
-                onClick={
-                  excelUsers.length > 0 ? handleSubmitExcelUsers : handleAddUser
-                }
+                type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
               >
                 Lưu
@@ -546,33 +461,32 @@ const ManageAccounts = () => {
         </Modal>
       )}
 
-      {/* Modal Xem người dùng */}
       {modalType === "view" && selectedUser && (
         <Modal title="Thông tin người dùng" onClose={closeModal}>
           <div className="space-y-2">
             <div>
-              <b>Họ và tên:</b> {selectedUser.name}
+              <b>Họ và tên:</b> {selectedUser.fullName}
             </div>
             <div>
               <b>Email:</b> {selectedUser.email}
             </div>
             <div>
-              <b>Vai trò:</b> {selectedUser.role}
+              <b>Vai trò:</b>{" "}
+              {roleLabels[selectedUser.role] || selectedUser.role}
             </div>
             <div>
-              <b>Trạng thái:</b> {selectedUser.status}
+              <b>SĐT:</b> {selectedUser.numberPhone}
             </div>
             <div>
-              <b>Hoạt động gần nhất:</b> {selectedUser.lastActive}
+              <b>Ngày sinh:</b> {selectedUser.dob}
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Modal Xóa người dùng */}
       {modalType === "delete" && selectedUser && (
         <Modal title="Xóa người dùng" onClose={closeModal}>
-          <p>Bạn có chắc muốn xóa người dùng {selectedUser.name} không?</p>
+          <p>Bạn có chắc muốn xóa người dùng {selectedUser.fullName} không?</p>
           <div className="flex justify-end gap-2 mt-4">
             <button
               onClick={closeModal}
@@ -581,7 +495,7 @@ const ManageAccounts = () => {
               Hủy
             </button>
             <button
-              onClick={() => deleteUser(selectedUser.id)}
+              onClick={() => deleteUser(selectedUser.userId)}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
             >
               Xóa
@@ -590,7 +504,6 @@ const ManageAccounts = () => {
         </Modal>
       )}
 
-      {/* Modal Hiển thị mật khẩu */}
       {modalType === "password" && (
         <Modal title="Mật khẩu đã tạo" onClose={closeModal}>
           <p className="mb-2">Mật khẩu mặc định người dùng là:</p>
