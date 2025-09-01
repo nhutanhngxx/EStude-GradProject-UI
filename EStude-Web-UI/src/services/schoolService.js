@@ -3,7 +3,7 @@ import config from "../config/config.js";
 const endpoints = {
   addSchool: "/api/schools",
   getSchool: "/api/schools",
-  //   getAllSchools: "/api/schools",
+  getAllSchools: "/api/schools",
   //   updateSchool: "/api/schools",
   //   deleteSchool: "/api/schools",
 };
@@ -39,9 +39,28 @@ const schoolService = {
         throw new Error("Lấy thông tin trường thất bại");
       }
       const result = await response.json();
-      return result; // { success, message, ... }
+      return result;
     } catch (error) {
       console.error("Lỗi khi lấy thông tin trường:", error);
+      return null;
+    }
+  },
+  getAllSchools: async () => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAllSchools}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy danh sách trường thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách trường:", error);
       return null;
     }
   },
