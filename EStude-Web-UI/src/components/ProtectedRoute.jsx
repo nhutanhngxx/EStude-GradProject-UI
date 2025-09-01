@@ -5,17 +5,11 @@ import authService from "../services/authService";
 export default function ProtectedRoute({ allowedRoles }) {
   const { user } = useAuth();
   const isLoggedIn = authService.isTokenValid();
-
   if (!isLoggedIn || !user) {
-    // Chưa đăng nhập ==> quay về login
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Đã login nhưng không có quyền truy cập
     return <Navigate to="/" replace />;
   }
-
-  // Hợp lệ → render tiếp route con
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
   return <Outlet />;
 }

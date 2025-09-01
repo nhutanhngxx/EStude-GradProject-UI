@@ -22,6 +22,7 @@ import TeacherSchedule from "./pages/teacher/TeachingSchedule";
 import TeacherManageSubjects from "./pages/teacher/ManageSubjects";
 import TeacherManageAttendance from "./pages/teacher/ManageAttendance";
 import TeacherAITool from "./pages/teacher/AI";
+import TeacherMyClasses from "./pages/teacher/MyClasses";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentDashboard from "./pages/student/Dashboard";
@@ -67,6 +68,7 @@ function App() {
             <Route path="subjects" element={<TeacherManageSubjects />} />
             <Route path="attendance" element={<TeacherManageAttendance />} />
             <Route path="ai-tools" element={<TeacherAITool />} />
+            <Route path="my-classes" element={<TeacherMyClasses />} />
           </Route>
         </Route>
 
