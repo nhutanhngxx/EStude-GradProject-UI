@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaEye, FaTrash } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import schoolService from "../../services/schoolService";
@@ -37,6 +37,27 @@ const ManageSchools = () => {
   ]);
   const [modalType, setModalType] = useState(null);
   const [selectedSchool, setSelectedSchool] = useState(null);
+  useEffect(() => {
+    const fetchSchools = async () => {
+      try {
+        const data = await schoolService.getAllSchools();
+        if (data) {
+          const mappedSchools = data.map((s) => ({
+            id: s.id,
+            code: s.schoolCode,
+            name: s.schoolName,
+            address: s.address,
+            email: s.contactEmail,
+            phone: s.contactPhone,
+          }));
+          setSchools(mappedSchools);
+        }
+      } catch (error) {
+        console.error("Lỗi khi load danh sách trường:", error);
+      }
+    };
+    fetchSchools();
+  }, []); // chạy 1 lần khi load trang
   const openModal = (type, school = null) => {
     setSelectedSchool(school);
     setModalType(type);
@@ -437,22 +458,47 @@ const ManageSchools = () => {
 
       {modalType === "view" && selectedSchool && (
         <Modal title="Chi tiết trường" onClose={closeModal}>
-          <div className="space-y-2 text-gray-800 dark:text-gray-200">
-            <p>
-              <strong>Mã trường:</strong> {selectedSchool.code}
-            </p>
-            <p>
-              <strong>Tên trường:</strong> {selectedSchool.name}
-            </p>
-            <p>
-              <strong>Địa chỉ:</strong> {selectedSchool.address}
-            </p>
-            <p>
-              <strong>Email liên hệ:</strong> {selectedSchool.email}
-            </p>
-            <p>
-              <strong>Số điện thoại:</strong> {selectedSchool.phone}
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Mã trường
+              </p>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">
+                {selectedSchool.code}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Tên trường
+              </p>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">
+                {selectedSchool.name}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm md:col-span-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Địa chỉ
+              </p>
+              <p className="text-base font-medium text-gray-800 dark:text-gray-200">
+                {selectedSchool.address}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Email liên hệ
+              </p>
+              <p className="text-base font-medium text-gray-800 dark:text-gray-200">
+                {selectedSchool.email}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Số điện thoại
+              </p>
+              <p className="text-base font-medium text-gray-800 dark:text-gray-200">
+                {selectedSchool.phone}
+              </p>
+            </div>
           </div>
         </Modal>
       )}
