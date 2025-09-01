@@ -26,20 +26,16 @@ const authService = {
   login: async ({ username, password, role }) => {
     const endpoint = endpoints[role];
     if (!endpoint) throw new Error("Role không hợp lệ");
-
     try {
       const response = await fetch(`${config.BASE_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-
       if (!response.ok) {
         throw new Error("Đăng nhập thất bại");
       }
-
       const result = await response.json();
-
       if (result.success) {
         localStorage.setItem("accessToken", result.token);
         localStorage.setItem("user", JSON.stringify(result.data));
