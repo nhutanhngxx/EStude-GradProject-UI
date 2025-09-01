@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaPlus,
   FaEdit,
@@ -7,74 +7,85 @@ import {
   FaTasks,
   FaEye,
 } from "react-icons/fa";
+import subjectService from "../../services/subjectService";
 
 export default function ManageSubjects() {
-  const [subjects, setSubjects] = useState([
-    {
-      id: 1,
-      code: "MTH101",
-      name: "Mathematics",
-      teacher: "Nguyễn Văn A",
-      students: ["SV001", "SV002"],
-      assignments: [],
-    },
-  ]);
-
+  const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isStudentsOpen, setIsStudentsOpen] = useState(false);
   const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
-
-  // Form state
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [teacher, setTeacher] = useState("");
-
-  // Student management
+  const [description, setDescription] = useState("");
   const [newStudentId, setNewStudentId] = useState("");
-
-  // Assignment management
   const [newAssignment, setNewAssignment] = useState({
     title: "",
     dueDate: "",
     description: "",
+    type: "essay",
   });
 
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      const result = await subjectService.getAllSubjects();
+      if (result) setSubjects(result);
+    };
+    fetchSubjects();
+  }, []);
+
   const resetForm = () => {
-    setCode("");
     setName("");
-    setTeacher("");
+    setDescription("");
     setSelectedSubject(null);
   };
 
-  const handleSaveSubject = () => {
-    if (!code || !name || !teacher) {
-      alert("Vui lòng nhập đầy đủ thông tin môn học.");
+  const handleSaveSubject = async () => {
+    if (!name) {
+      alert("Vui lòng nhập tên môn học.");
       return;
     }
-    if (selectedSubject) {
-      // Update
-      setSubjects((prev) =>
-        prev.map((s) =>
-          s.id === selectedSubject.id ? { ...s, code, name, teacher } : s
-        )
-      );
-    } else {
-      // Add new
-      setSubjects((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          code,
-          name,
-          teacher,
-          students: [],
-          assignments: [],
-        },
-      ]);
+    const payload = {
+      name,
+      description,
+    };
+    try {
+      const result = await subjectService.addSubject(payload);
+      if (result) {
+        if (selectedSubject) {
+          setSubjects((prev) =>
+            prev.map((s) =>
+              s.id === selectedSubject.id
+                ? {
+                    ...s,
+                    name: result.name,
+                    description: result.description || "",
+                  }
+                : s
+            )
+          );
+          alert("Cập nhật môn học thành công!");
+        } else {
+          setSubjects((prev) => [
+            ...prev,
+            {
+              id: result.id || Date.now(),
+              name: result.name,
+              description: result.description || "",
+            },
+          ]);
+          alert("Thêm môn học thành công!");
+        }
+        setIsFormOpen(false);
+        resetForm();
+      } else {
+        alert("Thêm môn học thất bại!");
+      }
+    } catch (error) {
+      console.error("Lỗi khi lưu môn học:", error);
+      alert("Có lỗi khi lưu môn học");
     }
-    setIsFormOpen(false);
-    resetForm();
   };
 
   const handleDeleteSubject = (id) => {
@@ -83,7 +94,6 @@ export default function ManageSubjects() {
     }
   };
 
-  // Students
   const handleAddStudent = () => {
     if (!newStudentId) return;
     setSubjects((prev) =>
@@ -106,7 +116,6 @@ export default function ManageSubjects() {
     );
   };
 
-  // Assignments
   const handleAddAssignment = () => {
     if (!newAssignment.title || !newAssignment.dueDate) return;
     setSubjects((prev) =>
@@ -122,7 +131,12 @@ export default function ManageSubjects() {
           : s
       )
     );
-    setNewAssignment({ title: "", dueDate: "", description: "" });
+    setNewAssignment({
+      title: "",
+      dueDate: "",
+      description: "",
+      type: "essay",
+    });
   };
 
   const handleRemoveAssignment = (id) => {
@@ -136,39 +150,40 @@ export default function ManageSubjects() {
   };
 
   return (
-    <div className="p-6 dark:bg-gray-900 dark:text-white min-h-screen">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Quản lý môn học</h1>
+    <div className="p-6 dark:bg-gray-900 dark:text-white">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Quản lý môn học</h1>
+          <p className="text-gray-600">
+            Quản lý môn học là một công cụ giúp giáo viên tổ chức và quản lý tất
+            cả các khía cạnh của một môn học, từ điểm danh, giao bài tập đến
+            đánh giá học sinh.
+          </p>
+        </div>
         <button
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           onClick={() => {
             setIsFormOpen(true);
             resetForm();
           }}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
-          <FaPlus /> Thêm môn học
+          Thêm môn học
         </button>
       </div>
 
-      {/* Table */}
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded-lg shadow">
         <table className="w-full text-sm text-left">
           <thead className="bg-gray-50">
             <tr>
               <th className="p-3 border-b border-gray-200 dark:border-gray-700">
-                Mã môn
-              </th>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-700">
                 Tên môn
               </th>
               <th className="p-3 border-b border-gray-200 dark:border-gray-700">
-                Giáo viên
+                Mô tả
               </th>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-700 text-center">
-                Số HS
-              </th>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-700 text-center">
+              <th className="p-3 border-b border-gray-200 dark:border-gray-700">
                 Thao tác
               </th>
             </tr>
@@ -181,40 +196,33 @@ export default function ManageSubjects() {
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                 >
                   <td className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    {subject.code}
-                  </td>
-                  <td className="p-3 border-b border-gray-200 dark:border-gray-700">
                     {subject.name}
                   </td>
                   <td className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    {subject.teacher}
-                  </td>
-                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-center">
-                    {subject.students.length}
+                    {subject.description}
                   </td>
                   <td className="p-3 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex justify-center gap-3">
+                    <div className="flex gap-3">
                       <button
                         className="text-yellow-500"
                         title="Sửa"
                         onClick={() => {
                           setSelectedSubject(subject);
-                          setCode(subject.code);
                           setName(subject.name);
-                          setTeacher(subject.teacher);
+                          setDescription(subject.description || "");
                           setIsFormOpen(true);
                         }}
                       >
-                        <FaEye />
+                        Xem chi tiết
                       </button>
                       <button
                         className="text-red-500"
                         title="Xoá"
                         onClick={() => handleDeleteSubject(subject.id)}
                       >
-                        <FaTrash />
+                        Xóa
                       </button>
-                      <button
+                      {/* <button
                         className="text-green-500"
                         title="Quản lý học sinh"
                         onClick={() => {
@@ -223,8 +231,8 @@ export default function ManageSubjects() {
                         }}
                       >
                         <FaUserGraduate />
-                      </button>
-                      <button
+                      </button> */}
+                      {/* <button
                         className="text-purple-500"
                         title="Quản lý bài tập"
                         onClick={() => {
@@ -233,7 +241,7 @@ export default function ManageSubjects() {
                         }}
                       >
                         <FaTasks />
-                      </button>
+                      </button> */}
                     </div>
                   </td>
                 </tr>
@@ -261,24 +269,16 @@ export default function ManageSubjects() {
             </h2>
             <input
               type="text"
-              placeholder="Mã môn"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700"
-            />
-            <input
-              type="text"
               placeholder="Tên môn"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700"
             />
-            <input
-              type="text"
-              placeholder="Giáo viên phụ trách"
-              value={teacher}
-              onChange={(e) => setTeacher(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700"
+            <textarea
+              placeholder="Mô tả môn học"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700 min-h-[80px]"
             />
             <div className="flex justify-end gap-3">
               <button onClick={() => setIsFormOpen(false)}>Hủy</button>
