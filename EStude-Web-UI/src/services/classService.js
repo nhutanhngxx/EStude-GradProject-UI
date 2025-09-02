@@ -25,6 +25,7 @@ const classService = {
       return null;
     }
   },
+
   getAllClasses: async () => {
     try {
       const response = await fetch(
@@ -44,6 +45,7 @@ const classService = {
       return null;
     }
   },
+
   getClassById: async (classId) => {
     try {
       const response = await fetch(
@@ -66,6 +68,7 @@ const classService = {
       return null;
     }
   },
+
   getClassesBySchoolId: async (schoolId) => {
     try {
       const response = await fetch(

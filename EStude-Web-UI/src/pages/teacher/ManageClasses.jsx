@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { FaEye, FaTrash } from "react-icons/fa";
 import classService from "../../services/classService";
@@ -44,11 +44,11 @@ const ManageClasses = () => {
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [school, setSchool] = useState(null);
 
+  // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  console.log("user:", user);
-
-  const schoolId = user.schoolId;
+  const schoolId = user.school?.schoolId;
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -69,8 +69,10 @@ const ManageClasses = () => {
   useEffect(() => {
     const fetchClassesWithSubjects = async () => {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
+      // console.log("[DEBUG] classes by school:", allClasses);
       if (!allClasses) return;
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
+      // console.log("[DEBUG] allClassSubjects:", allClassSubjects);
       const classesWithSubjects = allClasses.map((cls) => {
         const subjectsForClass = allClassSubjects
           .filter((cs) => cs.clazz.classId === cls.classId)
@@ -86,7 +88,7 @@ const ManageClasses = () => {
       setClasses(classesWithSubjects);
     };
     fetchClassesWithSubjects();
-  }, []);
+  }, [schoolId]);
 
   const openModal = (type, cls = null) => {
     setSelectedClass(cls);
@@ -98,6 +100,7 @@ const ManageClasses = () => {
       setClassSize(0);
       setSelectedSubjects([]);
       setSelectedTeacher("");
+      setSchool(schoolId);
     } else if (type === "edit" && cls) {
       setName(cls.name);
       setTerm(cls.term || "");
@@ -122,45 +125,62 @@ const ManageClasses = () => {
     setModalType(null);
   };
 
+  const fetchClassesWithSubjects = useCallback(async () => {
+    try {
+      const allClasses = await classService.getClassesBySchoolId(schoolId);
+      if (!allClasses) return;
+
+      const allClassSubjects = await classSubjectService.getAllClassSubjects();
+
+      const classesWithSubjects = allClasses.map((cls) => {
+        const subjectsForClass = allClassSubjects
+          .filter((cs) => cs.clazz.classId === cls.classId)
+          .map((cs) => ({
+            classSubjectId: cs.classSubjectId,
+            subjectId: cs.subject.subjectId,
+            name: cs.subject.name,
+            teacherId: cs.teacher?.userId ?? null,
+            teacherName: cs.teacher?.fullName ?? null,
+          }));
+        return { ...cls, subjects: subjectsForClass };
+      });
+
+      setClasses(classesWithSubjects);
+    } catch (error) {
+      console.error("Lỗi khi load lớp và môn:", error);
+    }
+  }, [schoolId]);
+
+  useEffect(() => {
+    fetchClassesWithSubjects();
+  }, [fetchClassesWithSubjects]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!name) return alert("Vui lòng nhập tên lớp");
 
-    const payload = {
-      name,
-      term,
-      classSize,
-      teacher: selectedTeacher || null,
-      subjects: selectedSubjects || [],
-    };
-
     try {
-      let classResult;
+      const classPayload = {
+        name,
+        term,
+        classSize,
+        schoolId,
+      };
+      const classResult = await classService.addClass(classPayload);
+      if (!classResult?.classId) throw new Error("Không thêm được lớp");
 
-      if (modalType === "add") {
-        classResult = await classService.addClass(payload);
-        console.log("classResult:", classResult);
-        const classId = Number(classResult.classId);
-        if (classResult) {
-          setClasses((prev) => [...prev, classResult]);
-
-          if (selectedSubjects.length > 0) {
-            for (const subj of selectedSubjects) {
-              console.log("Adding class-subject:", {
-                classId: classId,
-                teacherId: subj.teacherId ? Number(subj.teacherId) : null,
-                subjectId: Number(subj.subjectId),
-              });
-
-              await classSubjectService.addClassSubject({
-                classId: Number(classId),
-                subjectId: Number(subj.subjectId),
-                teacherId: subj.teacherId,
-              });
-            }
-          }
+      if (selectedSubjects.length > 0) {
+        for (const subj of selectedSubjects) {
+          await classSubjectService.addClassSubject({
+            classId: classResult.classId,
+            subjectId: subj.subjectId,
+            teacherId: subj.teacherId ?? null,
+          });
         }
       }
+
+      await fetchClassesWithSubjects();
+
       closeModal();
     } catch (error) {
       console.error(error);
@@ -168,8 +188,8 @@ const ManageClasses = () => {
     }
   };
 
-  const handleDelete = (id) => {
-    setClasses(classes.filter((c) => c.id !== id));
+  const handleDelete = (classId) => {
+    setClasses(classes.filter((c) => c.classId !== classId));
     closeModal();
   };
 
@@ -206,7 +226,7 @@ const ManageClasses = () => {
           </thead>
           <tbody>
             {classes.map((c) => (
-              <tr key={c.id} className="border-t">
+              <tr key={c.classId} className="border-t">
                 <td className="px-4 py-2 font-medium">{c.name}</td>
                 <td className="px-4 py-2">{c.term || "-"}</td>
                 <td className="px-4 py-2">
