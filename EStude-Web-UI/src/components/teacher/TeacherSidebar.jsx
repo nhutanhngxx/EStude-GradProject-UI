@@ -21,6 +21,11 @@ export default function TeacherSidebar() {
 
   const menuItems = [
     { name: "Tổng quan", path: "/teacher/dashboard", icon: <FaHome /> },
+    {
+      name: "Lớp giảng dạy",
+      path: "/teacher/my-classes",
+      icon: <FaChalkboardTeacher />,
+    },
     ...(isAdmin
       ? [
           {
@@ -38,11 +43,6 @@ export default function TeacherSidebar() {
     ...(!isAdmin
       ? [
           {
-            name: "Lớp giảng dạy",
-            path: "/teacher/my-classes",
-            icon: <FaChalkboardTeacher />,
-          },
-          {
             name: "Quản lý điểm danh",
             path: "/teacher/attendance",
             icon: <FaClipboardList />,
@@ -55,12 +55,6 @@ export default function TeacherSidebar() {
       icon: <FaChalkboardTeacher />,
     },
     { name: "Thông báo", path: "/teacher/notifications", icon: <FaBell /> },
-    // { name: "Công cụ hỗ trợ AI", path: "/teacher/ai-tools", icon: <FaBrain /> },
-    // {
-    //   name: "Phân tích và báo cáo",
-    //   path: "/teacher/statistics-reports",
-    //   icon: <FaFileAlt />,
-    // },
   ];
 
   return (
