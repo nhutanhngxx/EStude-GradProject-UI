@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+import { AuthContext, AuthProvider } from "./src/contexts/AuthContext";
+
 import RoleSelectionScreen from "./src/screens/RoleSelectionScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import TabNavigator from "./src/navigation/TabNavigator";
@@ -22,117 +25,93 @@ import AttendanceDetailScreen from "./src/screens/Attendances/AttendanceDetailSc
 
 const Stack = createNativeStackNavigator();
 
-export default function App() {
+function AppNavigator() {
+  const { user, loading } = useContext(AuthContext);
+
+  if (loading) {
+    return null;
+  }
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen
-          name="RoleSelection"
-          component={RoleSelectionScreen}
-          options={{ headerShown: false }}
-        />
+    <Stack.Navigator>
+      {!user ? (
         <Stack.Screen
           name="Login"
           component={LoginScreen}
           options={{ headerShown: false }}
         />
-        <Stack.Screen
-          name="MainTabs"
-          component={TabNavigator}
-          options={{ animation: "none", headerShown: false }}
-        />
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{
-            title: "Cài đặt",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="FullChucNang"
-          component={FullChucNangScreen}
-          options={{
-            title: "Tất cả chức năng",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        {/* <Stack.Screen name="ScheduleDetail" component={ScheduleScreen} /> */}
-        <Stack.Screen
-          name="NopBai"
-          component={NopBaiScreen}
-          options={{
-            title: "Nộp bài",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="ChiTietBaiTap"
-          component={ChiTietBaiTapScreen}
-          options={{
-            title: "Chi tiết bài tập",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="SubjectList"
-          component={SubjectListScreen}
-          options={{
-            title: "Danh sách môn học",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="SubjectDetail"
-          component={SubjectDetailScreen}
-          options={{
-            title: "Chi tiết môn học",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="ExamDetail"
-          component={ExamDetailScreen}
-          options={{
-            title: "Chi tiết bài thi",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="ExamDoing"
-          component={ExamDoingScreen}
-          options={{
-            title: "Đang thi",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="ScheduleList"
-          component={ScheduleListScreen}
-          options={{
-            title: "Lịch học",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-        <Stack.Screen
-          name="AttendanceDetail"
-          component={AttendanceDetailScreen}
-          options={{
-            title: "Chi tiết điểm danh",
-            headerTitleAlign: "center",
-            headerBackTitle: "Trở lại",
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+      ) : (
+        <>
+          <Stack.Screen
+            name="MainTabs"
+            component={TabNavigator}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{ title: "Cài đặt", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="FullChucNang"
+            component={FullChucNangScreen}
+            options={{ title: "Tất cả chức năng", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="NopBai"
+            component={NopBaiScreen}
+            options={{ title: "Nộp bài", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="ChiTietBaiTap"
+            component={ChiTietBaiTapScreen}
+            options={{ title: "Chi tiết bài tập", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="SubjectList"
+            component={SubjectListScreen}
+            options={{ title: "Danh sách môn học", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="SubjectDetail"
+            component={SubjectDetailScreen}
+            options={{ title: "Chi tiết môn học", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="ExamDetail"
+            component={ExamDetailScreen}
+            options={{ title: "Chi tiết bài thi", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="ExamDoing"
+            component={ExamDoingScreen}
+            options={{ title: "Đang làm", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="ScheduleList"
+            component={ScheduleListScreen}
+            options={{ title: "Lịch học", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="AttendanceDetail"
+            component={AttendanceDetailScreen}
+            options={{
+              title: "Chi tiết điểm danh",
+              headerTitleAlign: "center",
+            }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <NavigationContainer>
+        <AppNavigator />
+      </NavigationContainer>
+    </AuthProvider>
   );
 }
