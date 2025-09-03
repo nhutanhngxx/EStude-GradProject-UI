@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useContext } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+import { AuthContext } from "../contexts/AuthContext";
 
 const student = {
   userId: 101,
@@ -77,6 +79,9 @@ const ProgressBar = ({ value }) => {
 };
 
 export default function HomeStudentScreen({ navigation }) {
+  const { user } = useContext(AuthContext);
+  // console.log("User: ", user);
+
   const creditPercent = Math.round(
     (student.passedCredits / student.requiredCredits) * 100
   );
@@ -102,11 +107,10 @@ export default function HomeStudentScreen({ navigation }) {
           <View>
             <Text style={styles.brand}>EStude</Text>
             <Text style={styles.greeting}>
-              Xin chào, <Text style={styles.highlight}>{student.fullName}</Text>{" "}
-              👋
+              Xin chào, <Text style={styles.highlight}>{user.fullName}</Text> 👋
             </Text>
             <Text style={styles.subGreeting}>
-              Lớp {student.class.name} • Học tốt mỗi ngày
+              Nơi lưu giữ hành tri tri thức trẻ
             </Text>
           </View>
           <Image source={{ uri: student.avatar }} style={styles.avatar} />
