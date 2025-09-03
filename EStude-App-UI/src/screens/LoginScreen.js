@@ -1,9 +1,8 @@
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
-  Button,
   TextInput,
   ImageBackground,
   StyleSheet,
@@ -11,10 +10,23 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { AuthContext } from "../contexts/AuthContext";
+import authService from "../services/authService";
 
 export default function LoginScreen({ navigation }) {
-  const handleLogin = () => {
-    navigation.replace("MainTabs");
+  const { login } = useContext(AuthContext);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleLogin = async () => {
+    const result = await authService.login({ username, password });
+    if (result) {
+      await login(result.user, result.token);
+      Alert.alert("Thông báo", "Đăng nhập thành công!");
+      navigation.replace("MainTabs");
+    } else {
+      Alert.alert("Thông báo", "Đăng nhập thất bại. Vui lòng thử lại.");
+    }
   };
 
   return (
@@ -37,37 +49,21 @@ export default function LoginScreen({ navigation }) {
             source={require("../assets/images/banner-light.png")}
             style={styles.logo}
           />
-          <View
-            style={{
-              width: "80%",
-              alignItems: "center",
-            }}
-          >
+          <View style={{ width: "80%", alignItems: "center" }}>
             <TextInput
-              placeholder="Nhập Mã định danh hoặc Số điện thoại..."
+              placeholder="Nhập mã đăng nhập"
+              value={username}
+              onChangeText={setUsername}
               placeholderTextColor={"gray"}
-              style={{
-                borderColor: "white",
-                paddingHorizontal: 10,
-                borderRadius: 10,
-                marginBottom: 10,
-                width: "100%",
-                backgroundColor: "white",
-                paddingVertical: 15,
-              }}
+              style={styles.input}
             />
             <TextInput
-              placeholder="Nhập Mật khẩu..."
+              placeholder="Nhập mật khẩu"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
               placeholderTextColor={"gray"}
-              style={{
-                borderColor: "white",
-                paddingHorizontal: 10,
-                borderRadius: 10,
-                marginBottom: 10,
-                width: "100%",
-                backgroundColor: "white",
-                paddingVertical: 15,
-              }}
+              style={styles.input}
             />
             <View style={{ width: "100%" }}>
               <TouchableOpacity
@@ -86,13 +82,7 @@ export default function LoginScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={{ paddingTop: 30 }}
-              onPress={() => {
-                handleLogin();
-                Alert.alert("Thông báo", "Đăng nhập thành công!");
-              }}
-            >
+            <TouchableOpacity style={{ paddingTop: 30 }} onPress={handleLogin}>
               <Text style={{ fontSize: 16, color: "white" }}>Đăng nhập</Text>
             </TouchableOpacity>
           </View>
@@ -120,5 +110,14 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 100,
     resizeMode: "contain",
+  },
+  input: {
+    borderColor: "white",
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: "100%",
+    backgroundColor: "white",
+    paddingVertical: 15,
   },
 });
