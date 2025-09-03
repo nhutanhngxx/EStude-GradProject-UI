@@ -1,11 +1,27 @@
 import { useEffect, useState } from "react";
 import teacherService from "../../services/teacherService";
 import ClassStudentModal from "./ClassStudentModal";
+import CreateAssignmentModal from "./CreateAssignmentModal";
+
+import {
+  BookOpen,
+  Users,
+  Calendar,
+  FileText,
+  CheckSquare,
+  FlaskConical,
+} from "lucide-react";
+import AttendanceModal from "./AttendanceModal";
 
 export default function MyClasses() {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Tạo bài thi
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [ctx, setCtx] = useState(null);
+  // Điểm danh
+  const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
 
   useEffect(() => {
     const fetchMyClasses = async () => {
@@ -19,10 +35,11 @@ export default function MyClasses() {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">
-        Lớp giảng dạy của tôi
-      </h1>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold mb-2">Lớp giảng dạy</h1>
+        <p className="text-gray-600">Danh sách lớp đang giảng dạy của bạn.</p>
+      </div>
 
       {classes.length === 0 ? (
         <p className="text-gray-500">
@@ -33,50 +50,75 @@ export default function MyClasses() {
           {classes.map((cls) => (
             <div
               key={cls.classSubjectId}
-              className="bg-white border rounded-xl shadow-md hover:shadow-lg transition p-5 flex flex-col"
+              className="bg-white border rounded-2xl shadow-sm hover:shadow-md transition p-5 flex flex-col"
             >
               {/* Header */}
-              <div className="mb-3">
-                <h2 className="text-lg font-semibold text-blue-700">
-                  {cls.clazz?.name}
-                </h2>
-                <p className="text-sm text-gray-500">
-                  Môn: <span className="font-medium">{cls.subject?.name}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Học kỳ: {cls.clazz?.term || "-"}
-                </p>
+              <div className="mb-4 flex items-center gap-3">
+                <BookOpen className="text-blue-600" size={22} />
+                <div>
+                  <h2 className="text-base font-semibold text-gray-800">
+                    {cls.clazz?.name}
+                  </h2>
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <span className="font-medium">{cls.subject?.name}</span>
+                  </p>
+                </div>
               </div>
 
               {/* Body */}
-              <div className="flex-1">
-                <p className="text-sm text-gray-600">
+              <div className="space-y-2 text-sm text-gray-600 flex-1">
+                <p className="flex items-center gap-2">
+                  <Users size={16} className="text-gray-400" />
                   Sĩ số:{" "}
                   <span className="font-medium">
                     {cls.clazz?.classSize || 0}
                   </span>
+                </p>
+                <p className="flex items-center gap-2">
+                  <Calendar size={16} className="text-gray-400" />
+                  Học kỳ: {cls.clazz?.term || "-"}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
-                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
                   onClick={() => {
                     setSelectedClass(cls.clazz?.classId);
                     setIsModalOpen(true);
                   }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 
+                     text-gray-700 hover:bg-gray-100 transition"
                 >
-                  👥 Xem học sinh
+                  <Users size={16} />
+                  <span>Xem học sinh</span>
                 </button>
-                <button className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">
-                  ✅ Điểm danh
+
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                  onClick={() => {
+                    setSelectedClass(cls.clazz?.classId);
+                    setIsAttendanceOpen(true);
+                  }}
+                >
+                  <CheckSquare size={16} />
+                  <span>Điểm danh</span>
                 </button>
-                <button className="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">
-                  📝 Giao bài tập
-                </button>
-                <button className="px-3 py-1.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-700">
-                  🧪 Tạo bài thi
+
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                  onClick={() => {
+                    setCtx({
+                      classId: cls.clazz?.classId,
+                      className: cls.clazz?.name,
+                      subjectId: cls.subject?.subjectId,
+                      subjectName: cls.subject?.name,
+                    });
+                    setIsCreateOpen(true);
+                  }}
+                >
+                  <FlaskConical size={16} />
+                  <span>Tạo bài thi</span>
                 </button>
               </div>
             </div>
@@ -87,6 +129,20 @@ export default function MyClasses() {
         classId={selectedClass}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+      />
+      <CreateAssignmentModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        defaultType="QUIZ"
+        classContext={ctx}
+        onCreated={(assignment) => {
+          console.log("Assignment created:", assignment);
+        }}
+      />
+      <AttendanceModal
+        classId={selectedClass}
+        isOpen={isAttendanceOpen}
+        onClose={() => setIsAttendanceOpen(false)}
       />
     </div>
   );

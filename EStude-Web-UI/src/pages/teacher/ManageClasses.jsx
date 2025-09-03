@@ -61,10 +61,12 @@ const ManageClasses = () => {
   useEffect(() => {
     const fetchTeachers = async () => {
       const result = await teacherService.getAllTeachers();
-      if (result) setTeachers(result);
+      // Lọc các teachers có trùng schoolId với user
+      const filtered = result.filter((t) => t.school?.schoolId === schoolId);
+      if (filtered) setTeachers(filtered);
     };
     fetchTeachers();
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     const fetchClassesWithSubjects = async () => {
