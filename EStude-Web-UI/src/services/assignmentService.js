@@ -1,0 +1,55 @@
+import config from "../config/config.js";
+
+const endpoints = {
+  assignment: "/api/assignments",
+  assignmentById: "/api/assignments/{assignmentId}",
+};
+
+const assignmentService = {
+  addAssignment: async (assignment) => {
+    //     console.log("Thêm bài tập:", assignment);
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.assignment}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(assignment),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Thêm bài tập thất bại");
+      }
+      const result = await response.json();
+      return result.data;
+    } catch (error) {
+      console.error("Lỗi khi thêm bài tập:", error);
+      return null;
+    }
+  },
+
+  getAssignmentById: async (assignmentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.assignmentById.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy thông tin bài tập thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin bài tập:", error);
+      return null;
+    }
+  },
+};
+
+export default assignmentService;
