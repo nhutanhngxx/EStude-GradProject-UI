@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,35 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { AuthContext } from "../contexts/AuthContext";
 
 export default function SettingsScreen({ navigation }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { logout } = useContext(AuthContext);
+
+  const handleLogout = async () => {
+    Alert.alert("Xác nhận", "Bạn có chắc chắn muốn đăng xuất?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Đăng xuất",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await logout();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          } catch (err) {
+            console.log("Logout error:", err.message);
+          }
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={styles.safe}>
@@ -56,7 +79,10 @@ export default function SettingsScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={[styles.item, styles.logout]}>
+        <TouchableOpacity
+          style={[styles.item, styles.logout]}
+          onPress={handleLogout}
+        >
           <View style={styles.itemLeft}>
             <MaterialIcons name="logout" size={22} color="#e63946" />
             <Text style={[styles.itemText, { color: "#e63946" }]}>
