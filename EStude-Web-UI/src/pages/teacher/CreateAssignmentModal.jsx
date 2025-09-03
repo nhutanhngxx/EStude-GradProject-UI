@@ -13,25 +13,11 @@ import {
   Trash2,
   LayoutGrid,
   Eye,
-  CheckCircle2,
   FileText,
-  HelpCircle,
 } from "lucide-react";
+import assignmentService from "../../services/assignmentService";
+import questionService from "../../services/questionService";
 
-/**
- * CreateAssignmentModal
- * - Hỗ trợ tạo bài thi: Trắc nghiệm (MULTIPLE_CHOICE) & Tự luận (ESSAY)
- * - Đồng bộ style lucide-react + Tailwind
- * - 2 cách tạo: "Tạo trực tiếp" và "Tải từ file"
- * - Gửi payload theo schema POST /api/assignments (BE hiện chưa xử lý kỹ => giữ ở mức cơ bản)
- *
- * Props:
- *  - isOpen: boolean
- *  - onClose: () => void
- *  - defaultType?: "QUIZ" | "ESSAY" | "MIXED"
- *  - classContext?: { classId?: number; className?: string; subjectId?: number; subjectName?: string }
- *  - onCreated?: (assignment: any) => void   // callback khi tạo thành công
- */
 export default function CreateAssignmentModal({
   isOpen,
   onClose,
@@ -39,26 +25,26 @@ export default function CreateAssignmentModal({
   classContext,
   onCreated,
 }) {
-  const [tab, setTab] = useState(/** @type {"build" | "upload"} */ ("build"));
+  const [tab, setTab] = useState("build");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const teacherId = user.userId;
 
   // --- Assignment meta ---
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState(""); // datetime-local
-  const [timeLimit, setTimeLimit] = useState(45); // minutes
-  const [type, setType] = useState(defaultType); // QUIZ | ESSAY | MIXED
+  const [dueDate, setDueDate] = useState("");
+  const [timeLimit, setTimeLimit] = useState(45);
+  const [type, setType] = useState(defaultType);
   const [maxScore, setMaxScore] = useState(0);
   const [isPublished, setIsPublished] = useState(false);
   const [allowLateSubmission, setAllowLateSubmission] = useState(false);
   const [latePenalty, setLatePenalty] = useState(0);
-  const [isAutoGraded, setIsAutoGraded] = useState(true); // auto grade when quiz only
 
-  // --- Question builder state ---
+  // --- Questions state ---
   const [questions, setQuestions] = useState([]);
 
-  // --- Upload state (chưa tích hợp upload server-side) ---
+  // --- Upload state ---
   const [file, setFile] = useState(null);
-  const [uploadNote, setUploadNote] = useState("");
 
   // Tính tổng điểm
   const totalPoints = useMemo(
@@ -66,7 +52,6 @@ export default function CreateAssignmentModal({
     [questions]
   );
 
-  // Đồng bộ maxScore theo tổng điểm nếu để 0
   React.useEffect(() => {
     if (!maxScore || maxScore === 0) {
       setMaxScore(totalPoints);
@@ -170,58 +155,72 @@ export default function CreateAssignmentModal({
     );
   }
 
-  // Build payload theo schema
-  function buildPayload() {
+  function buildAssignmentPayload() {
     return {
       title,
       description,
       dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       timeLimit: Number(timeLimit) || 0,
-      type: type === "MIXED" ? "QUIZ" : type, // tạm gán QUIZ nếu mixed
+      type: type === "MIXED" ? "QUIZ" : type,
       attachmentUrl: file ? file.name : null,
       maxScore: Number(maxScore) || totalPoints || 0,
       isPublished,
       allowLateSubmission,
       latePenalty: Number(latePenalty) || 0,
-      isAutoGraded: isAutoGraded,
-      // createdAt/updatedAt do BE gán
-      questions: questions.map((q, idx) => ({
-        questionText: q.questionText,
-        points: Number(q.points) || 0,
-        questionType: q.questionType, // MULTIPLE_CHOICE | ESSAY
-        questionOrder: idx + 1,
-        options:
-          q.questionType === "MULTIPLE_CHOICE"
-            ? q.options.map((o, jdx) => ({
-                optionText: o.optionText,
-                isCorrect: !!o.isCorrect,
-                optionOrder: jdx + 1,
-                explanation: o.explanation || "",
-              }))
-            : [],
-        answers: [], // tạo bài thi -> chưa có câu trả lời
-      })),
     };
   }
 
-  async function handleSubmit() {
-    // Validation nhẹ
+  function buildQuestionsPayload() {
+    return questions.map((q, idx) => ({
+      questionText: q.questionText,
+      points: Number(q.points) || 0,
+      questionType: q.questionType,
+      questionOrder: idx + 1,
+      options:
+        q.questionType === "MULTIPLE_CHOICE"
+          ? q.options.map((o, jdx) => ({
+              optionText: o.optionText,
+              isCorrect: !!o.isCorrect,
+              optionOrder: jdx + 1,
+              explanation: o.explanation || "",
+            }))
+          : [],
+    }));
+  }
+
+  async function handleSubmit(e) {
+    e?.preventDefault();
+
     if (!title.trim()) {
       alert("Vui lòng nhập tiêu đề bài thi");
       return;
     }
-    if (questions.length === 0 && tab === "build") {
-      const ok = confirm("Bài thi chưa có câu hỏi. Bạn vẫn muốn lưu?");
-      if (!ok) return;
-    }
 
     try {
-      const payload = buildPayload();
-      const token = localStorage.getItem("token");
-      const res = await axios.post("/api/assignments", payload, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const assignment = await assignmentService.addAssignment({
+        ...buildAssignmentPayload(),
+        classSubject: { classSubjectId: classContext.classId },
+        teacher: { userId: teacherId },
       });
-      onCreated?.(res.data);
+      // console.log("assignment:", assignment);
+      if (questions.length > 0) {
+        for (const q of buildQuestionsPayload()) {
+          await questionService.addQuestion(assignment.assignmentId, q);
+        }
+      }
+      onCreated?.(assignment);
+      setTitle("");
+      setDescription("");
+      setDueDate("");
+      setTimeLimit(45);
+      setType("QUIZ");
+      setMaxScore(0);
+      setIsPublished(false);
+      setAllowLateSubmission(false);
+      setLatePenalty(0);
+      setFile(null);
+      setTab("build");
+      setQuestions([]);
       close();
     } catch (e) {
       console.error(e);
@@ -231,12 +230,12 @@ export default function CreateAssignmentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-2xl shadow-xl overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 w-full max-w-7xl rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
             <FilePlus2 className="text-blue-600" size={20} />
-            <h2 className="text-lg font-semibold">Tạo bài thi</h2>
+            <h2 className="text-lg font-semibold">Tạo bài tập/bài thi</h2>
             {classContext?.className && (
               <span className="ml-2 text-sm text-gray-500 flex items-center gap-1">
                 <BookOpen size={16} /> {classContext.className}
@@ -280,143 +279,135 @@ export default function CreateAssignmentModal({
 
         {/* Content */}
         <div className="px-5 pb-5">
-          {/* Meta */}
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-gray-600">Tiêu đề</label>
-              <input
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ví dụ: Kiểm tra giữa kỳ – Phần 1"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 flex items-center gap-1">
-                <CalendarClock size={14} /> Hạn nộp
-              </label>
-              <input
-                type="datetime-local"
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 flex items-center gap-1">
-                <Clock size={14} /> Thời gian (phút)
-              </label>
-              <input
-                type="number"
-                min={0}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={timeLimit}
-                onChange={(e) => setTimeLimit(Number(e.target.value))}
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 flex items-center gap-1">
-                <Settings2 size={14} /> Loại bài thi
-              </label>
-              <select
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-              >
-                <option value="QUIZ">Trắc nghiệm</option>
-                <option value="ESSAY">Tự luận</option>
-                <option value="MIXED">Kết hợp</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600 flex items-center gap-1">
-                <CheckCircle2 size={14} /> Chấm tự động (trắc nghiệm)
-              </label>
-              <select
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={isAutoGraded ? "yes" : "no"}
-                onChange={(e) => setIsAutoGraded(e.target.value === "yes")}
-              >
-                <option value="yes">Bật</option>
-                <option value="no">Tắt</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">Điểm tối đa</label>
-              <input
-                type="number"
-                min={0}
-                className="mt-1 w-full rounded-xl border px-3 py-2"
-                value={maxScore}
-                onChange={(e) => setMaxScore(Number(e.target.value))}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Tổng điểm câu hỏi hiện tại: {totalPoints}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-600">Công khai</label>
-              <input
-                type="checkbox"
-                className="accent-blue-600"
-                checked={isPublished}
-                onChange={(e) => setIsPublished(e.target.checked)}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-gray-600">Cho nộp trễ</label>
-              <input
-                type="checkbox"
-                className="accent-blue-600"
-                checked={allowLateSubmission}
-                onChange={(e) => setAllowLateSubmission(e.target.checked)}
-              />
-              <span className="text-sm text-gray-600">Phạt (%)</span>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                className="w-24 rounded-xl border px-3 py-1"
-                value={latePenalty}
-                onChange={(e) => setLatePenalty(Number(e.target.value))}
-              />
-            </div>
-          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left column: Meta info */}
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600">Tiêu đề</label>
+                <input
+                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ví dụ: Kiểm tra giữa kỳ – Phần 1"
+                />
+              </div>
 
-          {/* Tab: Build */}
-          {tab === "build" && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold flex items-center gap-2">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                    <CalendarClock size={14} /> Hạn nộp
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="w-40">
+                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                    <Clock size={14} /> Thời gian (phút)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600 flex items-center gap-1">
+                  <Settings2 size={14} /> Loại bài
+                </label>
+                <select
+                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                >
+                  <option value="QUIZ">Trắc nghiệm</option>
+                  <option value="ESSAY">Tự luận</option>
+                  <option value="MIXED">Kết hợp</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">
+                  Điểm tối đa của bài tập/bài thi
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  value={maxScore}
+                  onChange={(e) => setMaxScore(Number(e.target.value))}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Tổng điểm câu hỏi hiện tại: {totalPoints}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-4">
+                <label className="flex items-center gap-1 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    className="accent-blue-600"
+                    checked={isPublished}
+                    onChange={(e) => setIsPublished(e.target.checked)}
+                  />
+                  Công khai
+                </label>
+                <label className="flex items-center gap-1 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    className="accent-blue-600"
+                    checked={allowLateSubmission}
+                    onChange={(e) => setAllowLateSubmission(e.target.checked)}
+                  />
+                  Cho nộp trễ
+                </label>
+              </div>
+            </div>
+
+            {/* Right column: Question builder */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold flex items-center gap-2 text-gray-700">
                   <ListChecks size={18} /> Câu hỏi
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => addQuestion("MULTIPLE_CHOICE")}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                   >
-                    <Plus size={16} /> Thêm trắc nghiệm
+                    <Plus size={16} /> Trắc nghiệm
                   </button>
                   <button
                     onClick={() => addQuestion("ESSAY")}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                   >
-                    <Plus size={16} /> Thêm tự luận
+                    <Plus size={16} /> Tự luận
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="max-h-80 overflow-y-auto pr-2 space-y-4">
                 {questions.length === 0 && (
-                  <div className="rounded-xl border border-dashed p-6 text-center text-gray-500">
+                  <div className="rounded-xl border border-dashed p-6 text-center text-gray-400">
                     Chưa có câu hỏi nào.
                   </div>
                 )}
 
                 {questions.map((q) => (
-                  <div key={q.tempId} className="rounded-2xl border p-4">
+                  <div
+                    key={q.tempId}
+                    className="rounded-xl border bg-white shadow-sm p-4 space-y-3"
+                  >
                     <div className="flex items-start gap-3">
-                      <div className="flex-1 space-y-2">
+                      <div className="flex-1 flex flex-col gap-2">
                         <div className="flex items-center gap-3">
                           <select
                             className="rounded-lg border px-2 py-1 text-sm"
@@ -443,7 +434,7 @@ export default function CreateAssignmentModal({
                           <input
                             type="number"
                             min={0}
-                            className="w-28 rounded-lg border px-3 py-2"
+                            className="w-24 rounded-lg border px-3 py-2 text-sm"
                             value={q.points}
                             onChange={(e) =>
                               updateQuestion(q.tempId, {
@@ -458,14 +449,13 @@ export default function CreateAssignmentModal({
                             {q.options.map((o) => (
                               <div
                                 key={o.tempId}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg"
                               >
                                 <input
                                   type="checkbox"
                                   className="accent-blue-600"
                                   checked={!!o.isCorrect}
-                                  title="Đáp án đúng"
-                                  onChange={(e) => {
+                                  onChange={(e) =>
                                     updateQuestion(q.tempId, {
                                       options: q.options.map((x) =>
                                         x.tempId === o.tempId
@@ -475,29 +465,28 @@ export default function CreateAssignmentModal({
                                             }
                                           : x
                                       ),
-                                    });
-                                  }}
+                                    })
+                                  }
                                 />
                                 <input
                                   className="flex-1 rounded-lg border px-3 py-2"
                                   placeholder="Nội dung phương án"
                                   value={o.optionText}
-                                  onChange={(e) => {
+                                  onChange={(e) =>
                                     updateQuestion(q.tempId, {
                                       options: q.options.map((x) =>
                                         x.tempId === o.tempId
                                           ? { ...x, optionText: e.target.value }
                                           : x
                                       ),
-                                    });
-                                  }}
+                                    })
+                                  }
                                 />
                                 <button
-                                  className="p-2 rounded-lg hover:bg-gray-100"
+                                  className="p-2 rounded-lg hover:bg-gray-200"
                                   onClick={() =>
                                     removeOption(q.tempId, o.tempId)
                                   }
-                                  title="Xóa phương án"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -505,7 +494,7 @@ export default function CreateAssignmentModal({
                             ))}
                             <button
                               onClick={() => addOption(q.tempId)}
-                              className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+                              className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                             >
                               <Plus size={16} /> Thêm phương án
                             </button>
@@ -513,14 +502,14 @@ export default function CreateAssignmentModal({
                         )}
 
                         {q.questionType === "ESSAY" && (
-                          <div className="text-sm text-gray-500 flex items-center gap-2">
+                          <div className="text-sm text-gray-500 flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
                             <FileText size={16} /> Câu hỏi tự luận — học sinh sẽ
                             nhập câu trả lời dạng văn bản.
                           </div>
                         )}
                       </div>
                       <button
-                        className="p-2 rounded-lg hover:bg-gray-100"
+                        className="p-2 rounded-lg hover:bg-gray-200"
                         onClick={() => removeQuestion(q.tempId)}
                       >
                         <Trash2 size={18} />
@@ -530,47 +519,7 @@ export default function CreateAssignmentModal({
                 ))}
               </div>
             </div>
-          )}
-
-          {/* Tab: Upload */}
-          {tab === "upload" && (
-            <div className="mt-6">
-              <div className="rounded-2xl border border-dashed p-6 text-center">
-                <UploadCloud className="mx-auto mb-2" />
-                <p className="text-sm text-gray-600">
-                  Tải file theo mẫu của hệ thống (xlsx/csv). Tạm thời file sẽ
-                  không được tải lên máy chủ tự động (chưa có BE upload). Bạn
-                  vẫn có thể đính kèm tên file vào assignment.
-                </p>
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  <input
-                    type="file"
-                    accept=".xlsx,.csv,.xls"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                  />
-                </div>
-                {file && (
-                  <p className="mt-2 text-sm text-gray-700">
-                    Đã chọn: <span className="font-medium">{file.name}</span>
-                  </p>
-                )}
-                <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <HelpCircle size={16} />
-                  <span>
-                    Gợi ý: Bạn có thể tạo trực tiếp ở tab bên cạnh để xem trước
-                    cấu trúc rõ ràng hơn.
-                  </span>
-                </div>
-                <textarea
-                  className="mt-4 w-full rounded-xl border px-3 py-2 text-sm"
-                  rows={3}
-                  placeholder="Ghi chú/miêu tả cho file bài thi (tuỳ chọn)"
-                  value={uploadNote}
-                  onChange={(e) => setUploadNote(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -591,10 +540,11 @@ export default function CreateAssignmentModal({
               Huỷ
             </button>
             <button
+              type="button"
               className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
               onClick={handleSubmit}
             >
-              Lưu bài thi
+              Lưu bài
             </button>
           </div>
         </div>
@@ -602,19 +552,3 @@ export default function CreateAssignmentModal({
     </div>
   );
 }
-
-/* =============================
- * QUICK INTEGRATION (ví dụ)
- * =============================
- * import CreateAssignmentModal from "./CreateAssignmentModal";
- *
- * const [open, setOpen] = useState(false);
- * <button onClick={() => setOpen(true)}>Tạo bài thi</button>
- * <CreateAssignmentModal
- *   isOpen={open}
- *   onClose={() => setOpen(false)}
- *   defaultType="QUIZ"
- *   classContext={{ classId: selectedClass, className: cls.clazz?.name, subjectName: cls.subject?.name }}
- *   onCreated={(a) => console.log("Đã tạo:", a)}
- * />
- */

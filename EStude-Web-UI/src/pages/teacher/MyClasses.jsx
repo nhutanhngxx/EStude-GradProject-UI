@@ -117,8 +117,8 @@ export default function MyClasses() {
                     setIsCreateOpen(true);
                   }}
                 >
-                  <FlaskConical size={16} />
-                  <span>Tạo bài thi</span>
+                  <FileText size={16} />
+                  <span>Tạo bài tập/bài thi</span>
                 </button>
               </div>
             </div>
