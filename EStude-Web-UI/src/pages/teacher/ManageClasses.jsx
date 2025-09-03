@@ -87,6 +87,7 @@ const ManageClasses = () => {
           }));
         return { ...cls, subjects: subjectsForClass };
       });
+      console.log("[DEBUG] classesWithSubjects:", classesWithSubjects);
       setClasses(classesWithSubjects);
     };
     fetchClassesWithSubjects();

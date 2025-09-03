@@ -69,10 +69,9 @@ const StudentManagement = ({ classId }) => {
 
     try {
       // Enroll từng học sinh -> API trả về enrollment object
-      const enrollments = await Promise.all(
-        newStudentIds.map((userId) =>
-          enrollmentService.enrollStudent({ classId, studentId: userId })
-        )
+      const enrollments = await enrollmentService.enrollStudentsBatch(
+        classId,
+        newStudentIds
       );
 
       // Convert dữ liệu API về đúng format để render

@@ -1,7 +1,7 @@
 import config from "../config/config.js";
 
 const endpoints = {
-  enrollStudent: "/api/enrollments",
+  enrollBatch: "/api/enrollments",
   unenrollStudent: "/api/enrollments/{enrollmentId}",
   getEnrollmentsByClass: "/api/classes/{classId}/enrollments",
 };
@@ -10,7 +10,7 @@ const enrollmentService = {
   getAllEnrollments: async () => {
     try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.enrollStudent}`,
+        `${config.BASE_URL}${endpoints.enrollBatch}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -27,21 +27,20 @@ const enrollmentService = {
     }
   },
 
-  enrollStudent: async (enrollment) => {
+  enrollStudentsBatch: async (classId, studentIds) => {
     try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.enrollStudent}`,
+        `${config.BASE_URL}${endpoints.enrollBatch}?classId=${classId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(enrollment),
+          body: JSON.stringify(studentIds), // BE nhận mảng studentIds
         }
       );
       if (!response.ok) {
         throw new Error("Gán học sinh vào lớp thất bại");
       }
-      const result = await response.json();
-      return result;
+      return await response.json(); // BE trả về List<Enrollment>
     } catch (error) {
       console.error("Lỗi khi gán học sinh vào lớp:", error);
       return null;
