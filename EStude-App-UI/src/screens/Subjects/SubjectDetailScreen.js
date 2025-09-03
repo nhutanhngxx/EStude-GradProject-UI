@@ -1,43 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
+import { AuthContext } from "../../contexts/AuthContext";
+import assignmentService from "../../services/assignmentService";
 
-export default function SubjectDetailScreen({ route }) {
+// import gradeService from "../../services/gradeService";
+// import attendanceService from "../../services/attendanceService";
+// import notificationService from "../../services/notificationService";
+
+export default function SubjectDetailScreen({ route, navigation }) {
   const { subject } = route.params;
+  const { user } = useContext(AuthContext);
+
   const [activeTab, setActiveTab] = useState("Điểm");
+  const [loading, setLoading] = useState(false);
+  const [grade, setGrade] = useState(null);
+  const [attendance, setAttendance] = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
   const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        if (activeTab === "Bài tập") {
+          const classId = subject.classSubjects?.[0]?.class?.classId;
+          if (classId) {
+            const res = await assignmentService.getAssignmentsByClass(classId);
+            setAssignments(res);
+          }
+        }
+      } catch (e) {
+        console.log("Load error:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [activeTab]);
 
   return (
     <View style={styles.safe}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingBottom: 24,
+        }}
       >
         {/* Header môn học */}
         <View style={styles.headerCard}>
-          <Text style={styles.subjectName}>
-            {subject.name} - {subject.subjectId}
-          </Text>
-          <Text style={styles.description}>{subject.description}</Text>
-
-          {/* Danh sách lớp + GV */}
-          {subject.classSubjects.map((cs) => (
-            <View key={cs.classSubjectId} style={styles.classRow}>
-              <Text style={styles.className}>
-                {cs.class.name} ({cs.class.term})
-              </Text>
-              <Text style={styles.teacherName}>
-                Giáo viên/Giảng viên: {cs.teacher.fullName}
-              </Text>
-            </View>
-          ))}
+          <Text style={styles.subjectName}>{subject.name}</Text>
+          <Text style={styles.description}> {subject.description} </Text>
         </View>
-
         {/* Tab row */}
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
@@ -57,202 +79,165 @@ export default function SubjectDetailScreen({ route }) {
             </TouchableOpacity>
           ))}
         </View>
-
-        {/* Nội dung tab */}
-        <View style={styles.tabContent}>
-          {activeTab === "Điểm" && (
-            <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Kết quả học tập</Text>
-
-              {/* Bảng điểm theo cột dọc */}
-              <View style={styles.verticalTable}>
-                {/* Giữa kỳ */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Giữa kỳ</Text>
-                  <Text style={styles.rowValue}>
-                    {subject.subjectGrade?.midtermScore ?? "-"}
-                  </Text>
-                </View>
-
-                {/* Thường kỳ 1-3 */}
-                {(subject.subjectGrade?.regularScores ?? ["-", "-", "-"]).map(
-                  (v, i) => (
-                    <View style={styles.row} key={`reg${i}`}>
-                      <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
-                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
-                    </View>
-                  )
+        {/* Nội dung */}
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#007bff"
+            style={{
+              marginTop: 20,
+            }}
+          />
+        ) : (
+          <View style={styles.tabContent}>
+            {activeTab === "Điểm" && (
+              <View style={styles.cardContainer}>
+                <Text style={styles.cardTitle}> Kết quả học tập </Text>
+                {grade ? (
+                  <>
+                    <Text> Giữa kỳ: {grade.midtermScore} </Text>
+                    <Text> Cuối kỳ: {grade.finalScore} </Text>
+                    <Text> Tổng kết: {grade.actualAverage} </Text>
+                  </>
+                ) : (
+                  <Text style={styles.emptyText}> Chưa có điểm </Text>
                 )}
-
-                {/* Thực hành 1-3 */}
-                {(subject.subjectGrade?.practiceScores ?? ["-", "-", "-"]).map(
-                  (v, i) => (
-                    <View style={styles.row} key={`prac${i}`}>
-                      <Text style={styles.rowLabel}>Thực hành {i + 1}</Text>
-                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
-                    </View>
-                  )
-                )}
-
-                {/* Cuối kỳ */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Cuối kỳ</Text>
-                  <Text style={styles.rowValue}>
-                    {subject.subjectGrade?.finalScore ?? "-"}
-                  </Text>
-                </View>
-
-                {/* Tổng kết */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Tổng kết</Text>
-                  <Text style={styles.rowValue}>
-                    {subject.subjectGrade?.actualAverage ?? "-"}
-                  </Text>
-                </View>
-
-                {/* Xếp loại */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Xếp loại</Text>
-                  <Text style={styles.rowValue}>
-                    {subject.subjectGrade?.gradeClassification ?? "-"}
-                  </Text>
-                </View>
-
-                {/* Đạt/Không đạt */}
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>Đạt/Không đạt</Text>
-                  <Text style={styles.rowValue}>
-                    {subject.subjectGrade?.passed
-                      ? "Đạt ✅"
-                      : subject.subjectGrade?.passed === false
-                      ? "Không đạt ❌"
-                      : "-"}
-                  </Text>
-                </View>
               </View>
-            </View>
-          )}
-          {activeTab === "Điểm danh" && (
-            <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Tình hình điểm danh</Text>
-              {subject.attendanceRecords?.length > 0 ? (
-                subject.attendanceRecords.map((ar) => (
-                  <View key={ar.attendanceId} style={styles.recordCard}>
-                    <Text style={styles.recordDate}>
-                      {ar.timestamp.slice(0, 10)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.recordStatus,
-                        ar.status === "Vắng" && { color: "#FF4D4F" },
-                        ar.status === "Có mặt" && { color: "#52C41A" },
-                      ]}
+            )}
+            {activeTab === "Điểm danh" && (
+              <View style={styles.cardContainer}>
+                <Text style={styles.cardTitle}> Tình hình điểm danh </Text>
+                {attendance.length > 0 ? (
+                  attendance.map((ar) => (
+                    <View key={ar.attendanceId} style={styles.recordCard}>
+                      <Text> {ar.timestamp.slice(0, 10)} </Text>
+                      <Text> {ar.status} </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>
+                    Chưa có dữ liệu điểm danh
+                  </Text>
+                )}
+              </View>
+            )}
+            {activeTab === "Bài tập" && (
+              <View style={styles.cardContainer}>
+                <Text style={styles.cardTitle}>Danh sách bài tập</Text>
+                {assignments.length > 0 ? (
+                  assignments.map((as) => (
+                    <TouchableOpacity
+                      key={as.assignmentId}
+                      style={styles.assignmentItem}
+                      onPress={() =>
+                        navigation.navigate("ChiTietBaiTap", {
+                          assignment: as,
+                        })
+                      }
                     >
-                      {ar.status}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Chưa có dữ liệu điểm danh</Text>
-              )}
-            </View>
-          )}
-          {activeTab === "Bài tập" && (
-            <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Danh sách bài tập</Text>
-              {subject.assignments?.length > 0 ? (
-                subject.assignments.map((as) => (
-                  <View key={as.assignmentId} style={styles.recordCard}>
-                    <Text style={styles.recordTitle}>{as.title}</Text>
-                    <Text
-                      style={[
-                        styles.recordStatus,
-                        as.submissions?.length > 0
-                          ? { color: "#52C41A" }
-                          : { color: "#FF4D4F" },
-                      ]}
-                    >
-                      {as.submissions?.length > 0 ? "Hoàn thành" : "Chưa nộp"}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Chưa có bài tập</Text>
-              )}
-            </View>
-          )}
-          {activeTab === "Thông báo" && (
-            <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Thông báo gần đây</Text>
-              {subject.notifications?.length > 0 ? (
-                subject.notifications.map((nt) => (
-                  <View key={nt.notificationId} style={styles.recordCard}>
-                    <Text style={styles.recordDate}>
-                      {nt.sentAt.slice(0, 10)}
-                    </Text>
-                    <Text style={styles.recordMessage}>{nt.message}</Text>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.emptyText}>Chưa có thông báo</Text>
-              )}
-            </View>
-          )}
-        </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.assignmentTitle}>{as.title}</Text>
+                        <Text style={styles.assignmentDeadline}>
+                          Hạn nộp:{" "}
+                          {new Date(as.dueDate).toLocaleString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          })}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.assignmentStatus,
+                          as.status === "Đã nộp" ? styles.done : styles.pending,
+                        ]}
+                      >
+                        {as.status}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}>Chưa có bài tập</Text>
+                )}
+              </View>
+            )}
+
+            {activeTab === "Thông báo" && (
+              <View style={styles.cardContainer}>
+                <Text style={styles.cardTitle}> Thông báo gần đây </Text>
+                {notifications.length > 0 ? (
+                  notifications.map((nt) => (
+                    <View key={nt.notificationId} style={styles.recordCard}>
+                      <Text> {new Date(nt.sentAt).toLocaleDateString()} </Text>
+                      <Text> {nt.message} </Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.emptyText}> Chưa có thông báo </Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { flex: 1, padding: 16 },
-
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   headerCard: {
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
   },
-  subjectName: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  subjectCode: { fontSize: 14, color: "#666", marginTop: 4 },
-  description: { fontSize: 13, color: "#555", marginTop: 2 },
-  classRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 4,
+  subjectName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
   },
-  className: { fontSize: 14, color: "#333" },
-  teacherName: { fontSize: 13, color: "#007BFF" },
-
+  description: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 2,
+  },
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 8,
     marginBottom: 12,
-    overflow: "hidden",
   },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: "center" },
-  activeTab: { backgroundColor: "#007BFF" },
-  tabText: { fontSize: 14, color: "#333" },
-  activeTabText: { color: "#fff", fontWeight: "bold" },
-
-  tabContent: {},
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  activeTab: {
+    backgroundColor: "#007BFF",
+  },
+  tabText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  activeTabText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
   cardContainer: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
   },
   cardTitle: {
     fontSize: 16,
@@ -260,46 +245,42 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#333",
   },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  infoLabel: { fontWeight: "600", color: "#666" },
-  infoValue: { color: "#333" },
-  verticalTable: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  rowLabel: { fontWeight: "600", color: "#333" },
-  rowValue: { color: "#555" },
-  recordCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+  assignmentItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    elevation: 1,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
-  recordDate: { fontSize: 13, color: "#666" },
-  recordStatus: { fontSize: 14, fontWeight: "600" },
-  recordTitle: { fontSize: 14, fontWeight: "600", color: "#333" },
-  recordMessage: { fontSize: 14, color: "#333", flex: 1, marginLeft: 8 },
-  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
+  assignmentTitle: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  assignmentDeadline: {
+    fontSize: 13,
+    color: "#666",
+    marginTop: 2,
+  },
+  assignmentStatus: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  done: {
+    color: "#27ae60",
+  },
+  pending: {
+    color: "#e74c3c",
+  },
+  recordCard: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    marginTop: 12,
+  },
 });
