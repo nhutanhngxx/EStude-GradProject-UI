@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 export default function ChiTietBaiTapScreen({ route, navigation }) {
   const { assignment } = route.params;
+  console.log("Assignment detail:", assignment);
+
   const isQuiz = assignment.type === "QUIZ";
 
   return (
@@ -23,14 +25,14 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
       </Text>
 
       {/* Trạng thái */}
-      <Text style={styles.info}>
+      {/* <Text style={styles.info}>
         Trạng thái:{" "}
         <Text
           style={assignment.status === "Đã nộp" ? styles.done : styles.pending}
         >
           {assignment.status || "Chưa nộp"}
         </Text>
-      </Text>
+      </Text> */}
 
       {/* Loại bài tập */}
       <Text style={styles.info}>

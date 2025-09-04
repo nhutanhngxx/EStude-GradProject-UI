@@ -133,6 +133,12 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.infoLabel}>Email</Text>
                 <Text style={styles.infoValue}>{user?.email || "Chưa có"}</Text>
               </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Số điện thoại</Text>
+                <Text style={styles.infoValue}>
+                  {user?.numberPhone || "Chưa có"}
+                </Text>
+              </View>
             </View>
 
             {/* Card Tóm tắt học tập */}

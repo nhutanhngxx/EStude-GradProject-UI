@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+
+import submissionService from "../../services/submissionService";
+import { AuthContext } from "../../contexts/AuthContext";
 
 const themeColors = {
   primary: "#2ecc71",
@@ -19,6 +22,7 @@ const themeColors = {
 
 export default function ExamDoingScreen({ navigation, route }) {
   const { exam } = route.params;
+  const { user } = useContext(AuthContext);
   const [timeLeft, setTimeLeft] = useState(exam.timeLimit * 60 || 15 * 60);
   const [answers, setAnswers] = useState({});
   const [activeTab, setActiveTab] = useState("Doing");
@@ -59,13 +63,38 @@ export default function ExamDoingScreen({ navigation, route }) {
     });
   };
 
-  const handleSubmit = () => {
-    Alert.alert("Nộp bài", "Bài thi đã nộp!", [
-      {
-        text: "OK",
-        onPress: () => navigation.goBack(),
-      },
-    ]);
+  const handleSubmit = async () => {
+    try {
+      const submission = {
+        assignmentId: exam.assignmentId,
+        studentId: user.userId,
+        content: "Nộp bài",
+        answers: Object.entries(answers).flatMap(([questionId, selected]) => {
+          return selected.map((optText) => {
+            const option = exam.questions
+              .find((q) => q.questionId === Number(questionId))
+              .options.find((o) => o.optionText === optText);
+            return {
+              questionId: Number(questionId),
+              chosenOptionId: option.optionId,
+            };
+          });
+        }),
+      };
+
+      console.log("submission:", JSON.stringify(submission, null, 2));
+
+      const result = await submissionService.addSubmission(submission);
+
+      if (result) {
+        Alert.alert("Thành công", "Bài thi đã được nộp!", [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
+      }
+    } catch (error) {
+      Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
+      console.error(error);
+    }
   };
 
   return (
