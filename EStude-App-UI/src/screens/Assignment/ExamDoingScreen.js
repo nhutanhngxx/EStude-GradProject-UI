@@ -72,9 +72,9 @@ export default function ExamDoingScreen({ navigation, route }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.subject}> {exam.classSubject.clazz.name} </Text>
-        <Text style={styles.examTitle}> {exam.title} </Text>
-        <Text style={styles.timer}> ⏰ {formatTime(timeLeft)} </Text>
+        {/* <Text style={styles.subject}>{exam.classSubject.clazz.name}</Text> */}
+        <Text style={styles.examTitle}>{exam.title}</Text>
+        <Text style={styles.timer}>⏰ {formatTime(timeLeft)}</Text>
       </View>
       {/* Tabs */}
       <View style={styles.tabRow}>
