@@ -29,7 +29,6 @@ export default function CreateAssignmentModal({
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
 
-  // --- Assignment meta ---
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -40,7 +39,6 @@ export default function CreateAssignmentModal({
   const [allowLateSubmission, setAllowLateSubmission] = useState(false);
   const [latePenalty, setLatePenalty] = useState(0);
 
-  // --- Questions state ---
   const [questions, setQuestions] = useState([]);
 
   // --- Upload state ---
@@ -196,10 +194,18 @@ export default function CreateAssignmentModal({
       return;
     }
 
+    // console.log("classContext:", classContext);
+    // console.log("buildAssignmentPayload:", buildAssignmentPayload());
+
     try {
+      // Nếu chưa điền câu hỏi không cho add
+      if (questions.length === 0) {
+        alert("Vui lòng thêm ít nhất 1 câu hỏi");
+        return;
+      }
       const assignment = await assignmentService.addAssignment({
         ...buildAssignmentPayload(),
-        classSubject: { classSubjectId: classContext.classId },
+        classSubject: { classSubjectId: classContext.classSubjectId },
         teacher: { userId: teacherId },
       });
       // console.log("assignment:", assignment);
