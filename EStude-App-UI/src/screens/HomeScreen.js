@@ -12,23 +12,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthContext } from "../contexts/AuthContext";
 
-const student = {
-  userId: 101,
-  fullName: "Nguyễn Nhựt Anh",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  studentCode: "S12345",
-  class: { classId: 10, name: "12A3", term: "2025-2026", classSize: 42 },
-  school: {
-    schoolId: 1,
-    schoolCode: "IUH001",
-    schoolName: "Đại học Công nghiệp TP.HCM",
-  },
+const mockStudentData = {
   gpa: 8.7,
   rank: 5,
   totalStudents: 42,
   passedCredits: 85,
   requiredCredits: 120,
   subjectsAtRisk: 2,
+  avatar: "https://i.pravatar.cc/150?img=12",
+  class: { classId: 10, name: "12A3", term: "2025-2026", classSize: 42 },
 };
 
 const classSubject = {
@@ -80,13 +72,20 @@ const ProgressBar = ({ value }) => {
 
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
-  // console.log("User: ", user);
+  console.log("User: ", user);
 
-  const creditPercent = Math.round(
-    (student.passedCredits / student.requiredCredits) * 100
-  );
+  // Avatar: lấy từ user nếu có, nếu không thì lấy mock
+  const avatarUri = user.avatarPath ? user.avatarPath : mockStudentData.avatar;
 
-  // Lấy lịch học hôm nay từ schedule
+  // Dữ liệu học tập
+  const gpa = mockStudentData.gpa;
+  const rank = mockStudentData.rank;
+  const totalStudents = mockStudentData.totalStudents;
+  const passedCredits = mockStudentData.passedCredits;
+  const requiredCredits = mockStudentData.requiredCredits;
+  const creditPercent = Math.round((passedCredits / requiredCredits) * 100);
+
+  // Lịch học hôm nay từ schedule mock
   const todayPlan = classSubject.schedule.map((s) => ({
     id: s.scheduleId.toString(),
     time: `${s.startPeriod} - ${s.endPeriod}`,
@@ -113,7 +112,7 @@ export default function HomeStudentScreen({ navigation }) {
               Nơi lưu giữ hành tri tri thức trẻ
             </Text>
           </View>
-          <Image source={{ uri: student.avatar }} style={styles.avatar} />
+          <Image source={{ uri: avatarUri }} style={styles.avatar} />
         </View>
 
         {/* Tác vụ nhanh */}
@@ -165,17 +164,17 @@ export default function HomeStudentScreen({ navigation }) {
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Điểm TB</Text>
-              <Text style={styles.statValue}>{student.gpa.toFixed(2)}</Text>
+              <Text style={styles.statValue}>{gpa.toFixed(2)}</Text>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Thứ hạng</Text>
-              <Text style={styles.statValue}>#{student.rank}</Text>
-              <Text style={styles.statNote}>trong {student.totalStudents}</Text>
+              <Text style={styles.statValue}>#{rank}</Text>
+              <Text style={styles.statNote}>trong {totalStudents}</Text>
             </View>
             <View style={styles.stat}>
               <Text style={styles.statLabel}>Tín chỉ</Text>
               <Text style={styles.statValue}>
-                {student.passedCredits}/{student.requiredCredits}
+                {passedCredits}/{requiredCredits}
               </Text>
             </View>
           </View>

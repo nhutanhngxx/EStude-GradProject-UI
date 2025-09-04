@@ -1,42 +1,67 @@
-// ProfileScreen.js
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
+  SafeAreaView,
   StatusBar,
-  TextInput,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  ScrollView,
+  StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons as Icon } from "@expo/vector-icons";
+import Icon from "react-native-vector-icons/Ionicons";
+import { AuthContext } from "../contexts/AuthContext";
+import SubjectListScreen from "../screens/Subjects/SubjectListScreen";
 
 export default function ProfileScreen({ navigation }) {
-  const [editing, setEditing] = useState(false);
-  const [email, setEmail] = useState("sarah.johnson@school.edu");
+  const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Tổng quan");
   const tabs = ["Tổng quan", "Các môn học", "Lịch sử hoạt động"];
+
+  const activities = [
+    {
+      id: "1",
+      title: "Assignment 1: Algebra",
+      details: "Advanced Mathematics • Aug 10, 2024",
+      status: "Submitted",
+      color: "#4CAF50",
+    },
+    {
+      id: "2",
+      title: "Quiz: Physics",
+      details: "Physics • Aug 12, 2024",
+      status: "Late",
+      color: "#F44336",
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView
+
+      {/* Header: profile card + stats + tabs */}
+      <View
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        showsVerticalScrollIndicator={false}
       >
-        {/* Thông tin học sinh */}
+        {/* Profile Card */}
         <View style={styles.profileCard}>
           <Image
             source={{
-              uri: "https://i.pravatar.cc/150?img=12",
+              uri: user?.avatarPath || "https://i.pravatar.cc/150?img=12",
             }}
             style={styles.avatar}
           />
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>Nguyễn Văn A</Text>
-            <Text style={styles.infoText}>Lớp 12A1 • ID: HS00123</Text>
+            <Text style={styles.name}>{user?.fullName || "Chưa có tên"}</Text>
+            <Text style={styles.infoText}>
+              {user?.school?.schoolName || "Chưa có trường"}
+            </Text>
+            <Text style={styles.infoText}>
+              Mã học sinh: {user?.studentCode || "N/A"}
+            </Text>
           </View>
           <TouchableOpacity
             style={styles.settingsButton}
@@ -47,7 +72,7 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         </View>
 
-        {/* Thông số học tập */}
+        {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>3.85</Text>
@@ -63,7 +88,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Tab navigation */}
+        {/* Tabs */}
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
             <TouchableOpacity
@@ -82,230 +107,117 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+      </View>
 
-        {/* Nội dung tab */}
-        <View style={styles.tabContent}>
-          {activeTab === "Tổng quan" && (
-            <View>
-              {/* Card Thông tin cá nhân */}
-              <View style={styles.cardContainer}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-                  <TouchableOpacity onPress={() => setEditing(true)}>
-                    <Text style={styles.editButton}>Chỉnh sửa</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Email</Text>
-                  {editing ? (
-                    <TextInput
-                      style={styles.input}
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                    />
-                  ) : (
-                    <Text style={styles.infoValue}>{email}</Text>
-                  )}
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Phone</Text>
-                  <Text style={styles.infoValue}>+1 (555) 123-4567</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Date of Birth</Text>
-                  <Text style={styles.infoValue}>March 15, 2006</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Address</Text>
-                  <Text style={styles.infoValue}>
-                    123 Oak Street, Springfield, IL 62701
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Emergency Contact</Text>
-                  <Text style={styles.infoValue}>
-                    Mary Johnson - +1 (555) 987-6543
-                  </Text>
-                </View>
-
-                {editing && (
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={() => setEditing(false)}
-                  >
-                    <Text style={styles.saveButtonText}>Lưu</Text>
-                  </TouchableOpacity>
-                )}
+      {/* Nội dung tab */}
+      <View style={styles.tabContent}>
+        {/* Tab Tổng quan */}
+        {activeTab === "Tổng quan" && (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Card Thông tin cá nhân */}
+            <View style={styles.cardContainer}>
+              <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Ngày sinh</Text>
+                <Text style={styles.infoValue}>
+                  {user?.dob
+                    ? new Date(user.dob).toLocaleDateString("en-GB")
+                    : "Chưa có"}
+                </Text>
               </View>
-
-              {/* Card Academic Summary */}
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}>Academic Summary</Text>
-
-                <View style={styles.summaryRow}>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryValue}>3.7</Text>
-                    <Text style={styles.summaryLabel}>Current GPA</Text>
-                  </View>
-                  <View style={styles.summaryItem}>
-                    <Text style={styles.summaryValue}>#15</Text>
-                    <Text style={styles.summaryLabel}>Class Rank</Text>
-                  </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Enrollment Date</Text>
-                  <Text style={styles.infoValue}>9/1/2022</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Expected Graduation</Text>
-                  <Text style={styles.infoValue}>6/15/2026</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Class Size</Text>
-                  <Text style={styles.infoValue}>120 students</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Class Rank Progress</Text>
-                  <Text style={styles.infoValue}>Top 13% of class</Text>
-                </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Email</Text>
+                <Text style={styles.infoValue}>{user?.email || "Chưa có"}</Text>
               </View>
             </View>
-          )}
 
-          {activeTab === "Các môn học" && (
+            {/* Card Tóm tắt học tập */}
             <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Current Subjects</Text>
-              <Text style={styles.cardSubtitle}>Fall 2024 Semester</Text>
-
-              {[
-                {
-                  name: "Advanced Mathematics",
-                  teacher: "Mr. Johnson",
-                  credits: 4,
-                  grade: "A-",
-                },
-                {
-                  name: "AP Chemistry",
-                  teacher: "Dr. Smith",
-                  credits: 4,
-                  grade: "B+",
-                },
-                {
-                  name: "English Literature",
-                  teacher: "Ms. Davis",
-                  credits: 3,
-                  grade: "A",
-                },
-                {
-                  name: "AP Physics",
-                  teacher: "Dr. Wilson",
-                  credits: 4,
-                  grade: "A-",
-                },
-                {
-                  name: "World History",
-                  teacher: "Mr. Brown",
-                  credits: 3,
-                  grade: "B+",
-                },
-              ].map((subject, index) => (
-                <View key={index} style={styles.subjectItem}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.subjectName}>{subject.name}</Text>
-                    <Text style={styles.subjectDetails}>
-                      {subject.teacher} • {subject.credits} credits
-                    </Text>
-                  </View>
-                  <View style={styles.gradeContainer}>
-                    <Text style={styles.gradeText}>{subject.grade}</Text>
-                  </View>
+              <Text style={styles.cardTitle}>Tóm tắt học tập</Text>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryValue}>3.7</Text>
+                  <Text style={styles.summaryLabel}>GPA hiện tại</Text>
                 </View>
-              ))}
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryValue}>#15</Text>
+                  <Text style={styles.summaryLabel}>Xếp hạng lớp</Text>
+                </View>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Ngày nhập học</Text>
+                <Text style={styles.infoValue}>
+                  {user?.enrollmentDate
+                    ? new Date(user.enrollmentDate).toLocaleDateString("en-GB")
+                    : "Chưa có"}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Dự kiến tốt nghiệp</Text>
+                <Text style={styles.infoValue}>Chưa có</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Sĩ số lớp</Text>
+                <Text style={styles.infoValue}>120 học sinh</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Tiến trình xếp hạng</Text>
+                <Text style={styles.infoValue}>Top 13% của lớp</Text>
+              </View>
             </View>
-          )}
+          </ScrollView>
+        )}
 
-          {activeTab === "Lịch sử hoạt động" && (
-            <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Recent Submissions</Text>
+        {/* Tab Các môn học */}
+        {activeTab === "Các môn học" && (
+          <SubjectListScreen navigation={navigation} />
+        )}
 
-              {[
-                {
-                  title: "Assignment 1: Algebra",
-                  subject: "Advanced Mathematics",
-                  date: "Aug 10, 2024",
-                  status: "Submitted",
-                },
-                {
-                  title: "Lab Report: Chemical Reactions",
-                  subject: "AP Chemistry",
-                  date: "Aug 8, 2024",
-                  status: "Late",
-                },
-                {
-                  title: "Essay: Shakespeare Analysis",
-                  subject: "English Literature",
-                  date: "Aug 5, 2024",
-                  status: "Grading",
-                },
-                {
-                  title: "Project: Newton’s Laws",
-                  subject: "AP Physics",
-                  date: "Aug 3, 2024",
-                  status: "Submitted",
-                },
-              ].map((activity, index) => (
-                <View key={index} style={styles.activityItem}>
+        {/* Tab Lịch sử hoạt động */}
+        {activeTab === "Lịch sử hoạt động" && (
+          <FlatList
+            data={activities}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+            renderItem={({ item }) => (
+              <View style={styles.cardContainer}>
+                <View style={styles.activityItem}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.activityTitle}>{activity.title}</Text>
-                    <Text style={styles.activityDetails}>
-                      {activity.subject} • {activity.date}
-                    </Text>
+                    <Text style={styles.activityTitle}>{item.title}</Text>
+                    <Text style={styles.activityDetails}>{item.details}</Text>
                   </View>
                   <View
                     style={[
                       styles.statusBadge,
-                      activity.status === "Submitted" && {
-                        backgroundColor: "#4CAF5020",
-                        borderColor: "#4CAF50",
-                      },
-                      activity.status === "Late" && {
-                        backgroundColor: "#FF572220",
-                        borderColor: "#FF5722",
-                      },
-                      activity.status === "Grading" && {
-                        backgroundColor: "#FFC10720",
-                        borderColor: "#FFC107",
+                      {
+                        backgroundColor: `${item.color}20`,
+                        borderColor: item.color,
                       },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.statusText,
-                        activity.status === "Submitted" && { color: "#4CAF50" },
-                        activity.status === "Late" && { color: "#FF5722" },
-                        activity.status === "Grading" && { color: "#FFC107" },
-                      ]}
-                    >
-                      {activity.status}
+                    <Text style={[styles.statusText, { color: item.color }]}>
+                      {item.status}
                     </Text>
                   </View>
                 </View>
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+              </View>
+            )}
+          />
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { flex: 1, padding: 16 },
+  container: { paddingHorizontal: 16 },
+
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -346,6 +258,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 14,
   },
+
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -373,6 +286,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
   },
+
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -396,33 +310,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  editButton: {
-    color: "#4CAF50",
-    fontWeight: "600",
-  },
-  input: {
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
+
+  tabContent: {
     flex: 1,
-    paddingVertical: 2,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
   },
-  saveButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginTop: 12,
-    alignItems: "center",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
+
   cardContainer: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -444,10 +338,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#555",
   },
-  highlight: {
-    fontWeight: "bold",
-    color: "#4CAF50",
-  },
+
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -463,6 +354,7 @@ const styles = StyleSheet.create({
     width: "60%",
     textAlign: "right",
   },
+
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -482,6 +374,7 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+
   subjectItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -511,6 +404,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#4CAF50",
   },
+
   activityItem: {
     flexDirection: "row",
     alignItems: "center",

@@ -27,12 +27,14 @@ export default function SubjectDetailScreen({ route, navigation }) {
 
   const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
 
+  console.log("Subject detail:", subject);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         if (activeTab === "Bài tập") {
-          const classId = subject.classSubjects?.[0]?.class?.classId;
+          const classId = subject.clazz?.classId;
           if (classId) {
             const res = await assignmentService.getAssignmentsByClass(classId);
             setAssignments(res);
@@ -92,35 +94,86 @@ export default function SubjectDetailScreen({ route, navigation }) {
           <View style={styles.tabContent}>
             {activeTab === "Điểm" && (
               <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}> Kết quả học tập </Text>
-                {grade ? (
-                  <>
-                    <Text> Giữa kỳ: {grade.midtermScore} </Text>
-                    <Text> Cuối kỳ: {grade.finalScore} </Text>
-                    <Text> Tổng kết: {grade.actualAverage} </Text>
-                  </>
-                ) : (
-                  <Text style={styles.emptyText}> Chưa có điểm </Text>
-                )}
-              </View>
-            )}
-            {activeTab === "Điểm danh" && (
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}> Tình hình điểm danh </Text>
-                {attendance.length > 0 ? (
-                  attendance.map((ar) => (
-                    <View key={ar.attendanceId} style={styles.recordCard}>
-                      <Text> {ar.timestamp.slice(0, 10)} </Text>
-                      <Text> {ar.status} </Text>
+                <Text style={styles.cardTitle}>Kết quả học tập</Text>
+
+                {/* Bảng điểm theo cột dọc */}
+                <View style={styles.verticalTable}>
+                  {/* Giữa kỳ */}
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Giữa kỳ</Text>
+                    <Text style={styles.rowValue}>
+                      {subject.subjectGrade?.midtermScore ?? "-"}
+                    </Text>
+                  </View>
+
+                  {/* Thường kỳ 1-3 */}
+                  {(subject.subjectGrade?.regularScores ?? ["-", "-", "-"]).map(
+                    (v, i) => (
+                      <View style={styles.row} key={`reg${i}`}>
+                        <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
+                        <Text style={styles.rowValue}>{v ?? "-"}</Text>
+                      </View>
+                    )
+                  )}
+
+                  {/* Thực hành 1-3 */}
+                  {(
+                    subject.subjectGrade?.practiceScores ?? ["-", "-", "-"]
+                  ).map((v, i) => (
+                    <View style={styles.row} key={`prac${i}`}>
+                      <Text style={styles.rowLabel}>Thực hành {i + 1}</Text>
+                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
                     </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>
-                    Chưa có dữ liệu điểm danh
-                  </Text>
-                )}
+                  ))}
+
+                  {/* Cuối kỳ */}
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Cuối kỳ</Text>
+                    <Text style={styles.rowValue}>
+                      {subject.subjectGrade?.finalScore ?? "-"}
+                    </Text>
+                  </View>
+
+                  {/* Tổng kết */}
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Tổng kết</Text>
+                    <Text style={styles.rowValue}>
+                      {subject.subjectGrade?.actualAverage ?? "-"}
+                    </Text>
+                  </View>
+
+                  {/* Xếp loại */}
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Xếp loại</Text>
+                    <Text style={styles.rowValue}>
+                      {subject.subjectGrade?.gradeClassification ?? "-"}
+                    </Text>
+                  </View>
+
+                  {/* Đạt/Không đạt */}
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Đạt/Không đạt</Text>
+                    <Text
+                      style={[
+                        styles.rowValue,
+                        subject.subjectGrade?.passed === true
+                          ? styles.pass
+                          : subject.subjectGrade?.passed === false
+                          ? styles.fail
+                          : null,
+                      ]}
+                    >
+                      {subject.subjectGrade?.passed
+                        ? "Đạt ✅"
+                        : subject.subjectGrade?.passed === false
+                        ? "Không đạt ❌"
+                        : "-"}
+                    </Text>
+                  </View>
+                </View>
               </View>
             )}
+
             {activeTab === "Bài tập" && (
               <View style={styles.cardContainer}>
                 <Text style={styles.cardTitle}>Danh sách bài tập</Text>
@@ -238,13 +291,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 10,
     color: "#333",
   },
+
+  // Assignment list
   assignmentItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -273,6 +333,8 @@ const styles = StyleSheet.create({
   pending: {
     color: "#e74c3c",
   },
+
+  // Records
   recordCard: {
     padding: 12,
     borderBottomWidth: 1,
@@ -282,5 +344,44 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "#999",
     marginTop: 12,
+  },
+
+  // Grade Table
+  verticalTable: {
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderColor: "#ddd",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: "#fafafa",
+  },
+  rowLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#444",
+  },
+  rowValue: {
+    flex: 1,
+    fontSize: 14,
+    textAlign: "right",
+    color: "#000",
+    fontWeight: "600",
+  },
+  pass: {
+    color: "#27ae60", // xanh cho Đạt
+    fontWeight: "bold",
+  },
+  fail: {
+    color: "#e74c3c", // đỏ cho Không đạt
+    fontWeight: "bold",
   },
 });

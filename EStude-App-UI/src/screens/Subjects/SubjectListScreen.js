@@ -9,6 +9,7 @@ import {
 
 import { AuthContext } from "../../contexts/AuthContext";
 import subjectService from "../../services/subjectService";
+import classSubjectService from "../../services/classSubjectService";
 
 export default function SubjectListScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -19,39 +20,52 @@ export default function SubjectListScreen({ navigation }) {
     const fetchSubjects = async () => {
       if (!user) return;
 
-      const result = await subjectService.getSubjectsByStudent();
-      if (result) {
-        // lọc enrollment theo userId đăng nhập
+      try {
+        const result = await subjectService.getSubjectsByStudent();
+        if (!result) return setSubjects([]);
+
+        // Lọc enrollment theo userId đăng nhập
         const myEnrollments = result.filter(
           (en) => en.student.userId === user.userId
         );
 
-        // map enrollment → subject item (theo class info trong enrollment)
-        const mappedSubjects = myEnrollments.map((en) => ({
-          subjectId: en.enrollmentId, // tạm dùng enrollmentId làm id
-          name: en.clazz.name,
-          description: `Lớp học: ${en.clazz.name}`,
-          semester: en.clazz.term,
-          classSubjects: [
-            {
-              classSubjectId: `cs-${en.clazz.classId}`,
-              class: {
+        const mappedSubjects = await Promise.all(
+          myEnrollments.map(async (en) => {
+            // Lấy danh sách classSubjects theo classId
+            const classSubjects = await classSubjectService.getByClassId(
+              en.clazz.classId
+            );
+
+            return {
+              subjectId: en.enrollmentId, // Tạm dùng enrollmentId làm id
+              name: en.clazz.name,
+              description: `Lớp học: ${en.clazz.name}`,
+              semester: en.clazz.term,
+              clazz: {
+                // giữ nguyên class
                 classId: en.clazz.classId,
                 name: en.clazz.name,
                 term: en.clazz.term,
-                classSize: en.clazz.classSize,
               },
-              teacher: {
-                fullName: en.clazz.homeroomTeacher
-                  ? en.clazz.homeroomTeacher.fullName
-                  : "Chưa có",
-              },
-            },
-          ],
-        }));
+              classSubjects: classSubjects.map((cs) => ({
+                classSubjectId: cs.classSubjectId,
+                classId: en.clazz.classId, // 👈 thêm classId vào đây
+                subject: {
+                  subjectId: cs.subject.subjectId,
+                  name: cs.subject.name,
+                },
+                teacher: {
+                  fullName: cs.teacher?.fullName || "Chưa có",
+                },
+              })),
+            };
+          })
+        );
 
+        console.log("mappedSubjects with classSubjects:", mappedSubjects);
         setSubjects(mappedSubjects);
-      } else {
+      } catch (err) {
+        console.error("Error fetching subjects:", err);
         setSubjects([]);
       }
     };
@@ -74,7 +88,7 @@ export default function SubjectListScreen({ navigation }) {
 
       {item.classSubjects.map((cs) => (
         <View key={cs.classSubjectId} style={styles.classRow}>
-          {/* <Text style={styles.className}>{cs.class.name}</Text> */}
+          <Text style={styles.className}>{cs.subject.name}</Text>
           <Text style={styles.teacherName}>GV: {cs.teacher.fullName}</Text>
         </View>
       ))}
@@ -125,12 +139,10 @@ export default function SubjectListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 16 },
+  container: { flex: 1, padding: 16 },
   list: { paddingBottom: 20 },
-
-  // Card môn học
   item: {
-    backgroundColor: "#f2f2f2",
+    backgroundColor: "#fff",
     padding: 14,
     borderRadius: 10,
     marginBottom: 10,
@@ -145,8 +157,6 @@ const styles = StyleSheet.create({
   className: { fontSize: 14, color: "#333" },
   teacherName: { fontSize: 13, color: "#777" },
   semester: { fontSize: 12, color: "#999", marginTop: 4 },
-
-  // Bộ lọc học kỳ
   filterRow: { flexDirection: "row", marginBottom: 16 },
   filterButton: {
     paddingVertical: 6,
@@ -162,8 +172,6 @@ const styles = StyleSheet.create({
   },
   filterText: { fontSize: 14, color: "#333" },
   filterTextActive: { color: "#fff", fontWeight: "bold" },
-
-  // Empty
   empty: {
     flex: 1,
     justifyContent: "center",
