@@ -109,6 +109,7 @@ export default function MyClasses() {
                   className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => {
                     setCtx({
+                      classSubjectId: cls.classSubjectId,
                       classId: cls.clazz?.classId,
                       className: cls.clazz?.name,
                       subjectId: cls.subject?.subjectId,
