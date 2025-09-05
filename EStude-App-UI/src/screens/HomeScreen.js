@@ -72,7 +72,7 @@ const ProgressBar = ({ value }) => {
 
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
-  console.log("User: ", user);
+  console.log("Người dùng đã đăng nhập: ", user.fullName);
 
   // Avatar: lấy từ user nếu có, nếu không thì lấy mock
   const avatarUri = user.avatarPath ? user.avatarPath : mockStudentData.avatar;

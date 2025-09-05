@@ -1,5 +1,12 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image, ImageBackground } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  ImageBackground,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 
@@ -17,7 +24,15 @@ const RoleSelectionScreen = () => {
         source={require("../assets/images/background-01.png")}
         style={styles.backgroundImage}
       >
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "space-between", paddingTop: 100, paddingBottom: 30 }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: 100,
+            paddingBottom: 30,
+          }}
+        >
           <Image
             source={require("../assets/images/banner-light.png")}
             style={styles.logo}
@@ -50,9 +65,7 @@ const RoleSelectionScreen = () => {
             </TouchableOpacity>
           </View>
           <View>
-            <Text style={styles.footerText}>
-              Những câu hỏi thường gặp
-            </Text>
+            <Text style={styles.footerText}>Những câu hỏi thường gặp</Text>
           </View>
         </View>
       </ImageBackground>
@@ -94,7 +107,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 16,
     color: "white",
-    textAlign: "center"
+    textAlign: "center",
   },
   backgroundImage: {
     width: "100%",
