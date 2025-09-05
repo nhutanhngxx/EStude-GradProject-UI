@@ -5,7 +5,6 @@ const endpoints = {
 };
 
 const classSubjectService = {
-  // Lấy toàn bộ
   getAllClassSubjects: async () => {
     try {
       const response = await fetch(
@@ -25,7 +24,6 @@ const classSubjectService = {
     }
   },
 
-  // Lọc theo classId
   getByClassId: async (classId) => {
     try {
       const all = await classSubjectService.getAllClassSubjects();
