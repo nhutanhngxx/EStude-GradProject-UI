@@ -1,73 +1,147 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
+import assignmentService from "../../services/assignmentService";
+import { AuthContext } from "../../contexts/AuthContext";
+import submissionService from "../../services/submissionService";
+import { loadAssignmentsWithStatus } from "../../services/assignmentHelper";
 
 const filters = ["Hôm nay", "Tất cả", "Tuần", "Tháng"];
-
-const mockAssignments = [
-  {
-    assignmentId: "a1",
-    classSubject: { id: "cs1", name: "Toán" },
-    title: "Bài 5",
-    deadline: "2025-08-23",
-    status: "Chưa nộp",
-  },
-  {
-    assignmentId: "a2",
-    classSubject: { id: "cs2", name: "Văn" },
-    title: "Tập làm văn",
-    deadline: "2025-08-23",
-    status: "Đã nộp",
-  },
-  {
-    assignmentId: "a3",
-    classSubject: { id: "cs3", name: "Anh" },
-    title: "Bài nghe",
-    deadline: "2025-08-24",
-    status: "Chưa nộp",
-  },
-];
-
-// Mock data Exams theo cấu trúc UML
-const mockExams = [
-  {
-    examId: "e1",
-    classSubject: { id: "cs1", name: "Toán" },
-    title: "Thi giữa kỳ",
-    date: "2025-09-01",
-    duration: "60 phút",
-    questions: 40,
-    status: "Chưa làm",
-  },
-  {
-    examId: "e2",
-    classSubject: { id: "cs2", name: "Cơ sở dữ liệu" },
-    title: "Thi cuối kỳ",
-    date: "2025-09-10",
-    duration: "90 phút",
-    questions: 50,
-    status: "Đã nộp",
-  },
-];
+const PAGE_SIZE = 20;
 
 export default function NopBaiScreen({ navigation }) {
+  const { user } = useContext(AuthContext);
+  const [activeTab, setActiveTab] = useState("Assignments");
   const [activeFilter, setActiveFilter] = useState("Hôm nay");
-  const [activeTab, setActiveTab] = useState("Assignments"); // "Assignments" | "Exams"
 
-  // Lọc dữ liệu bài tập theo filter
-  const filteredAssignments =
-    activeFilter === "Hôm nay"
-      ? mockAssignments.filter((a) => a.deadline === "2025-08-23")
-      : mockAssignments;
+  const [assignments, setAssignments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      setLoading(true);
+      try {
+        const res = await loadAssignmentsWithStatus(
+          user.userId,
+          null,
+          activeTab === "Exams"
+        );
+        setAssignments(res);
+      } catch (err) {
+        console.error(err);
+        setAssignments([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssignments();
+  }, [user, activeTab]);
+
+  const filteredByTab = useMemo(() => {
+    return assignments.filter((item) => {
+      const isExam = item.isExam;
+      return activeTab === "Assignments" ? !isExam : isExam;
+    });
+  }, [assignments, activeTab]);
+
+  const filteredByDate = useMemo(() => {
+    const now = new Date();
+    return filteredByTab.filter((item) => {
+      const due = new Date(item.dueDate || item.startDate || item.createdAt);
+      switch (activeFilter) {
+        case "Hôm nay":
+          return due.toDateString() === now.toDateString();
+        case "Tuần": {
+          const weekStart = new Date(now);
+          weekStart.setDate(now.getDate() - now.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          return due >= weekStart && due <= weekEnd;
+        }
+        case "Tháng":
+          return (
+            due.getMonth() === now.getMonth() &&
+            due.getFullYear() === now.getFullYear()
+          );
+        case "Tất cả":
+        default:
+          return true;
+      }
+    });
+  }, [filteredByTab, activeFilter]);
+
+  const displayData = useMemo(() => {
+    const start = 0;
+    const end = page * PAGE_SIZE;
+    return filteredByDate.slice(start, end);
+  }, [filteredByDate, page]);
+
+  const handleLoadMore = () => {
+    if (displayData.length < filteredByDate.length) {
+      setPage((prev) => prev + 1);
+    }
+  };
+
+  const renderItem = ({ item }) => {
+    const title = item.title;
+    const className =
+      item.classSubject?.clazz?.name || item.classSubject?.name || "Lớp";
+    const deadline = item.dueDate || item.startDate || item.createdAt;
+    const status = item.status;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.card,
+          status === "Đã nộp" ? styles.doneBorder : styles.pendingBorder,
+        ]}
+        onPress={() =>
+          navigation.navigate("ChiTietBaiTap", {
+            assignment: item,
+            isExam: activeTab === "Exams",
+            status: item.status || "Chưa nộp",
+          })
+        }
+      >
+        <Text style={styles.title}>
+          {className} - {title}
+        </Text>
+        <Text style={styles.deadline}>
+          {activeTab === "Assignments"
+            ? `Hạn: ${deadline}`
+            : `Ngày thi: ${deadline}`}
+        </Text>
+        <Text
+          style={[
+            styles.status,
+            status === "Đã nộp" ? styles.done : styles.pending,
+          ]}
+        >
+          {status}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  if (loading)
+    return (
+      <ActivityIndicator
+        size="large"
+        style={{ marginTop: 50 }}
+        color="#007BFF"
+      />
+    );
 
   return (
     <View style={styles.container}>
-      {/* Tabs Bài tập / Bài thi */}
+      {/* Tabs */}
       <View style={styles.tabRow}>
         <TouchableOpacity
           style={[
@@ -100,101 +174,48 @@ export default function NopBaiScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {activeTab === "Assignments" ? (
-        <>
-          {/* Bộ lọc bài tập */}
-          <View style={styles.filterRow}>
-            {filters.map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[
-                  styles.filterBtn,
-                  activeFilter === f && styles.filterBtnActive,
-                ]}
-                onPress={() => setActiveFilter(f)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    activeFilter === f && styles.filterTextActive,
-                  ]}
-                >
-                  {f}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      {/* Filter */}
+      <View style={styles.filterRow}>
+        {filters.map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[
+              styles.filterBtn,
+              activeFilter === f && styles.filterBtnActive,
+            ]}
+            onPress={() => {
+              setActiveFilter(f);
+              setPage(1); // reset pagination khi đổi filter
+            }}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === f && styles.filterTextActive,
+              ]}
+            >
+              {f}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          {/* Danh sách bài tập */}
-          <FlatList
-            data={filteredAssignments}
-            keyExtractor={(item) =>
-              item.classSubject.id + "_" + item.assignmentId
-            }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.assignmentCard}
-                onPress={() =>
-                  navigation.navigate("ChiTietBaiTap", { assignment: item })
-                }
-              >
-                <Text style={styles.title}>
-                  {item.classSubject.name} - {item.title}
-                </Text>
-                <Text style={styles.deadline}>Hạn: {item.deadline}</Text>
-                <Text
-                  style={[
-                    styles.status,
-                    item.status === "Đã nộp" ? styles.done : styles.pending,
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </>
-      ) : (
-        <>
-          {/* Danh sách bài thi */}
-          <FlatList
-            data={mockExams}
-            keyExtractor={(item) => item.classSubject.id + "_" + item.examId}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.examCard}
-                onPress={() =>
-                  navigation.navigate("ExamDetail", { exam: item })
-                }
-              >
-                <Text style={styles.title}>
-                  {item.classSubject.name} - {item.title}
-                </Text>
-                <Text style={styles.deadline}>Ngày thi: {item.date}</Text>
-                <Text style={styles.info}>
-                  Thời lượng: {item.duration} | Số câu: {item.questions}
-                </Text>
-                <Text
-                  style={[
-                    styles.status,
-                    item.status === "Đã nộp" ? styles.done : styles.pending,
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        </>
-      )}
+      {/* List */}
+      <FlatList
+        data={displayData}
+        keyExtractor={(item) =>
+          `${item.assignmentId || item.examId}_${user.userId}`
+        }
+        renderItem={renderItem}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f9f9f9", padding: 16 },
-
-  // Tabs
   tabRow: { flexDirection: "row", marginBottom: 12 },
   tabBtn: {
     flex: 1,
@@ -208,7 +229,6 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 14, fontWeight: "600", color: "#333" },
   tabTextActive: { color: "#fff" },
 
-  // Filter
   filterRow: {
     flexDirection: "row",
     marginBottom: 12,
@@ -224,31 +244,17 @@ const styles = StyleSheet.create({
   filterText: { fontSize: 14, color: "#333" },
   filterTextActive: { color: "#fff", fontWeight: "bold" },
 
-  // Assignment Card
-  assignmentCard: {
+  card: {
     backgroundColor: "white",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     elevation: 2,
-    borderLeftWidth: 5,
-    borderLeftColor: "#2ecc71",
   },
-
-  // Exam Card
-  examCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 5,
-    borderLeftColor: "#27ae60",
-    elevation: 2,
-  },
-
+  doneBorder: { borderLeftWidth: 5, borderLeftColor: "#27ae60" },
+  pendingBorder: { borderLeftWidth: 5, borderLeftColor: "#e74c3c" },
   title: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
   deadline: { fontSize: 12, color: "#666", marginBottom: 6 },
-  info: { fontSize: 13, color: "#444", marginBottom: 4 },
   status: { fontSize: 14, fontWeight: "bold" },
   done: { color: "#27ae60" },
   pending: { color: "#e74c3c" },

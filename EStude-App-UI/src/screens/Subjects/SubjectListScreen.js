@@ -24,48 +24,37 @@ export default function SubjectListScreen({ navigation }) {
         const result = await subjectService.getSubjectsByStudent();
         if (!result) return setSubjects([]);
 
-        // Lọc enrollment theo userId đăng nhập
         const myEnrollments = result.filter(
           (en) => en.student.userId === user.userId
         );
 
-        const mappedSubjects = await Promise.all(
-          myEnrollments.map(async (en) => {
-            // Lấy danh sách classSubjects theo classId
-            const classSubjects = await classSubjectService.getByClassId(
-              en.clazz.classId
-            );
+        const classSubjectsFlattened = [];
 
-            return {
-              subjectId: en.enrollmentId, // Tạm dùng enrollmentId làm id
-              name: en.clazz.name,
+        for (const en of myEnrollments) {
+          const classSubjects = await classSubjectService.getByClassId(
+            en.clazz.classId
+          );
+
+          classSubjects.forEach((cs) => {
+            classSubjectsFlattened.push({
+              classSubjectId: cs.classSubjectId,
+              subjectId: cs.subject.subjectId,
+              name: cs.subject.name,
               description: `Lớp học: ${en.clazz.name}`,
               semester: en.clazz.term,
+              teacherName: cs.teacher?.fullName || "Chưa có",
               clazz: {
-                // giữ nguyên class
                 classId: en.clazz.classId,
                 name: en.clazz.name,
                 term: en.clazz.term,
               },
-              classSubjects: classSubjects.map((cs) => ({
-                classSubjectId: cs.classSubjectId,
-                classId: en.clazz.classId, // 👈 thêm classId vào đây
-                subject: {
-                  subjectId: cs.subject.subjectId,
-                  name: cs.subject.name,
-                },
-                teacher: {
-                  fullName: cs.teacher?.fullName || "Chưa có",
-                },
-              })),
-            };
-          })
-        );
+            });
+          });
+        }
 
-        console.log("mappedSubjects with classSubjects:", mappedSubjects);
-        setSubjects(mappedSubjects);
+        setSubjects(classSubjectsFlattened);
       } catch (err) {
-        console.error("Error fetching subjects:", err);
+        console.error(err);
         setSubjects([]);
       }
     };
@@ -85,14 +74,7 @@ export default function SubjectListScreen({ navigation }) {
     >
       <Text style={styles.subjectName}>{item.name}</Text>
       <Text style={styles.description}>{item.description}</Text>
-
-      {item.classSubjects.map((cs) => (
-        <View key={cs.classSubjectId} style={styles.classRow}>
-          <Text style={styles.className}>{cs.subject.name}</Text>
-          <Text style={styles.teacherName}>GV: {cs.teacher.fullName}</Text>
-        </View>
-      ))}
-
+      <Text style={styles.teacherName}>GV: {item.teacherName}</Text>
       <Text style={styles.semester}>{item.semester}</Text>
     </TouchableOpacity>
   );

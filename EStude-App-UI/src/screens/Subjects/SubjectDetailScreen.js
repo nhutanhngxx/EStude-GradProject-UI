@@ -8,14 +8,19 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
-import assignmentService from "../../services/assignmentService";
 
-// import gradeService from "../../services/gradeService";
+import { loadAssignmentsWithStatus } from "../../services/assignmentHelper";
+
+import assignmentService from "../../services/assignmentService";
+import subjectGradeService from "../../services/subjectGradeService";
+
 // import attendanceService from "../../services/attendanceService";
 // import notificationService from "../../services/notificationService";
 
 export default function SubjectDetailScreen({ route, navigation }) {
   const { subject } = route.params;
+  // console.log("Subject detail:", subject);
+
   const { user } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState("Điểm");
@@ -27,21 +32,29 @@ export default function SubjectDetailScreen({ route, navigation }) {
 
   const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
 
-  console.log("Subject detail:", subject);
-
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         if (activeTab === "Bài tập") {
-          const classId = subject.clazz?.classId;
-          if (classId) {
-            const res = await assignmentService.getAssignmentsByClass(classId);
-            setAssignments(res);
+          if (subject.clazz.classId) {
+            const res = await loadAssignmentsWithStatus(
+              user.userId,
+              subject.clazz.classId,
+              null,
+              subject.subjectId
+            );
+            // Lọc chỉ lấy assignments của classSubject hiện tại
+            const assignmentsForThisClass = res.filter(
+              (a) => a.classSubject?.classSubjectId === subject.classSubjectId
+            );
+            setAssignments(assignmentsForThisClass);
+            // console.log("Assignments raw:", assignmentsForThisClass);
           }
         }
       } catch (e) {
         console.log("Load error:", e);
+        setAssignments([]);
       } finally {
         setLoading(false);
       }
@@ -185,6 +198,9 @@ export default function SubjectDetailScreen({ route, navigation }) {
                       onPress={() =>
                         navigation.navigate("ChiTietBaiTap", {
                           assignment: as,
+                          isExam: activeTab === "Exams",
+                          status: as.status || "Chưa nộp",
+                          submissionId: as.submissionId || null,
                         })
                       }
                     >
