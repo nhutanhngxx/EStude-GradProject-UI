@@ -10,6 +10,8 @@ import {
 import subjectService from "../../services/subjectService";
 
 export default function ManageSubjects() {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const schoolId = user.school?.schoolId;
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -49,6 +51,7 @@ export default function ManageSubjects() {
     const payload = {
       name,
       description,
+      schoolId,
     };
     try {
       const result = await subjectService.addSubject(payload);
@@ -61,6 +64,7 @@ export default function ManageSubjects() {
                     ...s,
                     name: result.name,
                     description: result.description || "",
+                    schoolId,
                   }
                 : s
             )
@@ -73,6 +77,7 @@ export default function ManageSubjects() {
               id: result.id || Date.now(),
               name: result.name,
               description: result.description || "",
+              schoolId,
             },
           ]);
           alert("Thêm môn học thành công!");

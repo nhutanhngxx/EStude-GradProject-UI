@@ -1,99 +1,128 @@
 import { useEffect, useState } from "react";
-import { X, ListChecks } from "lucide-react";
+import { X, ListChecks, Save } from "lucide-react";
 import studentService from "../../services/studentService";
+import subjectGradeService from "../../services/subjectGradeService";
 
-export default function ClassStudentModal({ classId, isOpen, onClose }) {
+export default function ClassStudentModal({
+  classId,
+  classSubjectId,
+  isOpen,
+  onClose,
+}) {
   const [students, setStudents] = useState([]);
   const [grades, setGrades] = useState({});
 
   useEffect(() => {
     if (!isOpen) return;
-    const fetchStudents = async () => {
-      const result = await studentService.getStudentsByClass(classId);
-      console.log("result:", result);
 
-      if (result) {
-        setStudents(result);
+    const fetchData = async () => {
+      const studentsRes = await studentService.getStudentsByClass(classId);
+      if (!studentsRes) return;
 
-        // Khởi tạo bảng điểm rỗng
-        const initGrades = {};
-        result.forEach((s) => {
+      setStudents(studentsRes);
+
+      // Gọi song song cho tất cả học sinh
+      const gradesRes = await Promise.all(
+        studentsRes.map((s) =>
+          subjectGradeService.getGradesOfStudentByClassSubject(
+            s.userId,
+            classSubjectId
+          )
+        )
+      );
+
+      const initGrades = {};
+      studentsRes.forEach((s, idx) => {
+        const g = gradesRes[idx];
+        if (g) {
           initGrades[s.userId] = {
-            gk: "",
-            tk1: "",
-            tk2: "",
-            tk3: "",
-            th1: "",
-            th2: "",
-            th3: "",
-            ck: "",
+            regularScores: g.regularScores || [],
+            midtermScore: g.midtermScore ?? "",
+            finalScore: g.finalScore ?? "",
+            actualAverage: g.actualAverage ?? "",
+            predictedMidTerm: g.predictedMidTerm ?? "",
+            predictedFinal: g.predictedFinal ?? "",
+            predictedAverage: g.predictedAverage ?? "",
+            comment: g.comment ?? "",
+            locked: true,
           };
-        });
+        } else {
+          initGrades[s.userId] = {
+            regularScores: [],
+            midtermScore: "",
+            finalScore: "",
+            actualAverage: "",
+            predictedMidTerm: "",
+            predictedFinal: "",
+            predictedAverage: "",
+            comment: "",
+            locked: false,
+          };
+        }
+      });
 
-        setGrades(initGrades);
-      }
+      setGrades(initGrades);
     };
-    fetchStudents();
-  }, [classId, isOpen]);
 
-  const handleChange = (userId, field, value) => {
-    let newValue = value;
-    let error = "";
+    fetchData();
+  }, [classId, classSubjectId, isOpen]);
 
-    if (
-      newValue !== "" &&
-      (isNaN(Number(newValue)) || Number(newValue) < 0 || Number(newValue) > 10)
-    ) {
-      error = "Điểm phải từ 0 đến 10";
-    }
+  const handleChange = (userId, field, value, index = null) => {
+    setGrades((prev) => {
+      const studentGrade = { ...prev[userId] };
 
-    setGrades((prev) => ({
-      ...prev,
-      [userId]: {
-        ...prev[userId],
-        [field]: newValue,
-        [`${field}_error`]: error,
-      },
-    }));
+      if (field === "regularScores" && index !== null) {
+        const scores = [...(studentGrade.regularScores || [])];
+        scores[index] = value === "" ? "" : Number(value);
+        studentGrade.regularScores = scores;
+      } else {
+        studentGrade[field] = value === "" ? "" : Number(value);
+      }
+
+      return {
+        ...prev,
+        [userId]: studentGrade,
+      };
+    });
   };
 
-  const handleSave = () => {
-    let hasError = false;
-    const formattedGrades = {};
+  const handleSaveOne = async (student) => {
+    const g = grades[student.userId];
+    if (!g) return;
 
-    Object.entries(grades).forEach(([userId, g]) => {
-      formattedGrades[userId] = {};
-      for (const key of [
-        "gk",
-        "tk1",
-        "tk2",
-        "tk3",
-        "th1",
-        "th2",
-        "th3",
-        "ck",
-      ]) {
-        if (g[`${key}_error`]) {
-          hasError = true;
-        }
-        formattedGrades[userId][key] = g[key] === "" ? null : Number(g[key]);
-      }
-    });
+    const payload = {
+      studentId: student.userId,
+      classSubjectId,
+      regularScores: g.regularScores.filter((v) => v !== "" && v != null),
+      midtermScore: g.midtermScore === "" ? null : g.midtermScore,
+      finalScore: g.finalScore === "" ? null : g.finalScore,
+      comment: g.comment || null,
+    };
 
-    if (hasError) {
-      alert("Vui lòng sửa hết lỗi trước khi lưu!");
-      return;
+    try {
+      const res = await subjectGradeService.saveGrade(payload);
+      console.log("Saved:", res);
+
+      setGrades((prev) => ({
+        ...prev,
+        [student.userId]: {
+          ...prev[student.userId],
+          locked: true,
+        },
+      }));
+
+      alert(`Đã lưu điểm cho ${student.fullName}`);
+    } catch (err) {
+      console.error(err);
+      alert("Lưu điểm thất bại!");
     }
-
-    console.log("Điểm đã nhập:", formattedGrades);
-    alert("Đã lưu điểm (mock)");
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-4xl h-[70%] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-900 w-11/12 max-w-6xl h-4/6 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
@@ -115,71 +144,116 @@ export default function ClassStudentModal({ classId, isOpen, onClose }) {
               <thead>
                 <tr className="bg-gray-100 text-gray-700">
                   <th className="border px-3 py-2">Tên học sinh</th>
-                  {["GK", "TK1", "TK2", "TK3", "TH1", "TH2", "TH3", "CK"].map(
-                    (label) => (
-                      <th key={label} className="border px-3 py-2">
-                        {label}
-                      </th>
-                    )
-                  )}
+                  <th className="border px-3 py-2">Điểm thường xuyên</th>
+                  <th className="border px-3 py-2">Điểm giữa kỳ</th>
+                  <th className="border px-3 py-2">Điểm cuối kỳ</th>
+                  <th className="border px-3 py-2">Điểm trung bình</th>
+                  <th className="border px-3 py-2">Nhận xét</th>
+                  <th className="border px-3 py-2">Hành động</th>
                 </tr>
               </thead>
               <tbody>
-                {students.map((s) => (
-                  <tr key={s.userId} className="hover:bg-gray-50">
-                    <td className="border px-3 py-2">{s.fullName}</td>
-                    {["gk", "tk1", "tk2", "tk3", "th1", "th2", "th3", "ck"].map(
-                      (field) => (
-                        <td
-                          key={field}
-                          className="border px-2 py-1 text-center"
-                        >
+                {students.map((s) => {
+                  const g = grades[s.userId] || {};
+                  return (
+                    <tr key={s.userId} className="hover:bg-gray-50">
+                      <td className="border px-3 py-2">{s.fullName}</td>
+                      {/* Regular scores */}
+                      <td className="border px-3 py-2 text-center">
+                        {[0, 1, 2].map((i) => (
                           <input
+                            key={i}
                             type="number"
-                            step="0.1"
-                            min="0"
-                            max="10"
-                            value={grades[s.userId]?.[field] ?? ""}
+                            value={g.regularScores?.[i] ?? ""}
+                            disabled={g.locked}
                             onChange={(e) =>
-                              handleChange(s.userId, field, e.target.value)
+                              handleChange(
+                                s.userId,
+                                "regularScores",
+                                e.target.value,
+                                i
+                              )
                             }
-                            className={`w-14 px-1 py-0.5 border rounded text-center ${
-                              grades[s.userId]?.[`${field}_error`]
-                                ? "border-red-500"
-                                : "border-gray-300"
+                            className={`w-14 mx-1 px-1 py-0.5 border rounded text-center ${
+                              g.locked ? "bg-gray-100 cursor-not-allowed" : ""
                             }`}
                           />
-                          {grades[s.userId]?.[`${field}_error`] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {grades[s.userId][`${field}_error`]}
-                            </p>
-                          )}
-                        </td>
-                      )
-                    )}
-                  </tr>
-                ))}
+                        ))}
+                      </td>
+                      {/* Midterm */}
+                      <td className="border px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          disabled={g.locked}
+                          value={g.midtermScore ?? ""}
+                          onChange={(e) =>
+                            handleChange(
+                              s.userId,
+                              "midtermScore",
+                              e.target.value
+                            )
+                          }
+                          className="w-14 px-1 py-0.5 border rounded text-center"
+                        />
+                      </td>
+                      {/* Final */}
+                      <td className="border px-3 py-2 text-center">
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          disabled={g.locked}
+                          value={g.finalScore ?? ""}
+                          onChange={(e) =>
+                            handleChange(s.userId, "finalScore", e.target.value)
+                          }
+                          className="w-14 px-1 py-0.5 border rounded text-center"
+                        />
+                      </td>
+                      {/* Actual Average */}
+                      <td className="border px-3 py-2 text-center">
+                        {g.actualAverage ?? "-"}
+                      </td>
+                      {/* Comment */}
+                      <td className="border px-3 py-2">
+                        <input
+                          type="text"
+                          value={g.comment ?? ""}
+                          onChange={(e) =>
+                            handleChange(s.userId, "comment", e.target.value)
+                          }
+                          className="w-full px-2 py-1 border rounded"
+                        />
+                      </td>
+                      {/* Action */}
+                      <td className="border px-3 py-2 text-center">
+                        <button
+                          onClick={() => handleSaveOne(s)}
+                          className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          <Save size={16} /> Lưu
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t px-5 py-4 flex items-center justify-end">
-          <div className="flex items-center gap-2">
-            <button
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50"
-              onClick={onClose}
-            >
-              Huỷ
-            </button>
-            <button
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-              onClick={handleSave}
-            >
-              Lưu điểm
-            </button>
-          </div>
+        <div className="border-t px-5 py-3 flex justify-end">
+          <button
+            className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+            onClick={onClose}
+          >
+            Đóng
+          </button>
         </div>
       </div>
     </div>

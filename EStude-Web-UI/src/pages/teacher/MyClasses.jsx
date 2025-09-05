@@ -12,6 +12,7 @@ import {
   FlaskConical,
 } from "lucide-react";
 import AttendanceModal from "./AttendanceModal";
+import AssignmentListModal from "./AssignmentListModal";
 
 export default function MyClasses() {
   const [classes, setClasses] = useState([]);
@@ -22,6 +23,9 @@ export default function MyClasses() {
   const [ctx, setCtx] = useState(null);
   // Điểm danh
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
+
+  // Quản lý bài tập
+  const [isAssignmentListOpen, setIsAssignmentListOpen] = useState(false);
 
   useEffect(() => {
     const fetchMyClasses = async () => {
@@ -84,7 +88,10 @@ export default function MyClasses() {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   onClick={() => {
-                    setSelectedClass(cls.clazz?.classId);
+                    setSelectedClass({
+                      classId: cls.clazz?.classId,
+                      classSubjectId: cls.classSubjectId,
+                    });
                     setIsModalOpen(true);
                   }}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 
@@ -103,6 +110,20 @@ export default function MyClasses() {
                 >
                   <CheckSquare size={16} />
                   <span>Điểm danh</span>
+                </button>
+
+                <button
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                  onClick={() => {
+                    setSelectedClass({
+                      classId: cls.clazz?.classId,
+                      classSubjectId: cls.classSubjectId,
+                    });
+                    setIsAssignmentListOpen(true);
+                  }}
+                >
+                  <FileText size={16} />
+                  <span>Quản lý bài tập</span>
                 </button>
 
                 <button
@@ -127,10 +148,12 @@ export default function MyClasses() {
         </div>
       )}
       <ClassStudentModal
-        classId={selectedClass}
+        classId={selectedClass?.classId}
+        classSubjectId={selectedClass?.classSubjectId}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+
       <CreateAssignmentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -140,10 +163,18 @@ export default function MyClasses() {
           console.log("Assignment created:", assignment);
         }}
       />
+
       <AttendanceModal
         classId={selectedClass}
         isOpen={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
+      />
+
+      <AssignmentListModal
+        classId={selectedClass?.classId}
+        classSubjectId={selectedClass?.classSubjectId}
+        isOpen={isAssignmentListOpen}
+        onClose={() => setIsAssignmentListOpen(false)}
       />
     </div>
   );

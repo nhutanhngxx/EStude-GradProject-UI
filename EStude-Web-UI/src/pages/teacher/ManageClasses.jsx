@@ -33,9 +33,17 @@ const Modal = ({ title, children, onClose }) => {
   );
 };
 
+const formatTerm = (termNumber, beginDate, endDate) => {
+  if (!termNumber || !beginDate || !endDate) return "";
+  const beginYear = new Date(beginDate).getFullYear();
+  const endYear = new Date(endDate).getFullYear();
+  return `HK${termNumber} ${beginYear}-${endYear}`;
+};
+
 const ManageClasses = () => {
   const [name, setName] = useState("");
   const [term, setTerm] = useState("");
+  const [termNumber, setTermNumber] = useState("");
   const [classSize, setClassSize] = useState(0);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -45,6 +53,8 @@ const ManageClasses = () => {
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [school, setSchool] = useState(null);
+  const [beginDate, setBeginDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -161,13 +171,15 @@ const ManageClasses = () => {
   const handleSave = async (e) => {
     e.preventDefault();
     if (!name) return alert("Vui lòng nhập tên lớp");
-
+    const calculatedTerm = formatTerm(termNumber, beginDate, endDate);
     try {
       const classPayload = {
         name,
-        term,
+        term: calculatedTerm,
         classSize,
         schoolId,
+        beginDate,
+        endDate,
       };
       const classResult = await classService.addClass(classPayload);
       if (!classResult?.classId) throw new Error("Không thêm được lớp");
@@ -293,13 +305,50 @@ const ManageClasses = () => {
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg"
             />
-            <input
-              type="text"
-              placeholder="Term"
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg"
-            />
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block mb-2">Học kì</label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Số học kì"
+                  value={termNumber}
+                  onChange={(e) => setTermNumber(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="block mb-2">Ngày bắt đầu</label>
+                <input
+                  type="date"
+                  value={beginDate}
+                  onChange={(e) => setBeginDate(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+
+              <div className="flex-1">
+                <label className="block mb-2">Ngày kết thúc</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            {/* Hiển thị term tự động */}
+            <p className="mt-2 text-gray-600">
+              Học kỳ:{" "}
+              {termNumber && beginDate && endDate
+                ? `HK${termNumber} ${new Date(
+                    beginDate
+                  ).getFullYear()}-${new Date(endDate).getFullYear()}`
+                : "-"}
+            </p>
+
             <input
               type="number"
               placeholder="Class Size"
