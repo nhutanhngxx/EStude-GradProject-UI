@@ -11,6 +11,7 @@ const subjectService = {
       const payload = {
         name: subject.name,
         description: subject.description || "",
+        schoolId: subject.schoolId || 0,
       };
 
       const response = await fetch(
