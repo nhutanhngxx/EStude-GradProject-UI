@@ -31,11 +31,22 @@ export default function ManageSubjects() {
 
   useEffect(() => {
     const fetchSubjects = async () => {
-      const result = await subjectService.getAllSubjects();
-      if (result) setSubjects(result);
+      try {
+        const result = await subjectService.getAllSubjects();
+        // console.log("[DEBUG] subjects:", result);
+
+        if (result) {
+          const filtered = result.filter((s) =>
+            s.schools?.some((sch) => sch.schoolId === schoolId)
+          );
+          setSubjects(filtered);
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy môn học:", error);
+      }
     };
     fetchSubjects();
-  }, []);
+  }, [schoolId]);
 
   const resetForm = () => {
     setName("");
