@@ -15,9 +15,11 @@ import AttendanceModal from "./AttendanceModal";
 import AssignmentListModal from "./AssignmentListModal";
 
 export default function MyClasses() {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   // Tạo bài thi
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [ctx, setCtx] = useState(null);
@@ -30,6 +32,7 @@ export default function MyClasses() {
   useEffect(() => {
     const fetchMyClasses = async () => {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
+
       const result = await teacherService.getClassSubjectByTeacherId(
         user.userId
       );
@@ -104,12 +107,15 @@ export default function MyClasses() {
                 <button
                   className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
                   onClick={() => {
-                    setSelectedClass(cls.clazz?.classId);
+                    setSelectedClass({
+                      classSubjectId: cls.classSubjectId,
+                    });
+                    console.log("selectedClass:", selectedClass);
                     setIsAttendanceOpen(true);
                   }}
                 >
                   <CheckSquare size={16} />
-                  <span>Điểm danh</span>
+                  <span>Quản lý điểm danh</span>
                 </button>
 
                 <button
@@ -160,12 +166,13 @@ export default function MyClasses() {
         defaultType="QUIZ"
         classContext={ctx}
         onCreated={(assignment) => {
-          console.log("Assignment created:", assignment);
+          console.log("Assignment đã được tạo:", assignment);
         }}
       />
 
       <AttendanceModal
-        classId={selectedClass}
+        classSubjectId={selectedClass?.classSubjectId}
+        teacherId={user.userId}
         isOpen={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
       />

@@ -11,6 +11,20 @@ export default function ClassStudentModal({
 }) {
   const [students, setStudents] = useState([]);
   const [grades, setGrades] = useState({});
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setIsAdmin(user?.admin === true);
+      } catch (err) {
+        console.error("Parse user error:", err);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -21,7 +35,7 @@ export default function ClassStudentModal({
 
       setStudents(studentsRes);
 
-      // Gọi song song cho tất cả học sinh
+      // Lấy điểm của từng học sinh
       const gradesRes = await Promise.all(
         studentsRes.map((s) =>
           subjectGradeService.getGradesOfStudentByClassSubject(
@@ -36,27 +50,30 @@ export default function ClassStudentModal({
         const g = gradesRes[idx];
         if (g) {
           initGrades[s.userId] = {
-            regularScores: g.regularScores || [],
+            regularScores: g.regularScores || ["", "", ""],
             midtermScore: g.midtermScore ?? "",
             finalScore: g.finalScore ?? "",
             actualAverage: g.actualAverage ?? "",
-            predictedMidTerm: g.predictedMidTerm ?? "",
-            predictedFinal: g.predictedFinal ?? "",
-            predictedAverage: g.predictedAverage ?? "",
             comment: g.comment ?? "",
-            locked: true,
+            // lock theo từng ô
+            lockedRegular: (g.regularScores || ["", "", ""]).map(
+              (x) => x !== null && x !== ""
+            ),
+            lockedMidterm: g.midtermScore !== null && g.midtermScore !== "",
+            lockedFinal: g.finalScore !== null && g.finalScore !== "",
+            lockedComment: g.comment !== null && g.comment !== "",
           };
         } else {
           initGrades[s.userId] = {
-            regularScores: [],
+            regularScores: ["", "", ""],
             midtermScore: "",
             finalScore: "",
             actualAverage: "",
-            predictedMidTerm: "",
-            predictedFinal: "",
-            predictedAverage: "",
             comment: "",
-            locked: false,
+            lockedRegular: [false, false, false],
+            lockedMidterm: false,
+            lockedFinal: false,
+            lockedComment: false,
           };
         }
       });
@@ -72,11 +89,15 @@ export default function ClassStudentModal({
       const studentGrade = { ...prev[userId] };
 
       if (field === "regularScores" && index !== null) {
-        const scores = [...(studentGrade.regularScores || [])];
+        const scores = [...(studentGrade[field] || [])];
         scores[index] = value === "" ? "" : Number(value);
-        studentGrade.regularScores = scores;
-      } else {
-        studentGrade[field] = value === "" ? "" : Number(value);
+        studentGrade[field] = scores;
+      } else if (field === "midtermScore") {
+        studentGrade.midtermScore = value === "" ? "" : Number(value);
+      } else if (field === "finalScore") {
+        studentGrade.finalScore = value === "" ? "" : Number(value);
+      } else if (field === "comment") {
+        studentGrade.comment = value;
       }
 
       return {
@@ -103,13 +124,23 @@ export default function ClassStudentModal({
       const res = await subjectGradeService.saveGrade(payload);
       console.log("Saved:", res);
 
-      setGrades((prev) => ({
-        ...prev,
-        [student.userId]: {
-          ...prev[student.userId],
-          locked: true,
-        },
-      }));
+      // sau khi lưu thì khóa toàn bộ ô đã có dữ liệu (chỉ nếu không phải admin)
+      setGrades((prev) => {
+        const studentGrade = { ...prev[student.userId] };
+        if (!isAdmin) {
+          studentGrade.lockedRegular = studentGrade.regularScores.map(
+            (v) => v !== ""
+          );
+          studentGrade.lockedMidterm = studentGrade.midtermScore !== "";
+          studentGrade.lockedFinal = studentGrade.finalScore !== "";
+          studentGrade.lockedComment = studentGrade.comment !== "";
+        }
+        studentGrade.actualAverage = res?.actualAverage ?? g.actualAverage;
+        return {
+          ...prev,
+          [student.userId]: studentGrade,
+        };
+      });
 
       alert(`Đã lưu điểm cho ${student.fullName}`);
     } catch (err) {
@@ -122,7 +153,7 @@ export default function ClassStudentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 w-11/12 max-w-6xl h-4/6 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-900 w-11/12 max-w-7xl h-5/6 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
@@ -145,9 +176,9 @@ export default function ClassStudentModal({
                 <tr className="bg-gray-100 text-gray-700">
                   <th className="border px-3 py-2">Tên học sinh</th>
                   <th className="border px-3 py-2">Điểm thường xuyên</th>
-                  <th className="border px-3 py-2">Điểm giữa kỳ</th>
-                  <th className="border px-3 py-2">Điểm cuối kỳ</th>
-                  <th className="border px-3 py-2">Điểm trung bình</th>
+                  <th className="border px-3 py-2">Giữa kỳ</th>
+                  <th className="border px-3 py-2">Cuối kỳ</th>
+                  <th className="border px-3 py-2">Trung bình</th>
                   <th className="border px-3 py-2">Nhận xét</th>
                   <th className="border px-3 py-2">Hành động</th>
                 </tr>
@@ -158,28 +189,39 @@ export default function ClassStudentModal({
                   return (
                     <tr key={s.userId} className="hover:bg-gray-50">
                       <td className="border px-3 py-2">{s.fullName}</td>
+
                       {/* Regular scores */}
                       <td className="border px-3 py-2 text-center">
-                        {[0, 1, 2].map((i) => (
-                          <input
-                            key={i}
-                            type="number"
-                            value={g.regularScores?.[i] ?? ""}
-                            disabled={g.locked}
-                            onChange={(e) =>
-                              handleChange(
-                                s.userId,
-                                "regularScores",
-                                e.target.value,
-                                i
-                              )
-                            }
-                            className={`w-14 mx-1 px-1 py-0.5 border rounded text-center ${
-                              g.locked ? "bg-gray-100 cursor-not-allowed" : ""
-                            }`}
-                          />
-                        ))}
+                        {[0, 1, 2].map((i) => {
+                          const val = g.regularScores?.[i] ?? "";
+                          const isLocked = g.lockedRegular?.[i];
+                          return (
+                            <input
+                              key={i}
+                              type="number"
+                              min="0"
+                              max="10"
+                              step="0.1"
+                              value={val}
+                              disabled={!isAdmin && isLocked}
+                              onChange={(e) =>
+                                handleChange(
+                                  s.userId,
+                                  "regularScores",
+                                  e.target.value,
+                                  i
+                                )
+                              }
+                              className={`w-16 mx-1 px-1 py-0.5 border rounded text-center ${
+                                !isAdmin && isLocked
+                                  ? "bg-gray-100 cursor-not-allowed"
+                                  : ""
+                              }`}
+                            />
+                          );
+                        })}
                       </td>
+
                       {/* Midterm */}
                       <td className="border px-3 py-2 text-center">
                         <input
@@ -187,7 +229,7 @@ export default function ClassStudentModal({
                           min="0"
                           max="10"
                           step="0.1"
-                          disabled={g.locked}
+                          disabled={!isAdmin && g.lockedMidterm}
                           value={g.midtermScore ?? ""}
                           onChange={(e) =>
                             handleChange(
@@ -196,9 +238,14 @@ export default function ClassStudentModal({
                               e.target.value
                             )
                           }
-                          className="w-14 px-1 py-0.5 border rounded text-center"
+                          className={`w-16 px-1 py-0.5 border rounded text-center ${
+                            !isAdmin && g.lockedMidterm
+                              ? "bg-gray-100 cursor-not-allowed"
+                              : ""
+                          }`}
                         />
                       </td>
+
                       {/* Final */}
                       <td className="border px-3 py-2 text-center">
                         <input
@@ -206,29 +253,41 @@ export default function ClassStudentModal({
                           min="0"
                           max="10"
                           step="0.1"
-                          disabled={g.locked}
+                          disabled={!isAdmin && g.lockedFinal}
                           value={g.finalScore ?? ""}
                           onChange={(e) =>
                             handleChange(s.userId, "finalScore", e.target.value)
                           }
-                          className="w-14 px-1 py-0.5 border rounded text-center"
+                          className={`w-16 px-1 py-0.5 border rounded text-center ${
+                            !isAdmin && g.lockedFinal
+                              ? "bg-gray-100 cursor-not-allowed"
+                              : ""
+                          }`}
                         />
                       </td>
-                      {/* Actual Average */}
-                      <td className="border px-3 py-2 text-center">
-                        {g.actualAverage ?? "-"}
+
+                      {/* Actual average */}
+                      <td className="border px-3 py-2 text-center font-medium">
+                        {g.actualAverage ?? ""}
                       </td>
+
                       {/* Comment */}
                       <td className="border px-3 py-2">
                         <input
                           type="text"
+                          disabled={!isAdmin && g.lockedComment}
                           value={g.comment ?? ""}
                           onChange={(e) =>
                             handleChange(s.userId, "comment", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className={`w-full px-2 py-1 border rounded ${
+                            !isAdmin && g.lockedComment
+                              ? "bg-gray-100 cursor-not-allowed"
+                              : ""
+                          }`}
                         />
                       </td>
+
                       {/* Action */}
                       <td className="border px-3 py-2 text-center">
                         <button

@@ -40,15 +40,15 @@ export default function TeacherSidebar() {
           },
         ]
       : []),
-    ...(!isAdmin
-      ? [
-          {
-            name: "Quản lý điểm danh",
-            path: "/teacher/attendance",
-            icon: <FaClipboardList />,
-          },
-        ]
-      : []),
+    // ...(!isAdmin
+    //   ? [
+    //       {
+    //         name: "Quản lý điểm danh",
+    //         path: "/teacher/attendance",
+    //         icon: <FaClipboardList />,
+    //       },
+    //     ]
+    //   : []),
     {
       name: "Lịch giảng dạy",
       path: "/teacher/schedules",
