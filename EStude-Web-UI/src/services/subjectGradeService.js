@@ -28,6 +28,7 @@ const subjectGradeService = {
       return null;
     }
   },
+
   getGradesOfStudentByClassSubject: async (studentId, classSubjectId) => {
     try {
       const response = await fetch(
@@ -39,14 +40,19 @@ const subjectGradeService = {
           headers: { "Content-Type": "application/json" },
         }
       );
-      if (!response.ok) {
-        throw new Error("Lấy điểm thất bại");
+
+      if (response.status === 404) {
+        return [];
       }
-      const result = await response.json();
-      return result;
+
+      if (!response.ok) {
+        throw new Error(`Lấy điểm thất bại (status ${response.status})`);
+      }
+
+      return await response.json();
     } catch (error) {
       console.error("Lỗi khi lấy điểm:", error);
-      return null;
+      return [];
     }
   },
 };
