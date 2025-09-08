@@ -8,19 +8,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
-
 import { loadAssignmentsWithStatus } from "../../services/assignmentHelper";
-
 import assignmentService from "../../services/assignmentService";
 import subjectGradeService from "../../services/subjectGradeService";
 
-// import attendanceService from "../../services/attendanceService";
-// import notificationService from "../../services/notificationService";
-
 export default function SubjectDetailScreen({ route, navigation }) {
   const { subject } = route.params;
-  // console.log("Subject detail:", subject);
-
   const { user } = useContext(AuthContext);
 
   const [activeTab, setActiveTab] = useState("Điểm");
@@ -36,7 +29,15 @@ export default function SubjectDetailScreen({ route, navigation }) {
     const loadData = async () => {
       setLoading(true);
       try {
-        if (activeTab === "Bài tập") {
+        if (activeTab === "Điểm") {
+          // gọi API điểm
+          const res =
+            await subjectGradeService.getGradesOfStudentByClassSubject(
+              user.userId,
+              subject.classSubjectId
+            );
+          setGrade(res);
+        } else if (activeTab === "Bài tập") {
           if (subject.clazz.classId) {
             const res = await loadAssignmentsWithStatus(
               user.userId,
@@ -44,17 +45,16 @@ export default function SubjectDetailScreen({ route, navigation }) {
               null,
               subject.subjectId
             );
-            // Lọc chỉ lấy assignments của classSubject hiện tại
             const assignmentsForThisClass = res.filter(
               (a) => a.classSubject?.classSubjectId === subject.classSubjectId
             );
             setAssignments(assignmentsForThisClass);
-            // console.log("Assignments raw:", assignmentsForThisClass);
           }
         }
       } catch (e) {
         console.log("Load error:", e);
-        setAssignments([]);
+        if (activeTab === "Điểm") setGrade(null);
+        if (activeTab === "Bài tập") setAssignments([]);
       } finally {
         setLoading(false);
       }
@@ -66,16 +66,15 @@ export default function SubjectDetailScreen({ route, navigation }) {
     <View style={styles.safe}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{
-          paddingBottom: 24,
-        }}
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
         {/* Header môn học */}
         <View style={styles.headerCard}>
           <Text style={styles.subjectName}>{subject.name}</Text>
           <Text style={styles.description}> {subject.description} </Text>
         </View>
-        {/* Tab row */}
+
+        {/* Tabs */}
         <View style={styles.tabRow}>
           {tabs.map((tab) => (
             <TouchableOpacity
@@ -94,14 +93,13 @@ export default function SubjectDetailScreen({ route, navigation }) {
             </TouchableOpacity>
           ))}
         </View>
+
         {/* Nội dung */}
         {loading ? (
           <ActivityIndicator
             size="large"
             color="#007bff"
-            style={{
-              marginTop: 20,
-            }}
+            style={{ marginTop: 20 }}
           />
         ) : (
           <View style={styles.tabContent}>
@@ -109,78 +107,36 @@ export default function SubjectDetailScreen({ route, navigation }) {
               <View style={styles.cardContainer}>
                 <Text style={styles.cardTitle}>Kết quả học tập</Text>
 
-                {/* Bảng điểm theo cột dọc */}
                 <View style={styles.verticalTable}>
+                  {/* Thường kỳ 1-3 */}
+                  {(grade?.regularScores ?? ["-", "-", "-"]).map((v, i) => (
+                    <View style={styles.row} key={`reg${i}`}>
+                      <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
+                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
+                    </View>
+                  ))}
+
                   {/* Giữa kỳ */}
                   <View style={styles.row}>
                     <Text style={styles.rowLabel}>Giữa kỳ</Text>
                     <Text style={styles.rowValue}>
-                      {subject.subjectGrade?.midtermScore ?? "-"}
+                      {grade?.midtermScore ?? "-"}
                     </Text>
                   </View>
-
-                  {/* Thường kỳ 1-3 */}
-                  {(subject.subjectGrade?.regularScores ?? ["-", "-", "-"]).map(
-                    (v, i) => (
-                      <View style={styles.row} key={`reg${i}`}>
-                        <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
-                        <Text style={styles.rowValue}>{v ?? "-"}</Text>
-                      </View>
-                    )
-                  )}
-
-                  {/* Thực hành 1-3 */}
-                  {(
-                    subject.subjectGrade?.practiceScores ?? ["-", "-", "-"]
-                  ).map((v, i) => (
-                    <View style={styles.row} key={`prac${i}`}>
-                      <Text style={styles.rowLabel}>Thực hành {i + 1}</Text>
-                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
-                    </View>
-                  ))}
 
                   {/* Cuối kỳ */}
                   <View style={styles.row}>
                     <Text style={styles.rowLabel}>Cuối kỳ</Text>
                     <Text style={styles.rowValue}>
-                      {subject.subjectGrade?.finalScore ?? "-"}
+                      {grade?.finalScore ?? "-"}
                     </Text>
                   </View>
 
-                  {/* Tổng kết */}
+                  {/* Điểm trung bình */}
                   <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Tổng kết</Text>
+                    <Text style={styles.rowLabel}>Điểm trung bình</Text>
                     <Text style={styles.rowValue}>
-                      {subject.subjectGrade?.actualAverage ?? "-"}
-                    </Text>
-                  </View>
-
-                  {/* Xếp loại */}
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Xếp loại</Text>
-                    <Text style={styles.rowValue}>
-                      {subject.subjectGrade?.gradeClassification ?? "-"}
-                    </Text>
-                  </View>
-
-                  {/* Đạt/Không đạt */}
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Đạt/Không đạt</Text>
-                    <Text
-                      style={[
-                        styles.rowValue,
-                        subject.subjectGrade?.passed === true
-                          ? styles.pass
-                          : subject.subjectGrade?.passed === false
-                          ? styles.fail
-                          : null,
-                      ]}
-                    >
-                      {subject.subjectGrade?.passed
-                        ? "Đạt ✅"
-                        : subject.subjectGrade?.passed === false
-                        ? "Không đạt ❌"
-                        : "-"}
+                      {grade?.actualAverage ?? "-"}
                     </Text>
                   </View>
                 </View>
@@ -235,16 +191,16 @@ export default function SubjectDetailScreen({ route, navigation }) {
 
             {activeTab === "Thông báo" && (
               <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}> Thông báo gần đây </Text>
+                <Text style={styles.cardTitle}>Thông báo gần đây</Text>
                 {notifications.length > 0 ? (
                   notifications.map((nt) => (
                     <View key={nt.notificationId} style={styles.recordCard}>
-                      <Text> {new Date(nt.sentAt).toLocaleDateString()} </Text>
-                      <Text> {nt.message} </Text>
+                      <Text>{new Date(nt.sentAt).toLocaleDateString()}</Text>
+                      <Text>{nt.message}</Text>
                     </View>
                   ))
                 ) : (
-                  <Text style={styles.emptyText}> Chưa có thông báo </Text>
+                  <Text style={styles.emptyText}>Chưa có thông báo</Text>
                 )}
               </View>
             )}
@@ -256,52 +212,28 @@ export default function SubjectDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-  },
+  safe: { flex: 1, backgroundColor: "#f5f5f5" },
+  container: { flex: 1, padding: 16 },
   headerCard: {
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
   },
-  subjectName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  description: {
-    fontSize: 13,
-    color: "#555",
-    marginTop: 2,
-  },
+  subjectName: { fontSize: 20, fontWeight: "bold", color: "#333" },
+  description: { fontSize: 13, color: "#555", marginTop: 2 },
+
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
     borderRadius: 8,
     marginBottom: 12,
   },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#007BFF",
-  },
-  tabText: {
-    fontSize: 14,
-    color: "#333",
-  },
-  activeTabText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: "center" },
+  activeTab: { backgroundColor: "#007BFF" },
+  tabText: { fontSize: 14, color: "#333" },
+  activeTabText: { color: "#fff", fontWeight: "bold" },
+
   cardContainer: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -329,38 +261,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
-  assignmentTitle: {
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#333",
-  },
-  assignmentDeadline: {
-    fontSize: 13,
-    color: "#666",
-    marginTop: 2,
-  },
-  assignmentStatus: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  done: {
-    color: "#27ae60",
-  },
-  pending: {
-    color: "#e74c3c",
-  },
+  assignmentTitle: { fontSize: 15, fontWeight: "500", color: "#333" },
+  assignmentDeadline: { fontSize: 13, color: "#666", marginTop: 2 },
+  assignmentStatus: { fontSize: 13, fontWeight: "bold" },
+  done: { color: "#27ae60" },
+  pending: { color: "#e74c3c" },
 
   // Records
-  recordCard: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#999",
-    marginTop: 12,
-  },
+  recordCard: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
+  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
 
   // Grade Table
   verticalTable: {
@@ -375,29 +284,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderRightWidth: 1,
     borderColor: "#ddd",
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 12,
     backgroundColor: "#fafafa",
   },
-  rowLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#444",
-  },
+  rowLabel: { flex: 1, fontSize: 14, fontWeight: "500", color: "#444" },
   rowValue: {
     flex: 1,
     fontSize: 14,
     textAlign: "right",
     color: "#000",
     fontWeight: "600",
-  },
-  pass: {
-    color: "#27ae60", // xanh cho Đạt
-    fontWeight: "bold",
-  },
-  fail: {
-    color: "#e74c3c", // đỏ cho Không đạt
-    fontWeight: "bold",
   },
 });
