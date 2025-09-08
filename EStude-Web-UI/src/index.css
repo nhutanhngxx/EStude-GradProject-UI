@@ -6,7 +6,7 @@ html {
   scroll-behavior: smooth;
 }
 
-@keyframes slideIn {
+/* @keyframes slideIn {
   0% {
     opacity: 0;
     transform: translateX(100%);
@@ -19,4 +19,34 @@ html {
 
 .animate-slide-in {
   animation: slideIn 0.5s ease-out forwards;
+} */
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(100%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%) translateY(-10px);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.4s ease-out forwards;
+}
+
+.animate-slide-out {
+  animation: slide-out 0.4s ease-in forwards;
 }
