@@ -8,24 +8,31 @@ import {
   StyleSheet,
   Image,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
 import authService from "../services/authService";
+import { useToast } from "../contexts/ToastContext";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useContext(AuthContext);
+  const { showToast } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleLogin = async () => {
+    if (!username || !password) {
+      showToast("Vui lòng nhập đầy đủ thông tin!", { type: "error" });
+      return;
+    }
+
     const result = await authService.login({ username, password });
+
     if (result) {
       await login(result.user, result.token);
-      Alert.alert("Thông báo", "Đăng nhập thành công!");
+      showToast("Đăng nhập thành công!", { type: "success" });
       navigation.replace("MainTabs");
     } else {
-      Alert.alert("Thông báo", "Đăng nhập thất bại. Vui lòng thử lại.");
+      showToast("Đăng nhập thất bại. Vui lòng thử lại.", { type: "error" });
     }
   };
 
@@ -68,7 +75,9 @@ export default function LoginScreen({ navigation }) {
             <View style={{ width: "100%" }}>
               <TouchableOpacity
                 onPress={() =>
-                  Alert.alert("Thông báo", "Chức năng chưa được phát triển")
+                  showToast("Chức năng quên mật khẩu chưa phát triển", {
+                    type: "default",
+                  })
                 }
               >
                 <Text
