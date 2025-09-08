@@ -13,6 +13,8 @@ import {
   Legend,
 } from "chart.js";
 
+import { useToast } from "../../contexts/ToastContext";
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
