@@ -26,6 +26,7 @@ const studentService = {
       return null;
     }
   },
+
   getStudentById: async (studentId) => {
     try {
       const response = await fetch(
@@ -48,6 +49,7 @@ const studentService = {
       return null;
     }
   },
+
   getStudentsByClass: async (classId) => {
     try {
       const response = await fetch(
