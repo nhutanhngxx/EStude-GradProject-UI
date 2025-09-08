@@ -1,9 +1,9 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import authService from "../services/authService";
 import bannerLight from "../assets/banner-light.png";
 import bannerDark from "../assets/banner-dark.png";
+import { useToast } from "../contexts/ToastContext";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,6 +15,7 @@ export default function Login() {
   const [error, setError] = useState(null);
 
   const { login } = useAuth();
+  const { showToast } = useToast();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,14 +29,16 @@ export default function Login() {
       });
       if (!success) {
         setError("Đăng nhập thất bại");
+        showToast("Đăng nhập thất bại!", "error");
         return;
       }
 
-      alert("Đăng nhập thành công");
+      showToast("Đăng nhập thành công!", "success");
 
       const storedUser = JSON.parse(localStorage.getItem("user"));
       if (!storedUser) {
         setError("Không tìm thấy thông tin người dùng");
+        showToast("Không tìm thấy thông tin người dùng", "error");
         return;
       }
 
@@ -50,6 +53,7 @@ export default function Login() {
     } catch (err) {
       console.error("Lỗi khi đăng nhập:", err);
       setError("Có lỗi xảy ra, vui lòng thử lại");
+      showToast("Có lỗi xảy ra, vui lòng thử lại", "error");
     }
   };
 
