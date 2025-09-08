@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { X, ListChecks, Save } from "lucide-react";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
+import { useToast } from "../../contexts/ToastContext";
 
 export default function ClassStudentModal({
   classId,
@@ -9,13 +10,13 @@ export default function ClassStudentModal({
   isOpen,
   onClose,
 }) {
+  const { showToast } = useToast();
   const [students, setStudents] = useState([]);
   const [grades, setGrades] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
-
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
@@ -122,7 +123,6 @@ export default function ClassStudentModal({
 
     try {
       const res = await subjectGradeService.saveGrade(payload);
-      console.log("Saved:", res);
 
       // sau khi lưu thì khóa toàn bộ ô đã có dữ liệu (chỉ nếu không phải admin)
       setGrades((prev) => {
@@ -141,8 +141,7 @@ export default function ClassStudentModal({
           [student.userId]: studentGrade,
         };
       });
-
-      alert(`Đã lưu điểm cho ${student.fullName}`);
+      showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
     } catch (err) {
       console.error(err);
       alert("Lưu điểm thất bại!");
@@ -152,8 +151,8 @@ export default function ClassStudentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-gray-900 w-11/12 max-w-7xl h-5/6 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+    <div className="fixed -top-6 left-0 w-screen h-screen bg-black/40 backdrop-blur-sm flex justify-center items-center">
+      <div className="bg-white dark:bg-gray-900 w-4/6 max-w-6xl h-3/5 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div className="flex items-center gap-2">
@@ -306,14 +305,14 @@ export default function ClassStudentModal({
         </div>
 
         {/* Footer */}
-        <div className="border-t px-5 py-3 flex justify-end">
+        {/* <div className="border-t px-5 py-3 flex justify-end">
           <button
             className="px-4 py-2 rounded-lg border hover:bg-gray-50"
             onClick={onClose}
           >
             Đóng
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );
