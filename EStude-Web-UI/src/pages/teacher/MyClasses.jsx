@@ -23,6 +23,7 @@ export default function MyClasses() {
   // Tạo bài thi
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [ctx, setCtx] = useState(null);
+
   // Điểm danh
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
 
@@ -32,7 +33,6 @@ export default function MyClasses() {
   useEffect(() => {
     const fetchMyClasses = async () => {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-
       const result = await teacherService.getClassSubjectByTeacherId(
         user.userId
       );
@@ -109,8 +109,8 @@ export default function MyClasses() {
                   onClick={() => {
                     setSelectedClass({
                       classSubjectId: cls.classSubjectId,
+                      classId: cls.clazz?.classId,
                     });
-                    console.log("selectedClass:", selectedClass);
                     setIsAttendanceOpen(true);
                   }}
                 >
@@ -172,6 +172,7 @@ export default function MyClasses() {
 
       <AttendanceModal
         classSubjectId={selectedClass?.classSubjectId}
+        classId={selectedClass?.classId}
         teacherId={user.userId}
         isOpen={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
