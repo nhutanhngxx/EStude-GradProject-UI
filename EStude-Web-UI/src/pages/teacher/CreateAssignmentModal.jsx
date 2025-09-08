@@ -18,6 +18,8 @@ import {
 import assignmentService from "../../services/assignmentService";
 import questionService from "../../services/questionService";
 
+import { useToast } from "../../contexts/ToastContext";
+
 export default function CreateAssignmentModal({
   isOpen,
   onClose,
@@ -25,6 +27,8 @@ export default function CreateAssignmentModal({
   classContext,
   onCreated,
 }) {
+  const { showToast } = useToast();
+
   const [tab, setTab] = useState("build");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
@@ -190,7 +194,7 @@ export default function CreateAssignmentModal({
     e?.preventDefault();
 
     if (!title.trim()) {
-      alert("Vui lòng nhập tiêu đề bài thi");
+      showToast("Vui lòng nhập tiêu đề bài thi", "warn");
       return;
     }
 
@@ -200,7 +204,7 @@ export default function CreateAssignmentModal({
     try {
       // Nếu chưa điền câu hỏi không cho add
       if (questions.length === 0) {
-        alert("Vui lòng thêm ít nhất 1 câu hỏi");
+        showToast("Vui lòng thêm ít nhất 1 câu hỏi", "warn");
         return;
       }
       const assignment = await assignmentService.addAssignment({
@@ -208,13 +212,13 @@ export default function CreateAssignmentModal({
         classSubject: { classSubjectId: classContext.classSubjectId },
         teacher: { userId: teacherId },
       });
-      // console.log("assignment:", assignment);
       if (questions.length > 0) {
         for (const q of buildQuestionsPayload()) {
           await questionService.addQuestion(assignment.assignmentId, q);
         }
       }
       onCreated?.(assignment);
+      showToast("Tạo bài tập/bài thi thành công!", "success");
       setTitle("");
       setDescription("");
       setDueDate("");
@@ -230,12 +234,15 @@ export default function CreateAssignmentModal({
       close();
     } catch (e) {
       console.error(e);
-      alert("Không thể tạo bài thi. Vui lòng thử lại.");
+      showToast(
+        "Không thể tạo bài thi bây giờ. Vui lòng thử lại sau!",
+        "error"
+      );
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed -top-6 left-0 w-screen h-screen bg-black/40 backdrop-blur-sm flex justify-center items-center">
       <div className="bg-white dark:bg-gray-900 w-full max-w-7xl rounded-2xl shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-4">
