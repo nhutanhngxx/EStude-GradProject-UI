@@ -14,6 +14,9 @@ const endpoints = {
   // Xem trạng thái điểm danh của các học sinh điểm danh theo session
   getAttentanceStatusOfStudentsBySessionId:
     "/api/attendance/sessions/{sessionId}/students",
+
+  // Giáo viên điểm danh thủ công cho học sinh trong lớp
+  markAttendance: "/api/attendance/records/teacher",
 };
 
 const attendanceService = {
@@ -114,27 +117,52 @@ const attendanceService = {
     }
   },
 
-  getAttentanceStatusOfStudentsBySessionId: async (sessionId) => {
+  getAttentanceStatusOfStudentsBySessionId: async (sessionId, teacherId) => {
     try {
-      const response = await fetch(
-        `${
-          config.BASE_URL
-        }${endpoints.getAttentanceStatusOfStudentsBySessionId.replace(
-          "{sessionId}",
-          sessionId
-        )}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const url = `${
+        config.BASE_URL
+      }${endpoints.getAttentanceStatusOfStudentsBySessionId.replace(
+        "{sessionId}",
+        sessionId
+      )}?teacherId=${teacherId}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
       if (!response.ok) {
         throw new Error("Lấy trạng thái điểm danh thất bại mất òi :)))");
       }
-      const result = await response.json();
-      return result;
+
+      return await response.json();
     } catch (error) {
       console.error("Lỗi khi lấy trạng thái điểm danh:", error);
+      return null;
+    }
+  },
+
+  markAttendance: async (sessionId, studentId, teacherId, status) => {
+    try {
+      const url = new URL(`${config.BASE_URL}${endpoints.markAttendance}`);
+      url.searchParams.append("sessionId", sessionId);
+      url.searchParams.append("studentId", studentId);
+      url.searchParams.append("teacherId", teacherId);
+      url.searchParams.append("status", status);
+      console.log("url markAttendance:", url.toString());
+
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Điểm danh thất bại");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi điểm danh:", error);
       return null;
     }
   },
