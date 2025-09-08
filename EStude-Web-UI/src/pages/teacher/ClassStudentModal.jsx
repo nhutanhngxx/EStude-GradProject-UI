@@ -57,12 +57,19 @@ export default function ClassStudentModal({
             actualAverage: g.actualAverage ?? "",
             comment: g.comment ?? "",
             // lock theo từng ô
+            // lockedRegular: (g.regularScores || ["", "", ""]).map(
+            //   (x) => x !== null && x !== ""
+            // ),
+            // lockedMidterm: g.midtermScore !== null && g.midtermScore !== "",
+            // lockedFinal: g.finalScore !== null && g.finalScore !== "",
+            // lockedComment: g.comment !== null && g.comment !== "",
+
             lockedRegular: (g.regularScores || ["", "", ""]).map(
-              (x) => x !== null && x !== ""
+              (x) => !!x // chỉ lock khi có giá trị truthy (số điểm hoặc text), còn null/"" thì không lock
             ),
-            lockedMidterm: g.midtermScore !== null && g.midtermScore !== "",
-            lockedFinal: g.finalScore !== null && g.finalScore !== "",
-            lockedComment: g.comment !== null && g.comment !== "",
+            lockedMidterm: g.midtermScore ? true : false,
+            lockedFinal: g.finalScore ? true : false,
+            lockedComment: g.comment ? true : false,
           };
         } else {
           initGrades[s.userId] = {
