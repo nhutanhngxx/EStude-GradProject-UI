@@ -75,18 +75,16 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
         Trạng thái:{" "}
         {loading ? (
           <ActivityIndicator size="small" color="#007BFF" />
+        ) : isOverdue ? (
+          <Text style={[styles.overdue]}>
+            Quá hạn {assignment.allowLateSubmission ? "⚠️" : "❌"}
+          </Text>
         ) : (
           <Text style={status === "Đã nộp" ? styles.done : styles.pending}>
             {status}
           </Text>
         )}
       </Text>
-
-      {isOverdue && (
-        <Text style={[styles.info, styles.overdue]}>
-          Quá hạn {assignment.allowLateSubmission ? "⚠️" : "❌"}
-        </Text>
-      )}
 
       <Text style={styles.info}>
         Loại bài tập:{" "}
@@ -99,23 +97,39 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
             <Text style={styles.btnText}>Tải file</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          style={[
-            styles.btn,
-            styles.submitBtn,
-            !canSubmit && styles.disabledBtn,
-          ]}
-          onPress={() => navigation.navigate("ExamDoing", { exam: assignment })}
-          disabled={!canSubmit}
-        >
-          <Text style={[styles.btnText, { color: "#fff" }]}>
-            {status === "Đã nộp"
-              ? "Đã nộp"
-              : !canSubmit
-              ? "Không thể nộp"
-              : "Làm bài"}
-          </Text>
-        </TouchableOpacity>
+
+        {status === "Đã nộp" ? (
+          <TouchableOpacity
+            style={[styles.btn, styles.detailBtn]}
+            onPress={() =>
+              navigation.navigate("ExamDoing", {
+                exam: assignment,
+                submitted: true,
+              })
+            }
+          >
+            <Text style={styles.btnText}>Xem chi tiết</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.btn,
+              styles.submitBtn,
+              !canSubmit && styles.disabledBtn,
+            ]}
+            onPress={() =>
+              navigation.navigate("ExamDoing", {
+                exam: assignment,
+                submitted: false,
+              })
+            }
+            disabled={!canSubmit}
+          >
+            <Text style={[styles.btnText, { color: "#fff" }]}>
+              {!canSubmit ? "Không thể nộp" : "Làm bài"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -145,4 +159,7 @@ const styles = StyleSheet.create({
   submitBtn: { backgroundColor: "#007BFF" },
   disabledBtn: { backgroundColor: "#999" },
   btnText: { fontSize: 16, color: "#fff", fontWeight: "600" },
+  detailBtn: {
+    backgroundColor: "#8e44ad",
+  },
 });

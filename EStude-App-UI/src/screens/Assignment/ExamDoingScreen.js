@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,12 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 
 import submissionService from "../../services/submissionService";
 import { AuthContext } from "../../contexts/AuthContext";
+import aiService from "../../services/aiService";
 
 const themeColors = {
   primary: "#2ecc71",
@@ -21,65 +23,110 @@ const themeColors = {
 };
 
 export default function ExamDoingScreen({ navigation, route }) {
-  const { exam } = route.params;
+  const { exam, submitted: initialSubmitted } = route.params;
   const { user } = useContext(AuthContext);
-  const [timeLeft, setTimeLeft] = useState(exam.timeLimit * 60 || 15 * 60);
+
+  const initialSeconds = (exam?.timeLimit ?? 15) * 60;
+  const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [answers, setAnswers] = useState({});
   const [activeTab, setActiveTab] = useState("Doing");
+  const [aiResult, setAiResult] = useState(null);
+  const [aiFeedback, setAiFeedback] = useState([]);
+  const [submitted, setSubmitted] = useState(initialSubmitted || false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const autoSubmittedRef = useRef(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
-      handleSubmit();
-      return;
+    if (submitted) {
+      navigation.setOptions({ title: "Chi tiết bài làm" });
+    } else {
+      navigation.setOptions({ title: "Đang làm" });
     }
-    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+  }, [submitted, navigation]);
+
+  useEffect(() => {
+    if (submitted) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [submitted]);
+
+  useEffect(() => {
+    if (timeLeft <= 0 && !submitted && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      Alert.alert(
+        "Hết giờ",
+        "Thời gian làm bài đã hết. Bài sẽ được tự động nộp.",
+        [{ text: "OK", onPress: () => handleSubmit() }]
+      );
+    }
+  }, [timeLeft, submitted]);
 
   const formatTime = (s) =>
     `${Math.floor(s / 60)}:${s % 60 < 10 ? "0" : ""}${s % 60}`;
 
-  const handleSelect = (q, opt) => {
+  const handleSelect = (q, optText) => {
+    if (submitted) return;
     setAnswers((prev) => {
       const prevAns = prev[q.questionId] || [];
+      // detect multi-select: I assume q.answers chứa đúng số câu trả lời hợp lệ?
+      // original code used q.answers && q.answers.length > 1
       const multi = q.answers && q.answers.length > 1;
       if (multi) {
-        if (prevAns.includes(opt))
+        if (prevAns.includes(optText)) {
           return {
             ...prev,
-            [q.questionId]: prevAns.filter((o) => o !== opt),
+            [q.questionId]: prevAns.filter((o) => o !== optText),
           };
-        else
-          return {
-            ...prev,
-            [q.questionId]: [...prevAns, opt],
-          };
+        } else {
+          return { ...prev, [q.questionId]: [...prevAns, optText] };
+        }
       } else {
-        return {
-          ...prev,
-          [q.questionId]: [opt],
-        };
+        return { ...prev, [q.questionId]: [optText] };
       }
     });
   };
 
   const handleSubmit = async () => {
+    if (submitting || submitted) return;
+    setSubmitting(true);
+
     try {
+      // build submission payload
+      const answersPayload = Object.entries(answers).flatMap(
+        ([questionId, selected]) => {
+          // selected is array of optionText(s)
+          const q = exam.questions.find(
+            (x) => x.questionId === Number(questionId)
+          );
+          if (!q || !Array.isArray(selected)) return [];
+          return selected
+            .map((optText) => {
+              const opt = q.options.find((o) => o.optionText === optText);
+              if (!opt || opt.optionId == null) return null;
+              return {
+                questionId: Number(questionId),
+                chosenOptionId: opt.optionId,
+              };
+            })
+            .filter(Boolean);
+        }
+      );
+
       const submission = {
         assignmentId: exam.assignmentId,
         studentId: user.userId,
         content: "Nộp bài",
-        answers: Object.entries(answers).flatMap(([questionId, selected]) => {
-          return selected.map((optText) => {
-            const option = exam.questions
-              .find((q) => q.questionId === Number(questionId))
-              .options.find((o) => o.optionText === optText);
-            return {
-              questionId: Number(questionId),
-              chosenOptionId: option.optionId,
-            };
-          });
-        }),
+        answers: answersPayload,
       };
 
       console.log("submission:", JSON.stringify(submission, null, 2));
@@ -87,13 +134,46 @@ export default function ExamDoingScreen({ navigation, route }) {
       const result = await submissionService.addSubmission(submission);
 
       if (result) {
+        // call AI analysis
+        try {
+          const analysis = await aiService.getAIAnalysisBySubmission(
+            exam.assignmentId,
+            user.userId
+          );
+          // console.log("AI analysis:", analysis);
+
+          if (analysis?.success) {
+            setAiResult(analysis.data);
+
+            const rawFb = analysis.data.feedback || [];
+            const normalizedFb = Array.isArray(rawFb) ? rawFb.flat() : [];
+            // console.log("normalizedFb:", normalizedFb);
+
+            setAiFeedback(normalizedFb);
+          } else {
+            setAiResult(null);
+            setAiFeedback([]);
+            console.warn("AI analysis did not return success:", analysis);
+          }
+        } catch (e) {
+          console.error("Lỗi khi gọi AI analysis:", e);
+          setAiResult(null);
+          setAiFeedback([]);
+        }
+
+        setSubmitted(true);
+        setSubmitting(false);
         Alert.alert("Thành công", "Bài thi đã được nộp!", [
-          { text: "OK", onPress: () => navigation.goBack() },
+          { text: "OK", onPress: () => setActiveTab("Doing") },
         ]);
+      } else {
+        setSubmitting(false);
+        Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
       }
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
       console.error(error);
+      setSubmitting(false);
+      Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
     }
   };
 
@@ -101,10 +181,10 @@ export default function ExamDoingScreen({ navigation, route }) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {/* <Text style={styles.subject}>{exam.classSubject.clazz.name}</Text> */}
-        <Text style={styles.examTitle}>{exam.title}</Text>
+        <Text style={styles.examTitle}>{exam?.title ?? "Bài kiểm tra"}</Text>
         <Text style={styles.timer}>⏰ {formatTime(timeLeft)}</Text>
       </View>
+
       {/* Tabs */}
       <View style={styles.tabRow}>
         <TouchableOpacity
@@ -120,6 +200,7 @@ export default function ExamDoingScreen({ navigation, route }) {
             Làm bài
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.tabBtn, activeTab === "Overview" && styles.tabActive]}
           onPress={() => setActiveTab("Overview")}
@@ -134,100 +215,151 @@ export default function ExamDoingScreen({ navigation, route }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Body */}
       {activeTab === "Doing" ? (
-        <ScrollView
-          style={{
-            flex: 1,
-          }}
-        >
-          {exam.questions.map((q) => (
-            <View key={q.questionId} style={styles.questionBlock}>
-              <Text style={styles.questionText}>
-                {q.questionText} {q.answers.length > 1 && "(Chọn nhiều)"}
-              </Text>
-              {q.options.map((opt) => (
-                <TouchableOpacity
-                  key={opt.optionId}
+        <ScrollView style={{ flex: 1 }}>
+          {submitted ? (
+            // Sau khi nộp: chỉ hiển thị điểm và gợi ý
+            <View style={styles.aiSummary}>
+              {aiResult ? (
+                <>
+                  <Text style={styles.aiScore}>{aiResult?.score ?? "-"}</Text>
+                  <Text style={styles.aiPerf}>
+                    {aiResult?.performance_level ?? "-"}
+                  </Text>
+                  <Text style={styles.aiRecommend}>
+                    {aiResult?.general_recommendation ?? "Không có gợi ý."}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.aiScore}>Đã nộp</Text>
+                  <Text style={styles.aiPerf}>(Không có phân tích AI)</Text>
+                </>
+              )}
+            </View>
+          ) : (
+            // Trước khi nộp: hiển thị câu hỏi + lựa chọn
+            exam.questions.map((q) => (
+              <View key={q.questionId} style={styles.questionBlock}>
+                <Text style={styles.questionText}>
+                  {q.questionText}{" "}
+                  {q.answers && q.answers.length > 1 && "(Chọn nhiều)"}
+                </Text>
+                {q.options.map((opt) => {
+                  const selected = answers[q.questionId]?.includes(
+                    opt.optionText
+                  );
+                  return (
+                    <TouchableOpacity
+                      key={opt.optionId}
+                      disabled={submitted}
+                      style={[styles.option, selected && styles.optionSelected]}
+                      onPress={() => handleSelect(q, opt.optionText)}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selected && styles.optionTextSelected,
+                        ]}
+                      >
+                        {opt.optionText}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))
+          )}
+        </ScrollView>
+      ) : (
+        <ScrollView style={{ flex: 1, padding: 12 }}>
+          {exam.questions.map((q) => {
+            const isAnswered =
+              Array.isArray(answers[q.questionId]) &&
+              answers[q.questionId].length > 0;
+
+            const fb = aiFeedback.find(
+              (f) => Number(f.question_id) === exam.questions.indexOf(q) + 1
+            );
+
+            return (
+              <View key={q.questionId} style={styles.questionBlock}>
+                {/* Câu hỏi */}
+                <Text style={styles.questionText}>{q.questionText}</Text>
+
+                {/* Đáp án đã chọn */}
+                <View
                   style={[
-                    styles.option,
-                    answers[q.questionId]?.includes(opt.optionText) &&
-                      styles.optionSelected,
+                    styles.answerBox,
+                    {
+                      backgroundColor: isAnswered
+                        ? `${themeColors.primary}20` // xanh lá nhạt
+                        : "#f5f5f5",
+                    },
                   ]}
-                  onPress={() => handleSelect(q, opt.optionText)}
                 >
                   <Text
                     style={[
-                      styles.optionText,
-                      answers[q.questionId]?.includes(opt.optionText) &&
-                        styles.optionTextSelected,
+                      styles.answerText,
+                      { color: isAnswered ? themeColors.secondary : "#666" },
                     ]}
                   >
-                    {opt.optionText}
+                    {isAnswered
+                      ? "Đã chọn: " + answers[q.questionId].join(", ")
+                      : "Bạn chưa có đáp án nào."}
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-        </ScrollView>
-      ) : (
-        <ScrollView
-          style={{
-            flex: 1,
-            padding: 12,
-          }}
-        >
-          {exam.questions.map((q) => {
-            const isAnswered = answers[q.questionId]?.length;
-            return (
-              <View
-                key={q.questionId}
-                style={[
-                  styles.questionBlock,
-                  {
-                    backgroundColor: isAnswered ? "#a3d9a5" : "#eee",
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontWeight: "600",
-                    color: "#000",
-                  }}
-                >
-                  {q.questionText}
-                </Text>
-                <Text
-                  style={{
-                    marginTop: 4,
-                    color: "#333",
-                  }}
-                >
-                  {isAnswered
-                    ? "Đã chọn: " + answers[q.questionId].join(", ")
-                    : "Bạn chưa có đáp án nào."}
-                </Text>
+                </View>
+
+                {/* Feedback */}
+                {submitted && fb && (
+                  <View
+                    style={[
+                      styles.feedbackBox,
+                      {
+                        backgroundColor: fb.is_correct ? "#e8f5e9" : "#ffebee",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: fb.is_correct ? "#2e7d32" : "#c62828",
+                        fontStyle: "italic",
+                        fontSize: 14,
+                      }}
+                    >
+                      {fb.feedback}
+                    </Text>
+                  </View>
+                )}
               </View>
             );
           })}
         </ScrollView>
       )}
-      <TouchableOpacity
-        style={styles.submitBtn}
-        onPress={() =>
-          Alert.alert("Xác nhận", "Bạn có chắc chắn muốn nộp bài?", [
-            {
-              text: "Hủy",
-              style: "cancel",
-            },
-            {
-              text: "Nộp",
-              onPress: handleSubmit,
-            },
-          ])
-        }
-      >
-        <Text style={styles.submitText}> Nộp bài </Text>
-      </TouchableOpacity>
+
+      {/* Submit button - ẩn sau khi đã nộp */}
+      {!submitted && (
+        <View style={{ paddingHorizontal: 16 }}>
+          <TouchableOpacity
+            style={styles.submitBtn}
+            onPress={() =>
+              Alert.alert("Xác nhận", "Bạn có chắc chắn muốn nộp bài?", [
+                { text: "Hủy", style: "cancel" },
+                { text: "Nộp", onPress: handleSubmit },
+              ])
+            }
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}> Nộp bài </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -242,11 +374,6 @@ const styles = StyleSheet.create({
     backgroundColor: themeColors.primary,
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
-  },
-  subject: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#fff",
   },
   examTitle: {
     fontSize: 18,
@@ -265,6 +392,7 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: "row",
     marginVertical: 8,
+    paddingHorizontal: 8,
   },
   tabBtn: {
     flex: 1,
@@ -287,7 +415,7 @@ const styles = StyleSheet.create({
 
   questionBlock: {
     padding: 16,
-    marginBottom: 10,
+    marginBottom: 12,
     backgroundColor: themeColors.card,
     borderRadius: 10,
     elevation: 2,
@@ -295,14 +423,27 @@ const styles = StyleSheet.create({
   questionText: {
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 6,
+    color: "#000",
   },
+
+  answerBox: {
+    marginTop: 6,
+    padding: 10,
+    borderRadius: 8,
+  },
+  answerText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
   option: {
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#ccc",
     marginBottom: 8,
+    backgroundColor: "#fff",
   },
   optionSelected: {
     backgroundColor: themeColors.primary,
@@ -317,16 +458,50 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 
+  feedbackBox: {
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 8,
+  },
+
   submitBtn: {
     backgroundColor: themeColors.secondary,
     padding: 16,
     alignItems: "center",
     borderRadius: 12,
-    margin: 16,
+    marginVertical: 12,
   },
   submitText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+
+  // AI summary (số điểm to rõ)
+  aiSummary: {
+    backgroundColor: "#e8fce8",
+    padding: 20,
+    borderRadius: 12,
+    margin: 16,
+    alignItems: "center",
+    elevation: 3,
+  },
+  aiScore: {
+    fontSize: 36,
+    fontWeight: "900",
+    color: "#27ae60",
+  },
+  aiPerf: {
+    marginTop: 8,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+  },
+  aiRecommend: {
+    marginTop: 12,
+    fontSize: 15,
+    fontStyle: "italic",
+    color: "#555",
+    textAlign: "center",
   },
 });

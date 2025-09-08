@@ -393,7 +393,7 @@ export default function AssignmentListModal({
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         defaultType="QUIZ"
-        classContext={{ classId }}
+        classContext={{ classId, classSubjectId }}
         onCreated={(assignment) => {
           setAssignments((prev) => [...prev, assignment]);
         }}

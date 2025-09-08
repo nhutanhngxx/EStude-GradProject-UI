@@ -8,7 +8,7 @@ const endpoints = {
 
 const assignmentService = {
   addAssignment: async (assignment) => {
-    //     console.log("Thêm bài tập:", assignment);
+    console.log("Thêm bài tập:", assignment);
     try {
       const response = await fetch(
         `${config.BASE_URL}${endpoints.assignment}`,
@@ -18,6 +18,7 @@ const assignmentService = {
           body: JSON.stringify(assignment),
         }
       );
+      console.log("response:", response);
       if (!response.ok) {
         throw new Error("Thêm bài tập thất bại");
       }
