@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { Eye, Trash2, User, X } from "lucide-react";
 import { FaEye, FaTrash } from "react-icons/fa";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
 import subjectService from "../../services/subjectService";
 import StudentManagement from "./StudentManagement";
+
+import { useToast } from "../../contexts/ToastContext";
 
 const Badge = ({ text, color }) => (
   <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
@@ -15,18 +18,24 @@ const Badge = ({ text, color }) => (
 
 const Modal = ({ title, children, onClose }) => {
   return createPortal(
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-1/2 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center border-b pb-2 mb-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-5/6 max-w-6xl overflow-y-auto border border-gray-200 dark:border-gray-700 animate-fade-in">
+        {/* Header */}
+        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {title}
+          </h2>
           <button
-            className="text-gray-500 hover:text-gray-700"
             onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Đóng modal"
           >
-            ✖
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
           </button>
         </div>
-        {children}
+
+        {/* Body */}
+        <div className="px-6 py-4">{children}</div>
       </div>
     </div>,
     document.body
@@ -41,6 +50,7 @@ const formatTerm = (termNumber, beginDate, endDate) => {
 };
 
 const ManageClasses = () => {
+  const { showToast } = useToast();
   const [name, setName] = useState("");
   const [term, setTerm] = useState("");
   const [termNumber, setTermNumber] = useState("");
@@ -170,7 +180,7 @@ const ManageClasses = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!name) return alert("Vui lòng nhập tên lớp");
+    if (!name) return showToast("Vui lòng nhập tên lớp!", "warn");
     const calculatedTerm = formatTerm(termNumber, beginDate, endDate);
     try {
       const classPayload = {
@@ -182,7 +192,10 @@ const ManageClasses = () => {
         endDate,
       };
       const classResult = await classService.addClass(classPayload);
-      if (!classResult?.classId) throw new Error("Không thêm được lớp");
+      if (!classResult?.classId) {
+        showToast("Lỗi khi lưu lớp!", "error");
+        return;
+      }
 
       if (selectedSubjects.length > 0) {
         for (const subj of selectedSubjects) {
@@ -195,11 +208,11 @@ const ManageClasses = () => {
       }
 
       await fetchClassesWithSubjects();
-
+      showToast("Lưu lớp thành công!", "success");
       closeModal();
     } catch (error) {
       console.error(error);
-      alert("Lỗi khi lưu lớp!");
+      showToast("Lỗi khi lưu lớp!", "error");
     }
   };
 
@@ -222,7 +235,7 @@ const ManageClasses = () => {
         </div>
         <button
           onClick={() => openModal("add")}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
         >
           + Thêm lớp mới
         </button>
@@ -258,21 +271,21 @@ const ManageClasses = () => {
                 <td className="px-4 py-2 flex flex-wrap gap-4">
                   <button
                     onClick={() => openModal("edit", c)}
-                    className="text-blue-600 hover:underline"
+                    className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
-                    Xem chi tiết
+                    <Eye size={16} /> Xem
                   </button>
                   <button
                     onClick={() => openModal("students", c)}
-                    className="text-green-600 hover:underline"
+                    className="flex items-center gap-1 text-green-600 hover:underline"
                   >
-                    Quản lý học sinh
+                    <User size={16} /> Danh sách lớp
                   </button>
                   <button
                     onClick={() => openModal("delete", c)}
-                    className="text-red-600 hover:underline"
+                    className="flex items-center gap-1 text-red-500 hover:underline"
                   >
-                    Xóa
+                    <Trash2 size={16} /> Xóa
                   </button>
                 </td>
               </tr>
@@ -439,13 +452,13 @@ const ManageClasses = () => {
                 onClick={closeModal}
                 className="px-4 py-2 border rounded-lg"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
               >
-                Save
+                Lưu
               </button>
             </div>
           </form>
