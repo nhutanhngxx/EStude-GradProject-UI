@@ -9,15 +9,25 @@ import {
   FlatList,
   ScrollView,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { AuthContext } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import SubjectListScreen from "../screens/Subjects/SubjectListScreen";
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
+  const [isEditing, setIsEditing] = useState(false);
+  const [email, setEmail] = useState(user?.email || "");
   const [activeTab, setActiveTab] = useState("Tổng quan");
-  const tabs = ["Tổng quan", "Các môn học", "Lịch sử hoạt động"];
+  const tabs = ["Tổng quan", "Các môn học", "Hoạt động"];
+
+  const handleSave = () => {
+    showToast("Lưu thông tin thành công!", { type: "success" });
+    setIsEditing(false);
+  };
 
   const activities = [
     {
@@ -54,11 +64,11 @@ export default function ProfileScreen({ navigation }) {
             }}
             style={styles.avatar}
           />
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, justifyContent: "space-around" }}>
             <Text style={styles.name}>{user?.fullName || "Chưa có tên"}</Text>
-            <Text style={styles.infoText}>
+            {/* <Text style={styles.infoText}>
               {user?.school?.schoolName || "Chưa có trường"}
-            </Text>
+            </Text> */}
             <Text style={styles.infoText}>
               Mã học sinh: {user?.studentCode || "N/A"}
             </Text>
@@ -67,8 +77,8 @@ export default function ProfileScreen({ navigation }) {
             style={styles.settingsButton}
             onPress={() => navigation.navigate("Settings")}
           >
-            <Icon name="settings-outline" size={18} color="#fff" />
-            <Text style={styles.settingsText}>Cài đặt</Text>
+            <Icon name="settings-outline" size={24} color="#333" />
+            {/* <Text style={styles.settingsText}>Cài đặt</Text> */}
           </TouchableOpacity>
         </View>
 
@@ -119,7 +129,7 @@ export default function ProfileScreen({ navigation }) {
             showsVerticalScrollIndicator={false}
           >
             {/* Card Thông tin cá nhân */}
-            <View style={styles.cardContainer}>
+            {/* <View style={styles.cardContainer}>
               <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Ngày sinh</Text>
@@ -139,6 +149,61 @@ export default function ProfileScreen({ navigation }) {
                   {user?.numberPhone || "Chưa có"}
                 </Text>
               </View>
+            </View> */}
+
+            <View style={styles.cardContainer}>
+              {/* Header với tiêu đề và nút chỉnh sửa */}
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
+                <TouchableOpacity onPress={() => setIsEditing(!isEditing)}>
+                  <Text style={styles.editButton}>
+                    {isEditing ? "Hủy" : "Chỉnh sửa"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Ngày sinh */}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Ngày sinh</Text>
+                <Text style={styles.infoValue}>
+                  {user?.dob
+                    ? new Date(user.dob).toLocaleDateString("en-GB")
+                    : "Chưa có"}
+                </Text>
+              </View>
+
+              {/* Email */}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Email</Text>
+                {isEditing ? (
+                  <TextInput
+                    style={[styles.infoValue, styles.input]}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                  />
+                ) : (
+                  <Text style={styles.infoValue}>{email || "Chưa có"}</Text>
+                )}
+              </View>
+
+              {/* Số điện thoại */}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Số điện thoại</Text>
+                <Text style={styles.infoValue}>
+                  {user?.numberPhone || "Chưa có"}
+                </Text>
+              </View>
+
+              {/* Nút lưu khi đang chỉnh sửa */}
+              {isEditing && (
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSave}
+                >
+                  <Text style={styles.saveButtonText}>Lưu</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Card Tóm tắt học tập */}
@@ -185,7 +250,7 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {/* Tab Lịch sử hoạt động */}
-        {activeTab === "Lịch sử hoạt động" && (
+        {activeTab === "Hoạt động" && (
           <FlatList
             data={activities}
             keyExtractor={(item) => item.id}
@@ -221,15 +286,22 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { paddingHorizontal: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
 
+  container: {
+    paddingHorizontal: 16,
+  },
+
+  /* ==== Profile card (avatar + tên) ==== */
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 16,
     elevation: 2,
     shadowColor: "#000",
@@ -246,6 +318,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#333",
   },
   infoText: {
     color: "#666",
@@ -253,18 +326,18 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     flexDirection: "row",
-    backgroundColor: "#4CAF50",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 6,
     alignItems: "center",
   },
   settingsText: {
-    color: "#fff",
+    color: "#333",
     marginLeft: 4,
     fontSize: 14,
   },
 
+  /* ==== Stats row ==== */
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -275,7 +348,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     padding: 12,
-    borderRadius: 10,
+    borderRadius: 12,
     marginHorizontal: 4,
     elevation: 2,
     shadowColor: "#000",
@@ -293,17 +366,18 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 
+  /* ==== Tabs ==== */
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
-    borderRadius: 8,
+    borderRadius: 10,
     marginBottom: 12,
   },
   tabButton: {
     flex: 1,
     paddingVertical: 10,
     alignItems: "center",
-    borderRadius: 8,
+    borderRadius: 10,
   },
   activeTab: {
     backgroundColor: "#4CAF50",
@@ -316,16 +390,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-
   tabContent: {
     flex: 1,
     paddingHorizontal: 12,
     paddingBottom: 16,
   },
 
+  /* ==== Card chung (bao gồm card chỉnh sửa) ==== */
   cardContainer: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
     shadowColor: "#000",
@@ -334,21 +408,34 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 8,
     color: "#333",
+    marginBottom: 8,
+  },
+  editButton: {
+    fontSize: 14,
+    color: "#4CAF50",
+    fontWeight: "600",
   },
   cardSubtitle: {
     fontSize: 16,
     color: "#555",
   },
 
+  /* ==== Info row (trong card) ==== */
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
+    alignItems: "center",
   },
   infoLabel: {
     fontWeight: "600",
@@ -360,7 +447,29 @@ const styles = StyleSheet.create({
     width: "60%",
     textAlign: "right",
   },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    textAlign: "right",
+    fontSize: 14,
+  },
+  saveButton: {
+    marginTop: 12,
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
 
+  /* ==== Summary section ==== */
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -381,6 +490,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  /* ==== Subjects list ==== */
   subjectItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -403,7 +513,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF5020",
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   gradeText: {
     fontWeight: "bold",
@@ -411,6 +521,7 @@ const styles = StyleSheet.create({
     color: "#4CAF50",
   },
 
+  /* ==== Activity list ==== */
   activityItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -433,7 +544,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   statusText: {
     fontWeight: "bold",

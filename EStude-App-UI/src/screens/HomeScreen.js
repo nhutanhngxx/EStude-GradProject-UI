@@ -103,11 +103,16 @@ export default function HomeStudentScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ gap: 3 }}>
             <Text style={styles.brand}>EStude</Text>
             <Text style={styles.greeting}>
-              Xin chào, <Text style={styles.highlight}>{user.fullName}</Text> 👋
+              Xin chào,{" "}
+              <Text style={styles.highlight}>
+                {user.fullName.toUpperCase()}
+              </Text>{" "}
+              👋
             </Text>
+
             <Text style={styles.subGreeting}>
               Nơi lưu giữ hành tri tri thức trẻ
             </Text>
@@ -117,7 +122,7 @@ export default function HomeStudentScreen({ navigation }) {
 
         {/* Tác vụ nhanh */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tác vụ nhanh</Text>
+          <Text style={styles.cardTitle}>Các tác vụ nhanh</Text>
           <View style={styles.quickActionRow}>
             {quickActions.slice(0, 3).map((action) => (
               <TouchableOpacity
@@ -139,7 +144,7 @@ export default function HomeStudentScreen({ navigation }) {
               >
                 <Text style={styles.quickIcon}>{action.icon}</Text>
                 <Text style={styles.quickLabel}>{action.label}</Text>
-                <Text style={styles.quickHint}>{action.hint}</Text>
+                {/* <Text style={styles.quickHint}>{action.hint}</Text> */}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
