@@ -23,6 +23,7 @@ import ExamDetailScreen from "./src/screens/Assignment/ExamDetailScreen";
 import ExamDoingScreen from "./src/screens/Assignment/ExamDoingScreen";
 
 import AttendanceDetailScreen from "./src/screens/Attendances/AttendanceDetailScreen";
+import ForgotPasswordScreen from "./src/screens/Auth/ForgotPasswordScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -36,11 +37,18 @@ function AppNavigator() {
   return (
     <Stack.Navigator>
       {!user ? (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <>
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{ headerShown: false }}
+          />
+        </>
       ) : (
         <>
           <Stack.Screen

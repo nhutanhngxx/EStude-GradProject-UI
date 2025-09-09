@@ -131,11 +131,7 @@ export default function LoginScreen({ navigation }) {
               />
 
               <TouchableOpacity
-                onPress={() =>
-                  showToast("Chức năng sẽ được phát triển", {
-                    type: "info",
-                  })
-                }
+                onPress={() => navigation.navigate("ForgotPassword")}
               >
                 <Text style={styles.forgotPassword}>Quên mật khẩu?</Text>
               </TouchableOpacity>
