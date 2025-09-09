@@ -12,6 +12,7 @@ import {
 import submissionService from "../../services/submissionService";
 import { AuthContext } from "../../contexts/AuthContext";
 import aiService from "../../services/aiService";
+import { useToast } from "../../contexts/ToastContext";
 
 const themeColors = {
   primary: "#2ecc71",
@@ -25,6 +26,9 @@ const themeColors = {
 export default function ExamDoingScreen({ navigation, route }) {
   const { exam, submitted: initialSubmitted } = route.params;
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
+
+  const [submittedScore, setSubmittedScore] = useState(null);
 
   const initialSeconds = (exam?.timeLimit ?? 15) * 60;
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
@@ -134,6 +138,8 @@ export default function ExamDoingScreen({ navigation, route }) {
       const result = await submissionService.addSubmission(submission);
 
       if (result) {
+        setSubmittedScore(result.score);
+
         // call AI analysis
         try {
           const analysis = await aiService.getAIAnalysisBySubmission(
@@ -163,9 +169,21 @@ export default function ExamDoingScreen({ navigation, route }) {
 
         setSubmitted(true);
         setSubmitting(false);
-        Alert.alert("Thành công", "Bài thi đã được nộp!", [
-          { text: "OK", onPress: () => setActiveTab("Doing") },
-        ]);
+
+        showToast("Bài tập của bạn đã được nộp!", "success");
+
+        // Alert.alert(
+        //   "Thành công",
+        //   `Bài thi đã được nộp!\nĐiểm: ${result.score}`,
+        //   [
+        //     {
+        //       text: "OK",
+        //       onPress: () => {
+        //         navigation.goBack();
+        //       },
+        //     },
+        //   ]
+        // );
       } else {
         setSubmitting(false);
         Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
@@ -224,7 +242,9 @@ export default function ExamDoingScreen({ navigation, route }) {
             <View style={styles.aiSummary}>
               {aiResult ? (
                 <>
-                  <Text style={styles.aiScore}>{aiResult?.score ?? "-"}</Text>
+                  <Text style={styles.aiScore}>
+                    Điểm số: {submittedScore ?? "-"}
+                  </Text>
                   <Text style={styles.aiPerf}>
                     {aiResult?.performance_level ?? "-"}
                   </Text>
@@ -234,7 +254,11 @@ export default function ExamDoingScreen({ navigation, route }) {
                 </>
               ) : (
                 <>
-                  <Text style={styles.aiScore}>Đã nộp</Text>
+                  <Text style={styles.aiScore}>
+                    Điểm số: {submittedScore ?? "-"}
+                  </Text>
+                  {/* <Text style={styles.aiScore}>Đã nộp</Text> */}
+
                   <Text style={styles.aiPerf}>(Không có phân tích AI)</Text>
                 </>
               )}
@@ -287,7 +311,14 @@ export default function ExamDoingScreen({ navigation, route }) {
             return (
               <View key={q.questionId} style={styles.questionBlock}>
                 {/* Câu hỏi */}
-                <Text style={styles.questionText}>{q.questionText}</Text>
+                <Text
+                  style={[
+                    styles.questionText,
+                    submitted && fb && !fb.is_correct,
+                  ]}
+                >
+                  {q.questionText}
+                </Text>
 
                 {/* Đáp án đã chọn */}
                 <View
@@ -295,21 +326,47 @@ export default function ExamDoingScreen({ navigation, route }) {
                     styles.answerBox,
                     {
                       backgroundColor: isAnswered
-                        ? `${themeColors.primary}20` // xanh lá nhạt
+                        ? `${themeColors.primary}20`
                         : "#f5f5f5",
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
                     },
                   ]}
                 >
                   <Text
                     style={[
                       styles.answerText,
-                      { color: isAnswered ? themeColors.secondary : "#666" },
+                      {
+                        color:
+                          submitted && fb
+                            ? fb.is_correct
+                              ? "#2e7d32" // xanh lá cho đúng
+                              : "#c62828" // đỏ cho sai
+                            : isAnswered
+                            ? themeColors.secondary
+                            : "#666",
+                        fontWeight: submitted && fb ? "bold" : "500",
+                        flexShrink: 1, // để text không tràn khi dài
+                      },
                     ]}
                   >
                     {isAnswered
                       ? "Đã chọn: " + answers[q.questionId].join(", ")
                       : "Bạn chưa có đáp án nào."}
                   </Text>
+
+                  {submitted && fb && (
+                    <Text
+                      style={{
+                        color: fb.is_correct ? "#2e7d32" : "#c62828",
+                        fontWeight: "bold",
+                        marginLeft: 8,
+                      }}
+                    >
+                      {fb.is_correct ? "Đúng" : "Sai"}
+                    </Text>
+                  )}
                 </View>
 
                 {/* Feedback */}
@@ -371,9 +428,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    backgroundColor: themeColors.primary,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    backgroundColor: themeColors.secondary,
   },
   examTitle: {
     fontSize: 18,

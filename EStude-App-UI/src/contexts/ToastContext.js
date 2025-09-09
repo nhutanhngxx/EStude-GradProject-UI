@@ -120,12 +120,24 @@ export function ToastProvider({ children }) {
     })
   ).current;
 
-  const backgroundColor =
-    toast.type === "success"
-      ? "#2ecc71"
-      : toast.type === "error"
-      ? "#e74c3c"
-      : "#333";
+  const backgroundColor = (() => {
+    switch (toast.type) {
+      case "success":
+        return "#2ecc71";
+      case "error":
+        return "#e74c3c";
+      case "warning":
+        return "#f39c12";
+      case "info":
+        return "#3498db";
+      case "primary":
+        return "#007bff";
+      case "secondary":
+        return "#6c757d";
+      default:
+        return "#333";
+    }
+  })();
 
   return (
     <ToastContext.Provider value={{ showToast, hideToast }}>

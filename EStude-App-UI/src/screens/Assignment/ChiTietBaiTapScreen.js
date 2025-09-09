@@ -17,6 +17,10 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
   const [isOverdue, setIsOverdue] = useState(false);
   const isQuiz = assignment.type === "QUIZ";
 
+  // console.log("assignment:", assignment);
+  // console.log("isExam:", isExam);
+  // console.log("initialStatus:", initialStatus);
+
   useEffect(() => {
     if (initialStatus) return;
 

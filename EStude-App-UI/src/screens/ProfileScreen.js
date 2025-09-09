@@ -113,7 +113,7 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.tabContent}>
         {/* Tab Tổng quan */}
         {activeTab === "Tổng quan" && (
-          <ScrollView
+          <View
             style={{ flex: 1 }}
             contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
@@ -176,7 +176,7 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.infoValue}>Top 13% của lớp</Text>
               </View>
             </View>
-          </ScrollView>
+          </View>
         )}
 
         {/* Tab Các môn học */}

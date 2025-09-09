@@ -51,7 +51,11 @@ function AppNavigator() {
           <Stack.Screen
             name="Settings"
             component={SettingsScreen}
-            options={{ title: "Cài đặt", headerTitleAlign: "center" }}
+            options={{
+              title: "Cài đặt",
+              headerTitleAlign: "center",
+              headerBackTitleVisible: false,
+            }}
           />
           <Stack.Screen
             name="FullChucNang"

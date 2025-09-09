@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!username || !password) {
-      showToast("Vui lòng nhập đầy đủ thông tin!", { type: "error" });
+      showToast("Vui lòng nhập đầy đủ thông tin đăng nhập!", { type: "error" });
       return;
     }
 
@@ -132,8 +132,8 @@ export default function LoginScreen({ navigation }) {
 
               <TouchableOpacity
                 onPress={() =>
-                  showToast("Chức năng quên mật khẩu chưa phát triển", {
-                    type: "default",
+                  showToast("Chức năng sẽ được phát triển", {
+                    type: "info",
                   })
                 }
               >
