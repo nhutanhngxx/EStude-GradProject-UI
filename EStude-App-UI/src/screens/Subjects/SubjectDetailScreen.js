@@ -71,15 +71,34 @@ export default function SubjectDetailScreen({ route, navigation }) {
         {/* Header môn học */}
         <View style={styles.headerCard}>
           <Text style={styles.subjectName}>{subject.name}</Text>
-          <Text style={styles.description}> {subject.description} </Text>
+
+          {/* Thêm dữ liệu lớp học */}
+          <View style={styles.classInfo}>
+            <Text style={styles.description}>{subject.description}</Text>
+            {/* <Text style={styles.classText}>Lớp: {subject.clazz?.name}</Text> */}
+            <Text style={styles.classText}>{subject.clazz?.term}</Text>
+            <Text style={styles.classText}>
+              {subject.teacherName || "Chưa có"}
+            </Text>
+            {/* <Text style={styles.classText}>
+              Thời gian:{" "}
+              {new Date(subject.clazz?.beginDate).toLocaleDateString("vi-VN")} →{" "}
+              {new Date(subject.clazz?.endDate).toLocaleDateString("vi-VN")}
+            </Text> */}
+          </View>
         </View>
 
         {/* Tabs */}
         <View style={styles.tabRow}>
-          {tabs.map((tab) => (
+          {tabs.map((tab, index) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tabButton, activeTab === tab && styles.activeTab]}
+              style={[
+                styles.tabButton,
+                index === 0 && styles.firstTab, // bo tròn trái
+                index === tabs.length - 1 && styles.lastTab, // bo tròn phải
+                activeTab === tab && styles.activeTab,
+              ]}
               onPress={() => setActiveTab(tab)}
             >
               <Text
@@ -110,7 +129,16 @@ export default function SubjectDetailScreen({ route, navigation }) {
                 <View style={styles.verticalTable}>
                   {/* Thường kỳ 1-3 */}
                   {(grade?.regularScores ?? ["-", "-", "-"]).map((v, i) => (
-                    <View style={styles.row} key={`reg${i}`}>
+                    <View
+                      style={[
+                        styles.row,
+                        i % 2 === 0 ? styles.rowEven : styles.rowOdd,
+                        i === (grade?.regularScores?.length ?? 3) - 1 && {
+                          borderBottomWidth: 1,
+                        },
+                      ]}
+                      key={`reg${i}`}
+                    >
                       <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
                       <Text style={styles.rowValue}>{v ?? "-"}</Text>
                     </View>
@@ -252,7 +280,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  // Assignment list
   assignmentItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -267,33 +294,74 @@ const styles = StyleSheet.create({
   done: { color: "#27ae60" },
   pending: { color: "#e74c3c" },
 
-  // Records
   recordCard: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
   emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
 
-  // Grade Table
   verticalTable: {
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
+    borderWidth: 1,
     borderColor: "#ddd",
-    borderRadius: 8,
-    overflow: "hidden",
+    borderRadius: 10,
+    overflow: "hidden", // giúp bo góc
+    marginTop: 8,
   },
+
   row: {
     flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderRightWidth: 1,
-    borderColor: "#ddd",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    backgroundColor: "#fafafa",
+    borderBottomColor: "#eee",
   },
-  rowLabel: { flex: 1, fontSize: 14, fontWeight: "500", color: "#444" },
+
+  rowEven: { backgroundColor: "#fafafa" },
+  rowOdd: { backgroundColor: "#fff" },
+
+  rowLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+
   rowValue: {
     flex: 1,
     fontSize: 14,
     textAlign: "right",
-    color: "#000",
+    color: "#007BFF",
     fontWeight: "600",
+  },
+  classInfo: {
+    marginTop: 10,
+    gap: 5,
+  },
+  classText: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 2,
+  },
+
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  firstTab: {
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  lastTab: {
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  activeTab: {
+    backgroundColor: "#007BFF",
   },
 });
