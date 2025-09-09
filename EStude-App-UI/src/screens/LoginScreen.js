@@ -132,6 +132,7 @@ export default function LoginScreen({ navigation }) {
 
               <TouchableOpacity
                 onPress={() => navigation.navigate("ForgotPassword")}
+                style={styles.forgotPasswordContainer}
               >
                 <Text style={styles.forgotPassword}>Quên mật khẩu?</Text>
               </TouchableOpacity>
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     alignSelf: "flex-end",
-    color: "#007AFF",
+    color: "#007f3f",
     fontStyle: "italic",
     marginBottom: 25,
     fontSize: 14,
@@ -209,5 +210,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  forgotPasswordContainer: {
+    width: "100%",
+    alignItems: "flex-end",
   },
 });
