@@ -10,12 +10,14 @@ import {
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 
 export default function SettingsScreen({ navigation }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { logout } = useContext(AuthContext);
+  const { showToast } = useToast();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert("Xác nhận", "Bạn có chắc chắn muốn đăng xuất?", [
       { text: "Hủy", style: "cancel" },
       {
@@ -23,13 +25,16 @@ export default function SettingsScreen({ navigation }) {
         style: "destructive",
         onPress: async () => {
           try {
-            await logout();
+            await logout(); // Xóa token & user, gọi API
+            showToast("Đăng xuất thành công", "success");
+            // Reset navigation stack về màn hình Login
             navigation.reset({
               index: 0,
               routes: [{ name: "Login" }],
             });
           } catch (err) {
-            console.log("Logout error:", err.message);
+            console.log("Logout error:", err);
+            showToast("Đăng xuất thất bại", "error");
           }
         },
       },

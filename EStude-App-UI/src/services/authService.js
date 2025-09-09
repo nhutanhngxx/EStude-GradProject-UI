@@ -23,6 +23,7 @@ const authService = {
       return null;
     }
   },
+
   logout: async (token) => {
     try {
       const res = await fetch(`${config.BASE_URL}${endpoints.logout}`, {
