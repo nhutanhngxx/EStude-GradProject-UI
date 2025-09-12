@@ -110,10 +110,37 @@ const submissionService = {
 
   getSubmissionByStudentIdAndAssignmentId: async (studentId, assignmentId) => {
     try {
+      const url = `${
+        config.BASE_URL
+      }${endpoints.getSubmissionByStudentIdAndAssignmentId
+        .replace("{studentId}", studentId)
+        .replace("{assignmentId}", assignmentId)}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // console.log("Fetch submissions:", url, response.status);
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`API lỗi: ${response.status} - ${text}`);
+      }
+
+      const result = await response.json();
+      // console.log("Submission data:", result);
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy bài nộp:", error.message || error);
+      return null;
+    }
+  },
+
+  getSubmission: async (submissionId) => {
+    try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.getSubmissionByStudentIdAndAssignmentId
-          .replace("{studentId}", studentId)
-          .replace("{assignmentId}", assignmentId)}`,
+        `${config.BASE_URL}${endpoints.submission}/${submissionId}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -125,7 +152,7 @@ const submissionService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi lấy bài nộp:", error);
+      console.error("Lỗi khi lấy thông tin bài nộp:", error);
       return null;
     }
   },
