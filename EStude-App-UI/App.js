@@ -11,19 +11,19 @@ import TabNavigator from "./src/navigation/TabNavigator";
 
 import SettingsScreen from "./src/screens/SettingsScreen";
 import FullChucNangScreen from "./src/screens/FullChucNangScreen";
-import NopBaiScreen from "./src/screens/Assignment/NopBaiScreen";
-import ChiTietBaiTapScreen from "./src/screens/Assignment/ChiTietBaiTapScreen";
+import AssignmentListScreen from "./src/screens/Assignment/AssignmentListScreen";
+import AssignmentDetailScreen from "./src/screens/Assignment/AssignmentDetailScreen";
 
 import ScheduleListScreen from "./src/screens/Schedules/ScheduleListScreen";
 
 import SubjectListScreen from "./src/screens/Subjects/SubjectListScreen";
 import SubjectDetailScreen from "./src/screens/Subjects/SubjectDetailScreen";
 
-import ExamDetailScreen from "./src/screens/Assignment/ExamDetailScreen";
-import ExamDoingScreen from "./src/screens/Assignment/ExamDoingScreen";
+import AssignmentDoingScreen from "./src/screens/Assignment/AssignmentDoingScreen";
 
 import AttendanceDetailScreen from "./src/screens/Attendances/AttendanceDetailScreen";
 import ForgotPasswordScreen from "./src/screens/Auth/ForgotPasswordScreen";
+import AssignmentReviewScreen from "./src/screens/Assignment/AssignmentReviewScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -72,12 +72,12 @@ function AppNavigator() {
           />
           <Stack.Screen
             name="NopBai"
-            component={NopBaiScreen}
-            options={{ title: "Nộp bài", headerTitleAlign: "center" }}
+            component={AssignmentListScreen}
+            options={{ title: "Bài tập", headerTitleAlign: "center" }}
           />
           <Stack.Screen
             name="ChiTietBaiTap"
-            component={ChiTietBaiTapScreen}
+            component={AssignmentDetailScreen}
             options={{ title: "Chi tiết bài tập", headerTitleAlign: "center" }}
           />
           <Stack.Screen
@@ -91,15 +91,22 @@ function AppNavigator() {
             options={{ title: "Chi tiết môn học", headerTitleAlign: "center" }}
           />
           <Stack.Screen
-            name="ExamDetail"
-            component={ExamDetailScreen}
-            options={{ title: "Chi tiết bài thi", headerTitleAlign: "center" }}
-          />
-          <Stack.Screen
             name="ExamDoing"
-            component={ExamDoingScreen}
-            options={{ title: "Đang làm", headerTitleAlign: "center" }}
+            component={AssignmentDoingScreen}
+            options={{
+              title: "Đang làm",
+              headerTitleAlign: "center",
+              headerBackTitle: "",
+              // headerStyle: {
+              //   backgroundColor: "#2e7d32",
+              // },
+              // headerTintColor: "#fff",
+              // headerTitleStyle: {
+              //   fontWeight: "700",
+              // },
+            }}
           />
+
           <Stack.Screen
             name="ScheduleList"
             component={ScheduleListScreen}
@@ -112,6 +119,11 @@ function AppNavigator() {
               title: "Chi tiết điểm danh",
               headerTitleAlign: "center",
             }}
+          />
+          <Stack.Screen
+            name="ExamReview"
+            component={AssignmentReviewScreen}
+            options={{ title: "Xem lại bài làm", headerTitleAlign: "center" }}
           />
         </>
       )}
