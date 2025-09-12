@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const features = [
   { id: "1", icon: "📊", label: "Xem điểm", hint: "Kết quả học tập" },
   { id: "2", icon: "📝", label: "Điểm danh", hint: "Check-in buổi học" },
-  { id: "3", icon: "📤", label: "Nộp bài", hint: "Bài hôm nay" },
+  { id: "3", icon: "📤", label: "Bài tập", hint: "Bài hôm nay" },
   { id: "4", icon: "📅", label: "Lịch học", hint: "Lịch học & lịch thi" },
   { id: "5", icon: "📈", label: "Thống kê", hint: "Điểm danh chi tiết" },
   { id: "6", icon: "📰", label: "Tin tức", hint: "Thông báo mới" },
