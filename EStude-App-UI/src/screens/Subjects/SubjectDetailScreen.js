@@ -11,12 +11,18 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { loadAssignmentsWithStatus } from "../../services/assignmentHelper";
 import assignmentService from "../../services/assignmentService";
 import subjectGradeService from "../../services/subjectGradeService";
+import attendanceService from "../../services/attandanceService";
+import { useToast } from "../../contexts/ToastContext";
 
 export default function SubjectDetailScreen({ route, navigation }) {
-  const { subject } = route.params;
+  const { subject, tab } = route.params;
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState("Điểm");
+  // console.log("subject:", subject);
+
+  // const [activeTab, setActiveTab] = useState("Điểm");
+  const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
   const [grade, setGrade] = useState(null);
   const [attendance, setAttendance] = useState([]);
@@ -30,7 +36,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
       setLoading(true);
       try {
         if (activeTab === "Điểm") {
-          // gọi API điểm
           const res =
             await subjectGradeService.getGradesOfStudentByClassSubject(
               user.userId,
@@ -50,11 +55,19 @@ export default function SubjectDetailScreen({ route, navigation }) {
             );
             setAssignments(assignmentsForThisClass);
           }
+        } else if (activeTab === "Điểm danh") {
+          const res =
+            await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+              subject.classSubjectId,
+              user.userId
+            );
+          setAttendance(res || []);
         }
       } catch (e) {
         console.log("Load error:", e);
         if (activeTab === "Điểm") setGrade(null);
         if (activeTab === "Bài tập") setAssignments([]);
+        if (activeTab === "Điểm danh") setAttendance([]);
       } finally {
         setLoading(false);
       }
@@ -74,7 +87,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
 
           {/* Thêm dữ liệu lớp học */}
           <View style={styles.classInfo}>
-            <Text style={styles.description}>{subject.description}</Text>
+            {/* <Text style={styles.description}>{subject.description}</Text> */}
             {/* <Text style={styles.classText}>Lớp: {subject.clazz?.name}</Text> */}
             <Text style={styles.classText}>{subject.clazz?.term}</Text>
             <Text style={styles.classText}>
@@ -95,8 +108,8 @@ export default function SubjectDetailScreen({ route, navigation }) {
               key={tab}
               style={[
                 styles.tabButton,
-                index === 0 && styles.firstTab, // bo tròn trái
-                index === tabs.length - 1 && styles.lastTab, // bo tròn phải
+                index === 0 && styles.firstTab,
+                index === tabs.length - 1 && styles.lastTab,
                 activeTab === tab && styles.activeTab,
               ]}
               onPress={() => setActiveTab(tab)}
@@ -117,7 +130,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
         {loading ? (
           <ActivityIndicator
             size="large"
-            color="#007bff"
+            color="#2ecc71"
             style={{ marginTop: 20 }}
           />
         ) : (
@@ -166,6 +179,16 @@ export default function SubjectDetailScreen({ route, navigation }) {
                     <Text style={styles.rowValue}>
                       {grade?.actualAverage ?? "-"}
                     </Text>
+                  </View>
+
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Học lực</Text>
+                    <Text style={styles.rowValue}>{"-"}</Text>
+                  </View>
+
+                  <View style={styles.row}>
+                    <Text style={styles.rowLabel}>Xếp loại</Text>
+                    <Text style={styles.rowValue}>{"-"}</Text>
                   </View>
                 </View>
               </View>
@@ -217,6 +240,114 @@ export default function SubjectDetailScreen({ route, navigation }) {
               </View>
             )}
 
+            {activeTab === "Điểm danh" && (
+              <View style={styles.cardContainer}>
+                <Text style={styles.cardTitle}>Danh sách phiên điểm danh</Text>
+                {attendance.length > 0 ? (
+                  attendance.map((ses) => {
+                    const now = new Date();
+                    const startTime = new Date(ses.startTime);
+                    const endTime = new Date(ses.endTime);
+                    const canMark =
+                      now >= startTime && now <= endTime && !ses.status;
+
+                    return (
+                      <View key={ses.sessionId} style={styles.recordCard}>
+                        {/* Cột trái: thông tin */}
+                        <View style={styles.recordInfo}>
+                          <Text style={styles.sessionName}>
+                            {ses.sessionName}
+                          </Text>
+                          <Text style={styles.sessionTime}>
+                            Thời gian:{" "}
+                            {startTime.toLocaleString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}{" "}
+                            →{" "}
+                            {endTime.toLocaleString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Text>
+                        </View>
+
+                        {/* Cột phải: trạng thái / nút */}
+                        <View style={styles.recordActions}>
+                          {!ses.status ? (
+                            <TouchableOpacity
+                              style={[
+                                styles.attendanceButton,
+                                !canMark && { backgroundColor: "#ccc" }, // disable màu xám
+                              ]}
+                              disabled={!canMark}
+                              onPress={async () => {
+                                const res =
+                                  await attendanceService.markAttendance(
+                                    ses.sessionId,
+                                    user.userId,
+                                    "BUTTON_PRESS"
+                                  );
+                                if (res) {
+                                  const updated =
+                                    await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+                                      subject.classSubjectId,
+                                      user.userId
+                                    );
+                                  setAttendance(updated || []);
+                                }
+                              }}
+                            >
+                              <Text style={styles.attendanceButtonText}>
+                                {canMark ? "ĐIỂM DANH" : "CHƯA MỞ"}
+                              </Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <Text
+                              style={[
+                                styles.statusText,
+                                ses.status === "PRESENT"
+                                  ? { color: "#27ae60" }
+                                  : ses.status === "ABSENT"
+                                  ? { color: "#e74c3c" }
+                                  : ses.status === "LATE"
+                                  ? { color: "#f39c12" }
+                                  : { color: "#999" },
+                              ]}
+                            >
+                              {ses.status === "PRESENT"
+                                ? "CÓ MẶT"
+                                : ses.status === "ABSENT"
+                                ? "VẮNG"
+                                : ses.status === "LATE"
+                                ? "TRỄ"
+                                : "Chưa điểm danh"}
+                            </Text>
+                          )}
+
+                          <TouchableOpacity
+                            onPress={() => {
+                              showToast("Chức năng đang phát triển", "info");
+                            }}
+                          >
+                            <Text style={styles.detailLink}>Xem chi tiết</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.emptyText}>Chưa có phiên điểm danh</Text>
+                )}
+              </View>
+            )}
+
             {activeTab === "Thông báo" && (
               <View style={styles.cardContainer}>
                 <Text style={styles.cardTitle}>Thông báo gần đây</Text>
@@ -258,7 +389,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tabButton: { flex: 1, paddingVertical: 10, alignItems: "center" },
-  activeTab: { backgroundColor: "#007BFF" },
+  activeTab: { backgroundColor: "#27ae60" },
   tabText: { fontSize: 14, color: "#333" },
   activeTabText: { color: "#fff", fontWeight: "bold" },
 
@@ -301,7 +432,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 10,
-    overflow: "hidden", // giúp bo góc
+    overflow: "hidden",
     marginTop: 8,
   },
 
@@ -328,7 +459,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     textAlign: "right",
-    color: "#007BFF",
+    color: "#2e7d32",
     fontWeight: "600",
   },
   classInfo: {
@@ -361,7 +492,81 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     borderBottomRightRadius: 8,
   },
-  activeTab: {
-    backgroundColor: "#007BFF",
+
+  attendanceButton: {
+    marginTop: 8,
+    backgroundColor: "#2e7d32",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  attendanceButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
+  recordCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  recordInfo: {
+    flex: 1,
+    marginRight: 12,
+    gap: 5,
+  },
+
+  sessionName: {
+    fontWeight: "600",
+    color: "#2e7d32",
+    fontSize: 16,
+  },
+
+  sessionTime: {
+    fontSize: 13,
+    color: "#555",
+    marginTop: 2,
+  },
+
+  recordActions: {
+    alignItems: "flex-end",
+  },
+
+  attendanceButton: {
+    backgroundColor: "#2e7d32",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+
+  attendanceButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
+  statusText: {
+    fontWeight: "700",
+    fontSize: 14,
+    marginBottom: 4,
+  },
+
+  detailLink: {
+    color: "#2e7d32",
+    fontSize: 13,
+    textDecorationLine: "underline",
   },
 });
