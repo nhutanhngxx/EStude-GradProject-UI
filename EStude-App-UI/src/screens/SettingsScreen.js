@@ -27,7 +27,6 @@ export default function SettingsScreen({ navigation }) {
           try {
             await logout(); // Xóa token & user, gọi API
             showToast("Đăng xuất thành công", "success");
-            // Reset navigation stack về màn hình Login
             navigation.reset({
               index: 0,
               routes: [{ name: "Login" }],
