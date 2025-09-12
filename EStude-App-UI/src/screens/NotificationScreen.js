@@ -92,7 +92,7 @@ export default function NotificationScreen() {
               Lớp {user.grade} • Học tốt mỗi ngày
             </Text>
           </View>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          {/* <Image source={{ uri: user.avatar }} style={styles.avatar} /> */}
         </View>
 
         {/* Main Content */}
@@ -145,19 +145,41 @@ export default function NotificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { flex: 1, padding: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  brand: { fontSize: 20, fontWeight: "bold", color: "#00cc66" },
-  greeting: { fontSize: 16, color: "#333" },
-  highlight: { fontWeight: "bold" },
-  subGreeting: { fontSize: 14, color: "#777" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
+  brand: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#00cc66",
+  },
+  greeting: {
+    fontSize: 16,
+    color: "#333",
+  },
+  highlight: {
+    fontWeight: "bold",
+  },
+  subGreeting: {
+    fontSize: 14,
+    color: "#777",
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   main: {
     flex: 1,
     marginTop: 10,
@@ -177,9 +199,17 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  activeTab: { backgroundColor: "#2e7d32" },
-  tabText: { fontSize: 14, color: "#333" },
-  tabTextActive: { color: "#fff", fontWeight: "bold" },
+  activeTab: {
+    backgroundColor: "#2e7d32",
+  },
+  tabText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  tabTextActive: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
 
   notificationItem: {
     backgroundColor: "#fff",
@@ -193,9 +223,21 @@ const styles = StyleSheet.create({
     elevation: 1,
     borderLeftWidth: 6,
   },
-  notificationTitle: { fontSize: 15, fontWeight: "bold", color: "#2e7d32" },
-  notificationContent: { fontSize: 14, color: "#555", marginVertical: 5 },
-  notificationTime: { fontSize: 12, color: "#777", textAlign: "right" },
+  notificationTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#2e7d32",
+  },
+  notificationContent: {
+    fontSize: 14,
+    color: "#555",
+    marginVertical: 5,
+  },
+  notificationTime: {
+    fontSize: 12,
+    color: "#777",
+    textAlign: "right",
+  },
 
   loadMore: {
     flexDirection: "row",
@@ -203,5 +245,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginTop: 5,
   },
-  loadMoreText: { color: "#2e7d32", fontWeight: "bold" },
+  loadMoreText: {
+    color: "#2e7d32",
+    fontWeight: "bold",
+  },
 });

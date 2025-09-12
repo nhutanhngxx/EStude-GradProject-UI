@@ -110,16 +110,18 @@ export default function AILearningScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
+          <View style={{ gap: 3 }}>
             <Text style={styles.brand}>EStude</Text>
             <Text style={styles.greeting}>
-              Xin chào, <Text style={styles.highlight}>{user.name}</Text> 👋
+              Xin chào,{" "}
+              <Text style={styles.highlight}>{user.name.toUpperCase()}</Text> 👋
             </Text>
+
             <Text style={styles.subGreeting}>
-              Lớp {user.grade} • Học tốt mỗi ngày
+              Nơi lưu giữ hành tri tri thức trẻ
             </Text>
           </View>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          {/* <Image source={{ uri: avatarUri }} style={styles.avatar} /> */}
         </View>
 
         {/* Dự đoán kết quả học tập */}
