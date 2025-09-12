@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  Platform,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
 import { AuthContext } from "../contexts/AuthContext";
@@ -47,30 +48,32 @@ export default function ProfileScreen({ navigation }) {
   ];
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: "#f5f5f5",
+        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+        marginTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+      }}
+    >
       <StatusBar barStyle="dark-content" />
-
-      {/* Header: profile card + stats + tabs */}
       <View
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 16 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <Image
-            source={{
-              uri: user?.avatarPath || "https://i.pravatar.cc/150?img=12",
-            }}
+            source={require("../assets/images/icon.png")}
             style={styles.avatar}
           />
-          <View style={{ flex: 1, justifyContent: "space-around" }}>
-            <Text style={styles.name}>{user?.fullName || "Chưa có tên"}</Text>
-            {/* <Text style={styles.infoText}>
-              {user?.school?.schoolName || "Chưa có trường"}
-            </Text> */}
+          <View style={{ flex: 1, justifyContent: "space-between", gap: 4 }}>
+            <Text style={styles.name}>{user?.fullName || "N/A"}</Text>
             <Text style={styles.infoText}>
-              Mã học sinh: {user?.studentCode || "N/A"}
+              {user?.school?.schoolName || "N/A"}
+            </Text>
+            <Text style={styles.infoText}>
+              Mã đăng nhập: {user?.studentCode || "N/A"}
             </Text>
           </View>
           <TouchableOpacity
@@ -308,6 +311,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  banner: {
+    width: "100%",
+    height: 100,
+    // resizeMode: "cover",
+    marginBottom: 20,
   },
   avatar: {
     width: 64,
