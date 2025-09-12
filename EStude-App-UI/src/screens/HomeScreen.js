@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,10 +7,15 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthContext } from "../contexts/AuthContext";
+import attendanceService from "../services/attandanceService";
+import classSubjectService from "../services/classSubjectService";
+import AttendanceOverview from "../components/common/AttendanceOverview";
+import ProgressBar from "../components/common/ProgressBar";
 
 const mockStudentData = {
   gpa: 8.7,
@@ -55,24 +60,66 @@ const attendanceRecord = [
 
 const quickActions = [
   { id: "qa1", label: "Môn học", hint: "Môn đang học", icon: "🪪" },
-  { id: "qa2", label: "Nộp bài", hint: "Bài hôm nay", icon: "📤" },
+  { id: "qa2", label: "Bài tập", hint: "Bài hôm nay", icon: "📤" },
   { id: "qa3", label: "Lịch học", hint: "Tuần này", icon: "📅" },
   { id: "qa4", label: "Tra cứu điểm", hint: "Theo môn", icon: "📊" },
 ];
 
-// Component ProgressBar
-const ProgressBar = ({ value }) => {
-  const width = Math.max(0, Math.min(100, value));
-  return (
-    <View style={styles.progressWrap}>
-      <View style={[styles.progressFill, { width: `${width}%` }]} />
-    </View>
-  );
-};
-
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
-  console.log("Người dùng đã đăng nhập: ", user.fullName);
+  const [totalAttendance, setTotalAttendance] = useState({
+    present: 0,
+    total: 0,
+    percent: 0,
+  });
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      setLoadingAttendance(true);
+      try {
+        const subjectsData =
+          await classSubjectService.getClassSubjectsByStudentWithDetails({
+            studentId: user?.userId,
+          });
+        const subjectsWithSessions = await Promise.all(
+          subjectsData.map(async (subject) => {
+            const sessions =
+              await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+                subject.classSubjectId,
+                user?.userId
+              );
+            return { ...subject, sessions: sessions || [] };
+          })
+        );
+
+        const totalPresent = subjectsWithSessions.reduce(
+          (sum, s) =>
+            sum + s.sessions.filter((sess) => sess.status === "PRESENT").length,
+          0
+        );
+        const totalSessionsCount = subjectsWithSessions.reduce(
+          (sum, s) => sum + s.sessions.length,
+          0
+        );
+        const percent = totalSessionsCount
+          ? Math.round((totalPresent / totalSessionsCount) * 100)
+          : 0;
+
+        setTotalAttendance({
+          present: totalPresent,
+          total: totalSessionsCount,
+          percent,
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingAttendance(false);
+      }
+    };
+
+    fetchAttendance();
+  }, [user]);
 
   // Avatar: lấy từ user nếu có, nếu không thì lấy mock
   const avatarUri = user.avatarPath ? user.avatarPath : mockStudentData.avatar;
@@ -99,7 +146,7 @@ export default function HomeStudentScreen({ navigation }) {
       <StatusBar barStyle="dark-content" />
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        // contentContainerStyle={{ paddingBottom: 24 }}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -117,7 +164,7 @@ export default function HomeStudentScreen({ navigation }) {
               Nơi lưu giữ hành tri tri thức trẻ
             </Text>
           </View>
-          <Image source={{ uri: avatarUri }} style={styles.avatar} />
+          {/* <Image source={{ uri: avatarUri }} style={styles.avatar} /> */}
         </View>
 
         {/* Tác vụ nhanh */}
@@ -223,17 +270,15 @@ export default function HomeStudentScreen({ navigation }) {
         </View>
 
         {/* Tổng quan điểm danh */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tổng quan điểm danh</Text>
-          {attendanceRecord.map((item) => (
-            <View key={item.id} style={styles.attendanceRow}>
-              <Text style={styles.attendanceSubject}>{item.subject}</Text>
-              <Text style={styles.attendanceDetail}>
-                {item.present}/{item.total} có mặt
-              </Text>
-            </View>
-          ))}
-        </View>
+        {loadingAttendance ? (
+          <ActivityIndicator
+            size="small"
+            color="#2ecc71"
+            style={{ marginVertical: 16 }}
+          />
+        ) : (
+          <AttendanceOverview totalAttendance={totalAttendance} />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
