@@ -6,10 +6,13 @@ const endpoints = {
   markAttendance: "/api/attendance/records/student",
 };
 
+const parseDate = (dateStr) => new Date(dateStr);
+
 const attendanceService = {
   getAttentanceSessionByClassSubjectForStudent: async (
     classSubjectId,
-    studentId
+    studentId,
+    filter = null // { type: 'day'|'week'|'month'|'range', value: 'YYYY-MM-DD', startDate, endDate }
   ) => {
     try {
       const url = `${
@@ -28,10 +31,70 @@ const attendanceService = {
         throw new Error("Lấy danh sách session điểm danh thất bại mất òi :)))");
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      if (!filter) return data; // Không lọc gì
+
+      let start, end;
+
+      switch (filter.type) {
+        case "day":
+          start = new Date(`${filter.value}T00:00:00`);
+          end = new Date(`${filter.value}T23:59:59`);
+          break;
+
+        case "week":
+          {
+            const current = new Date(filter.value);
+            const day = current.getDay() === 0 ? 7 : current.getDay(); // Chủ nhật = 7
+            start = new Date(current);
+            start.setDate(current.getDate() - (day - 1));
+            start.setHours(0, 0, 0, 0);
+
+            end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            end.setHours(23, 59, 59, 999);
+          }
+          break;
+
+        case "month":
+          {
+            const current = new Date(filter.value);
+            start = new Date(
+              current.getFullYear(),
+              current.getMonth(),
+              1,
+              0,
+              0,
+              0
+            );
+            end = new Date(
+              current.getFullYear(),
+              current.getMonth() + 1,
+              0,
+              23,
+              59,
+              59
+            );
+          }
+          break;
+
+        case "range":
+          start = new Date(`${filter.startDate}T00:00:00`);
+          end = new Date(`${filter.endDate}T23:59:59`);
+          break;
+
+        default:
+          return data;
+      }
+
+      return data.filter((s) => {
+        const sessionStart = parseDate(s.startTime);
+        return sessionStart >= start && sessionStart <= end;
+      });
     } catch (error) {
       console.error("Lỗi khi lấy danh sách session điểm danh:", error);
-      return null;
+      return [];
     }
   },
 
