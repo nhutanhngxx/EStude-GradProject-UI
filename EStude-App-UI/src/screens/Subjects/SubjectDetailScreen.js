@@ -259,7 +259,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                             {ses.sessionName}
                           </Text>
                           <Text style={styles.sessionTime}>
-                            Thời gian:{" "}
+                            {/* Thời gian:{" "} */}
                             {startTime.toLocaleString("vi-VN", {
                               day: "2-digit",
                               month: "2-digit",
@@ -284,23 +284,38 @@ export default function SubjectDetailScreen({ route, navigation }) {
                             <TouchableOpacity
                               style={[
                                 styles.attendanceButton,
-                                !canMark && { backgroundColor: "#ccc" }, // disable màu xám
+                                !canMark && { backgroundColor: "#ccc" },
                               ]}
                               disabled={!canMark}
                               onPress={async () => {
-                                const res =
-                                  await attendanceService.markAttendance(
-                                    ses.sessionId,
-                                    user.userId,
-                                    "BUTTON_PRESS"
-                                  );
-                                if (res) {
-                                  const updated =
-                                    await attendanceService.getAttentanceSessionByClassSubjectForStudent(
-                                      subject.classSubjectId,
-                                      user.userId
+                                try {
+                                  const res =
+                                    await attendanceService.markAttendance(
+                                      ses.sessionId,
+                                      user.userId,
+                                      "BUTTON_PRESS"
                                     );
-                                  setAttendance(updated || []);
+
+                                  if (res) {
+                                    const updated =
+                                      await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+                                        subject.classSubjectId,
+                                        user.userId
+                                      );
+                                    setAttendance(updated || []);
+                                    showToast(
+                                      "Bạn đã điểm danh thành công!",
+                                      "success"
+                                    );
+                                  } else {
+                                    showToast("Điểm danh thất bại!", "error");
+                                  }
+                                } catch (error) {
+                                  showToast(
+                                    "Có lỗi xảy ra khi điểm danh!",
+                                    "error"
+                                  );
+                                  console.error(error);
                                 }
                               }}
                             >
@@ -332,9 +347,13 @@ export default function SubjectDetailScreen({ route, navigation }) {
                           )}
 
                           <TouchableOpacity
-                            onPress={() => {
-                              showToast("Chức năng đang phát triển", "info");
-                            }}
+                            onPress={() =>
+                              navigation.navigate("AttendanceDetail", {
+                                session: ses, // truyền toàn bộ object phiên
+                                subject: subject, // truyền thêm subject để hiển thị tên môn
+                                userId: user.userId, // truyền userId nếu cần gọi API chi tiết
+                              })
+                            }
                           >
                             <Text style={styles.detailLink}>Xem chi tiết</Text>
                           </TouchableOpacity>

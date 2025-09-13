@@ -3,174 +3,152 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   TouchableOpacity,
-  StatusBar,
-  ScrollView,
+  ActivityIndicator,
 } from "react-native";
+import attendanceService from "../../services/attandanceService"; // bạn đã có service này
+import { useToast } from "../../contexts/ToastContext"; // nếu đang dùng context toast
 
-// Props route nhận classSubject thay vì subject string
 export default function AttendanceDetailScreen({ route }) {
-  const { subject } = route.params; // subject: { classSubjectId, subject: {name}, teacher: {fullName} }
+  const { session: initSession, subject, user } = route.params;
+  const [session, setSession] = useState(initSession);
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
 
-  // Giả lập dữ liệu buổi học theo classSubjectId
-  const initialSessions = [
-    {
-      id: "s1",
-      classSubjectId: subject.classSubjectId,
-      date: "2025-08-01",
-      status: "done",
-    },
-    {
-      id: "s2",
-      classSubjectId: subject.classSubjectId,
-      date: "2025-08-03",
-      status: "done",
-    },
-    {
-      id: "s3",
-      classSubjectId: subject.classSubjectId,
-      date: "2025-08-05",
-      status: "late",
-    },
-    {
-      id: "s4",
-      classSubjectId: subject.classSubjectId,
-      date: "2025-08-07",
-      status: "pending",
-    },
-    {
-      id: "s5",
-      classSubjectId: subject.classSubjectId,
-      date: "2025-08-09",
-      status: "pending",
-    },
-  ];
+  const startTime = new Date(session.startTime);
+  const endTime = new Date(session.endTime);
 
-  const [sessions, setSessions] = useState(initialSessions);
-
-  const attendedCount = sessions.filter((s) => s.status === "done").length;
-  const totalCount = sessions.length;
-  const percent = Math.round((attendedCount / totalCount) * 100);
-
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "done":
-        return { color: "#2e7d32", label: "Đúng giờ" };
-      case "late":
-        return { color: "#ff9800", label: "Đi muộn" };
-      case "pending":
-        return { color: "#1976d2", label: "Chưa điểm danh" };
-      default:
-        return { color: "#555", label: "Không xác định" };
+  const handleMarkAttendance = async () => {
+    try {
+      setLoading(true);
+      const res = await attendanceService.markAttendance(
+        session.sessionId,
+        user.userId,
+        "BUTTON_PRESS"
+      );
+      if (res) {
+        setSession({ ...session, status: "PRESENT" });
+        showToast("Điểm danh thành công", "success");
+      } else {
+        showToast("Điểm danh thất bại", "error");
+      }
+    } catch (err) {
+      showToast("Có lỗi xảy ra", "error");
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleAttendance = (id) => {
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "done" } : s))
-    );
-  };
-
-  const renderSession = ({ item }) => {
-    const { color, label } = getStatusStyle(item.status);
-    return (
-      <View style={styles.sessionRow}>
-        <Text style={styles.sessionDate}>📅 {item.date}</Text>
-        {item.status === "pending" ? (
-          <TouchableOpacity
-            style={styles.attendBtn}
-            onPress={() => handleAttendance(item.id)}
-          >
-            <Text style={styles.attendText}>Điểm danh</Text>
-          </TouchableOpacity>
-        ) : (
-          <Text style={[styles.sessionStatus, { color }]}>{label}</Text>
-        )}
-      </View>
-    );
   };
 
   return (
     <View style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 24 }}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{subject.subject.name}</Text>
-          <Text style={styles.subText}>
-            {attendedCount}/{totalCount} buổi • {percent}%
+      <View style={styles.card}>
+        <Text style={styles.title}>{session.sessionName}</Text>
+        <Text style={styles.subtitle}>{subject.name}</Text>
+
+        <View style={styles.infoBlock}>
+          <Text style={styles.label}>Thời gian</Text>
+          <Text style={styles.value}>
+            Bắt đầu: {startTime.toLocaleString("vi-VN")}
           </Text>
-
-          {/* Progress bar */}
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${percent}%`, backgroundColor: "#2e7d32" },
-              ]}
-            />
-          </View>
+          <Text style={styles.value}>
+            Kết thúc: {endTime.toLocaleString("vi-VN")}
+          </Text>
         </View>
 
-        {/* Danh sách buổi học */}
-        <View style={styles.body}>
-          <Text style={styles.sectionTitle}>Chi tiết buổi học</Text>
-          <FlatList
-            data={sessions}
-            keyExtractor={(item) => item.id}
-            renderItem={renderSession}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            scrollEnabled={false}
-          />
+        <View style={styles.infoBlock}>
+          <Text style={styles.label}>Trạng thái</Text>
+          <Text
+            style={[
+              styles.value,
+              session.status === "PRESENT"
+                ? { color: "#27ae60" }
+                : session.status === "ABSENT"
+                ? { color: "#e74c3c" }
+                : session.status === "LATE"
+                ? { color: "#f39c12" }
+                : { color: "#999" },
+            ]}
+          >
+            {session.status === "PRESENT"
+              ? "CÓ MẶT"
+              : session.status === "ABSENT"
+              ? "VẮNG"
+              : session.status === "LATE"
+              ? "TRỄ"
+              : "CHƯA ĐIỂM DANH"}
+          </Text>
         </View>
-      </ScrollView>
+
+        {/* Nút điểm danh nếu chưa điểm danh */}
+        {session.status === "NOT_MARKED" && (
+          <TouchableOpacity
+            style={[styles.button, loading && { opacity: 0.6 }]}
+            onPress={handleMarkAttendance}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>ĐIỂM DANH NGAY</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  header: {
-    backgroundColor: "#fff",
+  safe: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
     padding: 20,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
+  },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 6,
     elevation: 3,
   },
-  title: { fontSize: 20, fontWeight: "bold", color: "#2e7d32" },
-  subText: { fontSize: 14, color: "#555", marginTop: 6 },
-  progressBar: {
-    height: 10,
-    backgroundColor: "#e0e0e0",
-    borderRadius: 6,
+  title: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#2e7d32",
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#555",
+    marginBottom: 18,
+  },
+  infoBlock: {
+    marginBottom: 18,
+  },
+  label: {
+    fontWeight: "600",
+    fontSize: 15,
+    color: "#222",
+    marginBottom: 6,
+  },
+  value: {
+    fontSize: 15,
+    color: "#444",
+    lineHeight: 22,
+  },
+  button: {
     marginTop: 10,
-    overflow: "hidden",
-  },
-  progressFill: { height: "100%", borderRadius: 6 },
-  body: { flex: 1, padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
-  sessionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    backgroundColor: "#2e7d32",
     paddingVertical: 12,
-    paddingHorizontal: 10,
-    backgroundColor: "#fff",
-    borderRadius: 8,
+    borderRadius: 12,
+    alignItems: "center",
   },
-  sessionDate: { fontSize: 14, color: "#333" },
-  sessionStatus: { fontSize: 14, fontWeight: "600" },
-  separator: { height: 10 },
-  attendBtn: {
-    backgroundColor: "#1976d2",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+  buttonText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
   },
-  attendText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  container: { flex: 1 },
 });

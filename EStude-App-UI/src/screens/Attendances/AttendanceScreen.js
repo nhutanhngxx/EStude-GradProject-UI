@@ -1,37 +1,33 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Image,
   StatusBar,
   ActivityIndicator,
+  SafeAreaView,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../../contexts/AuthContext";
 import Dropdown from "../../components/common/Dropdown";
 import attendanceService from "../../services/attandanceService";
 import classSubjectService from "../../services/classSubjectService";
 import ProgressBar from "../../components/common/ProgressBar";
-
-const student = {
-  userId: 101,
-  fullName: "Nguyễn Nhựt Anh",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  class: { classId: 10, name: "12A3", term: "2025-2026", classSize: 42 },
-};
+import DateTimePicker from "@react-native-community/datetimepicker";
+import AttendanceOverview from "../../components/common/AttendanceOverview";
 
 export default function AttendanceScreen({ navigation }) {
   const { user } = useContext(AuthContext);
   const [selectedFilter, setSelectedFilter] = useState("Tất cả");
-  const [selectedActivity, setSelectedActivity] = useState("Ngày");
-  const [subjects, setSubjects] = useState([]);
+  const [selectedActivity, setSelectedActivity] = useState("Ngày"); // "Ngày" | "Tuần" | "Tháng" | "Range"
+  const [subjects, setSubjects] = useState([]); // each subject has .sessions: []
   const [sessionsData, setSessionsData] = useState({
     Ngày: [],
     Tuần: [],
     Tháng: [],
+    Range: [],
   });
   const [loading, setLoading] = useState(true);
   const [totalAttendance, setTotalAttendance] = useState({
@@ -40,9 +36,50 @@ export default function AttendanceScreen({ navigation }) {
     percent: 0,
   });
 
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState("single"); // "single" | "start" | "end"
+  const [customDate, setCustomDate] = useState(new Date()); // used for Ngày/Tuần/Tháng
+  const [rangeStart, setRangeStart] = useState(new Date());
+  const [rangeEnd, setRangeEnd] = useState(new Date());
+
+  const activityOptions = ["Ngày", "Tuần", "Tháng", "Range"];
   const filters = ["Tất cả", ...subjects.map((s) => s.name)];
 
-  const fetchData = async () => {
+  const startOfDay = (d) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  const endOfDay = (d) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+  const startOfWeek = (d) => {
+    const day = d.getDay() === 0 ? 7 : d.getDay(); // sunday => 7
+    const diff = day - 1;
+    const s = new Date(d);
+    s.setDate(d.getDate() - diff);
+    return startOfDay(s);
+  };
+  const endOfWeek = (d) => {
+    const s = startOfWeek(d);
+    const e = new Date(s);
+    e.setDate(s.getDate() + 6);
+    return endOfDay(e);
+  };
+
+  const startOfMonth = (d) =>
+    new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+  const endOfMonth = (d) =>
+    new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const parseSessionStart = (s) => {
+    if (!s || !s.startTime) return null;
+    const dt = new Date(s.startTime);
+    if (isNaN(dt.getTime())) {
+      const alt = new Date(String(s.startTime).replace(" ", "T"));
+      return isNaN(alt.getTime()) ? null : alt;
+    }
+    return dt;
+  };
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const subjectsData =
@@ -50,135 +87,201 @@ export default function AttendanceScreen({ navigation }) {
           studentId: user?.userId,
         });
 
-      if (!subjectsData) throw new Error("Failed to fetch subjects");
+      if (!subjectsData || !Array.isArray(subjectsData)) {
+        setSubjects([]);
+        setLoading(false);
+        return;
+      }
 
       const subjectsWithSessions = await Promise.all(
         subjectsData.map(async (subject) => {
           const sessions =
             await attendanceService.getAttentanceSessionByClassSubjectForStudent(
               subject.classSubjectId,
-              user?.userId || student.userId
+              user?.userId
             );
-          return { ...subject, sessions: sessions || [] };
+          return {
+            ...subject,
+            sessions: Array.isArray(sessions) ? sessions : [],
+          };
         })
       );
 
-      const totalPresent = subjectsWithSessions.reduce(
-        (sum, s) =>
-          sum + s.sessions.filter((sess) => sess.status === "PRESENT").length,
-        0
-      );
-      const totalSessionsCount = subjectsWithSessions.reduce(
-        (sum, s) => sum + s.sessions.length,
-        0
-      );
-      const percent = totalSessionsCount
-        ? Math.round((totalPresent / totalSessionsCount) * 100)
-        : 0;
-
-      setTotalAttendance({
-        present: totalPresent,
-        total: totalSessionsCount,
-        percent,
-      });
-
-      const today = new Date();
-      const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const oneMonthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-      const activity = { Ngày: [], Tuần: [], Tháng: [] };
-
-      subjectsWithSessions.forEach((subject) => {
-        subject.sessions.forEach((sess) => {
-          const startTime = new Date(sess.startTime);
-          const sessionItem = {
-            ...sess,
-            subjectName: subject.name,
-            key: `${subject.classSubjectId}-${sess.sessionId}`,
-          };
-          if (startTime >= new Date(today.setHours(0, 0, 0, 0)))
-            activity.Ngày.push(sessionItem);
-          if (startTime >= oneWeekAgo) activity.Tuần.push(sessionItem);
-          if (startTime >= oneMonthAgo) activity.Tháng.push(sessionItem);
-        });
-      });
-
       setSubjects(subjectsWithSessions);
-      setSessionsData(activity);
     } catch (error) {
-      console.error(error);
+      console.error("Lỗi fetchData:", error);
       setSubjects([]);
-      setSessionsData({ Ngày: [], Tuần: [], Tháng: [] });
-      setTotalAttendance({ present: 0, total: 0, percent: 0 });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
-  const renderSessionCard = (item) => {
-    const percent = item.total
-      ? Math.round((item.present / item.total) * 100)
-      : item.status === "PRESENT"
-      ? 100
-      : 0;
+  useEffect(() => {
+    const dayStart = startOfDay(customDate);
+    const dayEnd = endOfDay(customDate);
+    const weekStart = startOfWeek(customDate);
+    const weekEnd = endOfWeek(customDate);
+    const monthStart = startOfMonth(customDate);
+    const monthEnd = endOfMonth(customDate);
+    const rStart = startOfDay(rangeStart);
+    const rEnd = endOfDay(rangeEnd);
 
-    const statusText =
-      item.status === "PRESENT"
-        ? "Có mặt"
-        : item.status === "LATE"
-        ? "Trễ"
-        : "Vắng";
-    const statusColor =
-      item.status === "PRESENT"
-        ? "#27ae60"
-        : item.status === "LATE"
-        ? "#f39c12"
-        : "#e74c3c";
+    const newActivity = {
+      Ngày: [],
+      Tuần: [],
+      Tháng: [],
+      Range: [],
+    };
 
-    return (
-      <TouchableOpacity
-        key={item.key}
-        style={[
-          styles.card,
-          item.status === "PRESENT"
-            ? styles.borderPresent
-            : item.status === "LATE"
-            ? styles.borderLate
-            : styles.borderAbsent,
-        ]}
-        onPress={() =>
-          navigation.navigate("SubjectDetail", {
-            subject: subjects.find((s) => s.name === item.subjectName),
-            tab: "Điểm danh",
-          })
+    subjects.forEach((subject) => {
+      (subject.sessions || []).forEach((sess) => {
+        const sDate = parseSessionStart(sess);
+        if (!sDate) return;
+        const sessionItem = {
+          ...sess,
+          subjectName: subject.name,
+          key: `${subject.classSubjectId}-${sess.sessionId}`,
+        };
+
+        if (
+          sDate.getTime() >= dayStart.getTime() &&
+          sDate.getTime() <= dayEnd.getTime()
+        ) {
+          newActivity.Ngày.push(sessionItem);
         }
-      >
-        <View style={styles.subjectRow}>
-          <Text style={styles.title}>{item.subjectName}</Text>
-          <Text
-            style={[
-              styles.status,
-              item.status === "PRESENT"
-                ? styles.statusPresent
-                : item.status === "LATE"
-                ? styles.statusLate
-                : styles.statusAbsent,
-            ]}
-          >
-            {statusText}
-          </Text>
-        </View>
-        <Text style={styles.description}>
-          {item.present || 0}/{item.total || 1} có mặt
-        </Text>
-        <ProgressBar value={percent} />
-        <Text style={styles.progressText}>{percent}% có mặt</Text>
-      </TouchableOpacity>
+        if (
+          sDate.getTime() >= weekStart.getTime() &&
+          sDate.getTime() <= weekEnd.getTime()
+        ) {
+          newActivity.Tuần.push(sessionItem);
+        }
+        if (
+          sDate.getTime() >= monthStart.getTime() &&
+          sDate.getTime() <= monthEnd.getTime()
+        ) {
+          newActivity.Tháng.push(sessionItem);
+        }
+        if (
+          sDate.getTime() >= rStart.getTime() &&
+          sDate.getTime() <= rEnd.getTime()
+        ) {
+          newActivity.Range.push(sessionItem);
+        }
+      });
+    });
+
+    setSessionsData(newActivity);
+
+    const displayed = newActivity[selectedActivity].filter(
+      (it) => selectedFilter === "Tất cả" || it.subjectName === selectedFilter
     );
+    const presentCount = displayed.filter(
+      (it) => it.status === "PRESENT"
+    ).length;
+    const totalCount = displayed.length;
+    const percent = totalCount
+      ? Math.round((presentCount / totalCount) * 100)
+      : 0;
+    setTotalAttendance({
+      present: presentCount,
+      total: totalCount,
+      percent,
+    });
+  }, [
+    subjects,
+    selectedActivity,
+    customDate,
+    rangeStart,
+    rangeEnd,
+    selectedFilter,
+  ]);
+
+  const openPickerFor = (mode) => {
+    setPickerMode(mode); // "single" | "start" | "end"
+    setShowDatePicker(true);
+  };
+
+  const onDateChange = (event, selected) => {
+    setShowDatePicker(false);
+    if (!selected) return;
+    if (pickerMode === "single") {
+      setCustomDate(selected);
+    } else if (pickerMode === "start") {
+      const newStart = startOfDay(selected);
+      setRangeStart(newStart);
+      if (rangeEnd.getTime() < newStart.getTime()) {
+        setRangeEnd(newStart);
+      }
+    } else if (pickerMode === "end") {
+      const newEnd = endOfDay(selected);
+      setRangeEnd(newEnd);
+      if (rangeStart.getTime() > newEnd.getTime()) {
+        setRangeStart(startOfDay(selected));
+      }
+    }
+  };
+
+  const renderSessionGroup = () => {
+    const list = (sessionsData[selectedActivity] || []).filter(
+      (item) =>
+        selectedFilter === "Tất cả" || item.subjectName === selectedFilter
+    );
+
+    if (!list || list.length === 0) {
+      return <Text style={styles.emptyText}>Chưa có dữ liệu</Text>;
+    }
+
+    const grouped = list.reduce((acc, session) => {
+      if (!acc[session.subjectName])
+        acc[session.subjectName] = {
+          subjectName: session.subjectName,
+          sessions: [],
+          present: 0,
+          total: 0,
+        };
+      acc[session.subjectName].sessions.push(session);
+      acc[session.subjectName].total += 1;
+      if (session.status === "PRESENT") acc[session.subjectName].present += 1;
+      return acc;
+    }, {});
+
+    return Object.values(grouped).map((subjectGroup) => {
+      const percent = subjectGroup.total
+        ? Math.round((subjectGroup.present / subjectGroup.total) * 100)
+        : 0;
+      return (
+        <TouchableOpacity
+          key={subjectGroup.subjectName}
+          style={[
+            styles.card,
+            subjectGroup.present === subjectGroup.total
+              ? styles.borderPresent
+              : subjectGroup.present > 0
+              ? styles.borderLate
+              : styles.borderAbsent,
+          ]}
+          onPress={() =>
+            navigation.navigate("SubjectDetail", {
+              subject: subjects.find(
+                (s) => s.name === subjectGroup.subjectName
+              ),
+              tab: "Điểm danh",
+            })
+          }
+        >
+          <Text style={styles.title}>{subjectGroup.subjectName}</Text>
+          <Text style={styles.description}>
+            {subjectGroup.present}/{subjectGroup.total} có mặt
+          </Text>
+          <ProgressBar value={percent} />
+          <Text style={styles.progressText}>{percent}% có mặt</Text>
+        </TouchableOpacity>
+      );
+    });
   };
 
   return (
@@ -187,7 +290,7 @@ export default function AttendanceScreen({ navigation }) {
       <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={{ gap: 3 }}>
+          <View>
             <Text style={styles.brand}>EStude</Text>
             <Text style={styles.greeting}>
               Xin chào,{" "}
@@ -197,118 +300,97 @@ export default function AttendanceScreen({ navigation }) {
               👋
             </Text>
             <Text style={styles.subGreeting}>
-              Nơi lưu giữ hành tri tri thức trẻ
+              Nơi lưu giữ hành trình tri thức trẻ
             </Text>
           </View>
         </View>
-        {/* Tổng quan */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Tổng quan điểm danh</Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Đã điểm danh</Text>
-              <Text style={styles.statValue}>{totalAttendance.present}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Tổng số buổi</Text>
-              <Text style={styles.statValue}>{totalAttendance.total}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Tỉ lệ</Text>
-              <Text style={styles.statValue}>{totalAttendance.percent}%</Text>
-            </View>
-          </View>
-          <ProgressBar value={totalAttendance.percent} />
-          <Text style={styles.progressText}>
-            {totalAttendance.percent}% hoàn thành
-          </Text>
-        </View>
 
-        {/* Điểm danh gần đây */}
+        {/* Tổng quan */}
+        <AttendanceOverview totalAttendance={totalAttendance} />
+
+        {/* Bộ lọc */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Điểm danh gần đây</Text>
 
-          {/* Dropdown filter */}
           <View style={styles.filterRow}>
             <View style={[styles.dropdownWrapper, { width: "30%" }]}>
               <Dropdown
-                options={["Ngày", "Tuần", "Tháng"]}
+                options={activityOptions}
                 selected={selectedActivity}
                 onSelect={setSelectedActivity}
               />
             </View>
-            <View style={[styles.dropdownWrapper, { width: "70%" }]}>
+            <View style={[styles.dropdownWrapper, { width: "50%" }]}>
               <Dropdown
                 options={filters}
                 selected={selectedFilter}
                 onSelect={setSelectedFilter}
               />
             </View>
+
+            {/* Lọc theo thời gian */}
+            {/* {selectedActivity !== "Range" ? (
+              <TouchableOpacity
+                style={styles.dateBtn}
+                onPress={() => {
+                  setPickerMode("single");
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={styles.dateBtnText}>
+                  {customDate.toLocaleDateString("vi-VN")}
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ flexDirection: "row" }}>
+                <TouchableOpacity
+                  style={[styles.dateBtn, { marginRight: 8 }]}
+                  onPress={() => {
+                    setPickerMode("start");
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Text style={styles.dateBtnText}>
+                    {rangeStart.toLocaleDateString("vi-VN")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.dateBtn}
+                  onPress={() => {
+                    setPickerMode("end");
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Text style={styles.dateBtnText}>
+                    {rangeEnd.toLocaleDateString("vi-VN")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )} */}
           </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={
+                pickerMode === "single"
+                  ? customDate
+                  : pickerMode === "start"
+                  ? rangeStart
+                  : rangeEnd
+              }
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={onDateChange}
+            />
+          )}
 
           {loading ? (
             <View style={styles.loadingInline}>
               <ActivityIndicator size="small" color="#2ecc71" />
               <Text style={{ marginTop: 4 }}>Đang tải dữ liệu...</Text>
             </View>
-          ) : sessionsData[selectedActivity].length === 0 ? (
-            <Text style={styles.emptyText}>Chưa có dữ liệu</Text>
           ) : (
-            // Group by subject
-            Object.values(
-              sessionsData[selectedActivity]
-                .filter(
-                  (item) =>
-                    selectedFilter === "Tất cả" ||
-                    item.subjectName === selectedFilter
-                )
-                .reduce((acc, session) => {
-                  if (!acc[session.subjectName])
-                    acc[session.subjectName] = {
-                      subjectName: session.subjectName,
-                      sessions: [],
-                      present: 0,
-                      total: 0,
-                    };
-                  acc[session.subjectName].sessions.push(session);
-                  acc[session.subjectName].total += 1;
-                  if (session.status === "PRESENT")
-                    acc[session.subjectName].present += 1;
-                  return acc;
-                }, {})
-            ).map((subjectGroup) => {
-              const percent = subjectGroup.total
-                ? Math.round((subjectGroup.present / subjectGroup.total) * 100)
-                : 0;
-              return (
-                <TouchableOpacity
-                  key={subjectGroup.subjectName}
-                  style={[
-                    styles.card,
-                    subjectGroup.present === subjectGroup.total
-                      ? styles.borderPresent
-                      : subjectGroup.present > 0
-                      ? styles.borderLate
-                      : styles.borderAbsent,
-                  ]}
-                  onPress={() =>
-                    navigation.navigate("SubjectDetail", {
-                      subject: subjects.find(
-                        (s) => s.name === subjectGroup.subjectName
-                      ),
-                      tab: "Điểm danh",
-                    })
-                  }
-                >
-                  <Text style={styles.title}>{subjectGroup.subjectName}</Text>
-                  <Text style={styles.description}>
-                    {subjectGroup.present}/{subjectGroup.total} có mặt
-                  </Text>
-                  <ProgressBar value={percent} />
-                  <Text style={styles.progressText}>{percent}% có mặt</Text>
-                </TouchableOpacity>
-              );
-            })
+            renderSessionGroup()
           )}
         </View>
       </ScrollView>
@@ -317,37 +399,13 @@ export default function AttendanceScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  brand: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#00cc66",
-  },
-  greeting: {
-    fontSize: 16,
-    color: "#333",
-  },
-  highlight: {
-    fontWeight: "bold",
-  },
-  subGreeting: {
-    fontSize: 14,
-    color: "#777",
-  },
+  safe: { flex: 1, backgroundColor: "#f5f5f5" },
+  container: { flex: 1, padding: 16 },
+  header: { marginBottom: 16 },
+  brand: { fontSize: 20, fontWeight: "bold", color: "#00cc66" },
+  greeting: { fontSize: 16, color: "#333" },
+  highlight: { fontWeight: "bold" },
+  subGreeting: { fontSize: 14, color: "#777" },
 
   card: {
     backgroundColor: "#fff",
@@ -356,10 +414,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 4,
     elevation: 2,
   },
@@ -369,91 +424,38 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "#333",
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 4,
-  },
-  description: {
-    fontSize: 13,
-    color: "#555",
-    marginBottom: 4,
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#666",
-    marginTop: 4,
-  },
+  title: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 4 },
+  description: { fontSize: 13, color: "#555", marginBottom: 4 },
+  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
 
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  stat: {
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#000",
-  },
+  stat: { alignItems: "center" },
+  statLabel: { fontSize: 12, color: "#666" },
+  statValue: { fontSize: 16, fontWeight: "bold", color: "#000" },
 
-  filterRow: {
-    flexDirection: "row",
-    marginBottom: 12,
-  },
-  dropdownWrapper: {
-    flex: 1,
-    marginHorizontal: 2,
-  },
+  filterRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  dropdownWrapper: { marginHorizontal: 2 },
 
-  borderPresent: {
-    borderLeftWidth: 5,
-    borderLeftColor: "#27ae60",
+  dateBtn: {
+    marginLeft: 8,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "#00cc66",
   },
-  borderLate: {
-    borderLeftWidth: 5,
-    borderLeftColor: "#f39c12",
-  },
-  borderAbsent: {
-    borderLeftWidth: 5,
-    borderLeftColor: "#e74c3c",
-  },
+  dateBtnText: { color: "#fff", fontSize: 14 },
 
-  subjectRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  status: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  statusPresent: {
-    color: "#27ae60",
-  },
-  statusLate: {
-    color: "#f39c12",
-  },
-  statusAbsent: {
-    color: "#e74c3c",
-  },
+  borderPresent: { borderLeftWidth: 5, borderLeftColor: "#27ae60" },
+  borderLate: { borderLeftWidth: 5, borderLeftColor: "#f39c12" },
+  borderAbsent: { borderLeftWidth: 5, borderLeftColor: "#e74c3c" },
 
   loadingInline: {
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 16,
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#999",
-    marginTop: 12,
-  },
+  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
 });
