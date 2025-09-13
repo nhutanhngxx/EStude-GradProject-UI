@@ -60,25 +60,29 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 8,
+    marginBottom: 12,
     color: "#333",
   },
   statsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
+    justifyContent: "space-around",
+    marginBottom: 16,
   },
   stat: { alignItems: "center" },
-  statLabel: { fontSize: 12, color: "#666" },
-  statValue: { fontSize: 16, fontWeight: "bold", color: "#000" },
+  statLabel: { fontSize: 13, color: "#666", marginBottom: 4 },
+  statValue: { fontSize: 22, fontWeight: "700", color: "#000" }, // tăng size và đậm
   progressWrap: {
-    height: 8,
+    height: 10,
     backgroundColor: "#eee",
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: "hidden",
   },
   progressFill: { height: "100%", backgroundColor: "#00cc66" },
-  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
+  progressText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 6,
+  },
   filterRow: { flexDirection: "row", marginBottom: 12 },
   dropdownWrapper: { flexGrow: 0, flexShrink: 1, marginHorizontal: 4 },
   subjectRow: {
