@@ -3,6 +3,7 @@ import { X, ListChecks, Save } from "lucide-react";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
 import { useToast } from "../../contexts/ToastContext";
+import aiService from "../../services/aiService";
 
 export default function ClassStudentModal({
   classId,
@@ -130,8 +131,7 @@ export default function ClassStudentModal({
 
     try {
       const res = await subjectGradeService.saveGrade(payload);
-
-      // sau khi lưu thì khóa toàn bộ ô đã có dữ liệu (chỉ nếu không phải admin)
+      // Sau khi lưu thì khóa toàn bộ ô đã có dữ liệu (chỉ nếu không phải admin)
       setGrades((prev) => {
         const studentGrade = { ...prev[student.userId] };
         if (!isAdmin) {
@@ -148,6 +148,7 @@ export default function ClassStudentModal({
           [student.userId]: studentGrade,
         };
       });
+      await aiService.predictStudentGPA(student.userId);
       showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
     } catch (err) {
       console.error(err);
