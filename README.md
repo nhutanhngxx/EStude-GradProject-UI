@@ -8,10 +8,14 @@ Dự án **EStude** là hệ thống quản lý học tập (Learning Management
 
 Phần EStude-Web-UI tập trung vào giao diện người dùng web, được thiết kế hiện đại, thân thiện và responsive, sử dụng các công cụ frontend tiên tiến để đảm bảo trải nghiệm người dùng mượt mà.
 
+Phần EStude-App-UI tập trung vào giao diện người dùng trên thiết bị di động, cũng được thiết kế hiện đại, thân thiện và responsive, sử dụng các công cụ frontend tiên tiến để đảm bảo trải nghiệm người dùng mượt mà.
+
+## <b>Thành viên</b>
+
 Dự án được phát triển bởi nhóm 2 thành viên:
 
 - **Nguyễn Nhựt Anh** (Quản lý dự án, Thiết kế UI/UX, Phát triển frontend chính).
-- **Đinh Nguyên Chung** (Phát triển backend integration, Tích hợp AI UI).
+- **Đinh Nguyên Chung** (Phát triển backend integration).
 
 Repository này chứa mã nguồn cho phần UI web. Các repository liên quan khác (backend, AI module) có thể được liên kết riêng.
 
