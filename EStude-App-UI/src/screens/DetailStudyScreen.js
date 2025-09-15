@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
   TouchableOpacity,
 } from "react-native";
 import ProgressBar from "../components/common/ProgressBar";
-import Dropdown from "../components/common/Dropdown"; // import dropdown tự tạo
+import Dropdown from "../components/common/Dropdown";
 import StudyOverviewCard from "../components/common/StudyOverviewCard";
+
+import studentStudyService from "../services/studentStudyService";
+import { AuthContext } from "../contexts/AuthContext";
 
 const studentData = {
   gpa: 8.7,
@@ -31,8 +34,28 @@ const studentData = {
 };
 
 export default function DetailStudyScreen() {
+  const { user } = useContext(AuthContext);
+  const tabs = ["Tổng quan", "Môn học"];
+  const [activeTab, setActiveTab] = useState("Tổng quan");
+
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("default");
+
+  const [subjects, setSubjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const data = await studentStudyService.getSubjectsWithGrades(
+        user.studentId
+      );
+      console.log("subjects:", data);
+      setSubjects(data);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
 
   const creditPercent = Math.round(
     (studentData.passedCredits / studentData.requiredCredits) * 100
@@ -60,105 +83,174 @@ export default function DetailStudyScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView style={styles.container}>
-        {/* Card Tổng quan học tập */}
-        <StudyOverviewCard
-          gpa={studentData.gpa}
-          rank={studentData.rank}
-          totalStudents={studentData.totalStudents}
-          passedCredits={studentData.passedCredits}
-          requiredCredits={studentData.requiredCredits}
-        />
-
-        {/* Filter + Sort với dropdown tự tạo */}
-        <View style={styles.filterSortRow}>
-          <View style={styles.dropdownWrapper}>
-            <Text style={styles.dropdownLabel}>Lọc theo</Text>
-            <Dropdown
-              options={["Tất cả", "Môn rủi ro", "Môn hoàn thành"]}
-              selected={
-                filter === "all"
-                  ? "Tất cả"
-                  : filter === "atRisk"
-                  ? "Môn rủi ro"
-                  : "Môn hoàn thành"
-              }
-              onSelect={(item) => {
-                if (item === "Tất cả") setFilter("all");
-                else if (item === "Môn rủi ro") setFilter("atRisk");
-                else setFilter("completed");
-              }}
-            />
-          </View>
-          <View style={styles.dropdownWrapper}>
-            <Text style={styles.dropdownLabel}>Sắp xếp theo</Text>
-            <Dropdown
-              options={[
-                "Mặc định",
-                "GPA giảm dần",
-                "Tiến độ giảm dần",
-                "Môn rủi ro trước",
-              ]}
-              selected={
-                sort === "default"
-                  ? "Mặc định"
-                  : sort === "gpa"
-                  ? "GPA giảm dần"
-                  : sort === "progress"
-                  ? "Tiến độ giảm dần"
-                  : "Môn rủi ro trước"
-              }
-              onSelect={(item) => {
-                if (item === "Mặc định") setSort("default");
-                else if (item === "GPA giảm dần") setSort("gpa");
-                else if (item === "Tiến độ giảm dần") setSort("progress");
-                else setSort("atRisk");
-              }}
-            />
-          </View>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
+        {/* Tabs */}
+        <View style={styles.tabRow}>
+          {tabs.map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tabButton, activeTab === tab && styles.activeTab]}
+              onPress={() => setActiveTab(tab)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === tab && styles.activeTabText,
+                ]}
+              >
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Danh sách môn học */}
-        {filteredSubjects.map((subject, index) => {
-          const subjectPercent = Math.round(
-            (subject.completed / subject.total) * 100
-          );
-          return (
-            <View key={index} style={[styles.card, styles.subjectCard]}>
+        {/* Nội dung */}
+        {activeTab === "Tổng quan" && (
+          <View>
+            <StudyOverviewCard
+              gpa={studentData.gpa}
+              rank={studentData.rank}
+              totalStudents={studentData.totalStudents}
+              passedCredits={studentData.passedCredits}
+              requiredCredits={studentData.requiredCredits}
+            />
+
+            <View>
+              {/* Filter + Sort */}
+              <View style={styles.filterSortRow}>
+                <View style={styles.dropdownWrapper}>
+                  <Text style={styles.dropdownLabel}>Lọc theo</Text>
+                  <Dropdown
+                    options={["Tất cả", "Môn rủi ro", "Môn hoàn thành"]}
+                    selected={
+                      filter === "all"
+                        ? "Tất cả"
+                        : filter === "atRisk"
+                        ? "Môn rủi ro"
+                        : "Môn hoàn thành"
+                    }
+                    onSelect={(item) => {
+                      if (item === "Tất cả") setFilter("all");
+                      else if (item === "Môn rủi ro") setFilter("atRisk");
+                      else setFilter("completed");
+                    }}
+                  />
+                </View>
+                <View style={styles.dropdownWrapper}>
+                  <Text style={styles.dropdownLabel}>Sắp xếp theo</Text>
+                  <Dropdown
+                    options={[
+                      "Mặc định",
+                      "GPA giảm dần",
+                      "Tiến độ giảm dần",
+                      "Môn rủi ro trước",
+                    ]}
+                    selected={
+                      sort === "default"
+                        ? "Mặc định"
+                        : sort === "gpa"
+                        ? "GPA giảm dần"
+                        : sort === "progress"
+                        ? "Tiến độ giảm dần"
+                        : "Môn rủi ro trước"
+                    }
+                    onSelect={(item) => {
+                      if (item === "Mặc định") setSort("default");
+                      else if (item === "GPA giảm dần") setSort("gpa");
+                      else if (item === "Tiến độ giảm dần") setSort("progress");
+                      else setSort("atRisk");
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Danh sách môn học */}
+              {filteredSubjects.map((subject, index) => {
+                const subjectPercent = Math.round(
+                  (subject.completed / subject.total) * 100
+                );
+                return (
+                  <View key={index} style={[styles.card, styles.subjectCard]}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.subjectName,
+                          subject.atRisk && { color: "#ff4d4f" },
+                        ]}
+                      >
+                        {subject.name}
+                      </Text>
+                      {subject.atRisk && (
+                        <Text style={{ color: "#ff4d4f", fontWeight: "bold" }}>
+                          ⚠
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.subjectDetailRow}>
+                      <Text style={styles.detailLabel}>
+                        Điểm TB: {subject.gpa}
+                      </Text>
+                      <Text style={styles.detailLabel}>
+                        Điểm danh: {subject.completed}/{subject.total}
+                      </Text>
+                    </View>
+                    <ProgressBar value={subjectPercent} />
+                    <Text style={styles.progressText}>
+                      {subjectPercent}% hoàn thành
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {activeTab === "Môn học" && (
+          <View>
+            {subjects.map((s, idx) => (
               <View
+                key={idx}
                 style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  marginBottom: 12,
+                  padding: 12,
+                  backgroundColor: "#fff",
+                  borderRadius: 8,
                 }}
               >
-                <Text
-                  style={[
-                    styles.subjectName,
-                    subject.atRisk && { color: "#ff4d4f" },
-                  ]}
-                >
-                  {subject.name}
+                <Text style={{ fontWeight: "bold" }}>
+                  {s.clazz?.name ?? "Không rõ môn"} (
+                  {s.clazz?.terms?.[0]?.name ?? "?"})
                 </Text>
-                {subject.atRisk && (
-                  <Text style={{ color: "#ff4d4f", fontWeight: "bold" }}>
-                    ⚠
-                  </Text>
+                <Text>GV: {s.clazz?.homeroomTeacher ?? "Chưa có"}</Text>
+                {s.grade ? (
+                  <>
+                    <Text>
+                      Điểm thường xuyên: {s.grade.regularScores?.join(", ")}
+                    </Text>
+                    <Text>
+                      Điểm giữa kỳ: {s.grade.midtermScore ?? "Chưa có"}
+                    </Text>
+                    <Text>Điểm cuối kỳ: {s.grade.finalScore ?? "Chưa có"}</Text>
+                    <Text>
+                      Trung bình: {s.grade.actualAverage ?? "Chưa có"}
+                    </Text>
+                  </>
+                ) : (
+                  <Text>Chưa có điểm</Text>
                 )}
               </View>
-              <View style={styles.subjectDetailRow}>
-                <Text style={styles.detailLabel}>Điểm TB: {subject.gpa}</Text>
-                <Text style={styles.detailLabel}>
-                  Điểm danh: {subject.completed}/{subject.total}
-                </Text>
-              </View>
-              <ProgressBar value={subjectPercent} />
-              <Text style={styles.progressText}>
-                {subjectPercent}% hoàn thành
-              </Text>
-            </View>
-          );
-        })}
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -167,8 +259,22 @@ export default function DetailStudyScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f5f5f5" },
   container: { flex: 1, padding: 16 },
-  header: { marginBottom: 12 },
-  greeting: { fontSize: 20, fontWeight: "bold", color: "#333" },
+
+  tabRow: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  activeTab: { backgroundColor: "#27ae60" },
+  tabText: { fontSize: 14, color: "#333" },
+  activeTabText: { color: "#fff", fontWeight: "bold" },
 
   card: {
     backgroundColor: "#fff",
@@ -181,25 +287,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    color: "#333",
-  },
-
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  stat: { alignItems: "center" },
-  statLabel: { fontSize: 13, color: "#666" },
-  statValue: { fontSize: 20, fontWeight: "bold", color: "#000" },
-  statNote: { fontSize: 12, color: "#999" },
-
-  blockTitle: { fontSize: 14, fontWeight: "bold", marginBottom: 4 },
-  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
 
   filterSortRow: {
     flexDirection: "row",
@@ -230,4 +317,5 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   footerText: { fontSize: 14, color: "#333", marginBottom: 4 },
+  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
 });

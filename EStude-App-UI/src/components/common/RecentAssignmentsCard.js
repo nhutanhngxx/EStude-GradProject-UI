@@ -17,7 +17,16 @@ export default function RecentAssignmentsCard({
       <View style={{ flex: 1, gap: 5 }}>
         <Text style={styles.assignmentName}>{item.name}</Text>
         <Text style={styles.assignmentMeta}>
-          {item.subject} • Hạn: {item.dueDate}
+          {item.subject} •{" "}
+          {item.dueDate
+            ? new Date(item.dueDate).toLocaleString("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "Không có hạn"}
         </Text>
       </View>
       <Text
@@ -25,7 +34,7 @@ export default function RecentAssignmentsCard({
           styles.statusBadge,
           item.status === "pending" && { color: "#ff9800" },
           item.status === "submitted" && { color: "#28a745" },
-          item.status === "late" && { color: "#f44336" },
+          // item.status === "late" && { color: "#f44336" },
         ]}
       >
         {item.status === "pending"

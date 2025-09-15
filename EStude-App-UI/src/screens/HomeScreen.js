@@ -16,6 +16,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
 import classSubjectService from "../services/classSubjectService";
+import assignmentService from "../services/assignmentService";
 import AttendanceOverview from "../components/common/AttendanceOverview";
 import ProgressBar from "../components/common/ProgressBar";
 import StudyOverviewCard from "../components/common/StudyOverviewCard";
@@ -95,12 +96,43 @@ const quickActions = [
 
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const [loadingAssignments, setLoadingAssignments] = useState(true);
+  const [recentAssignments, setRecentAssignments] = useState([]);
   const [totalAttendance, setTotalAttendance] = useState({
     present: 0,
     total: 0,
     percent: 0,
   });
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      try {
+        setLoadingAssignments(true);
+        const assignments = await assignmentService.getAssignmentsByStudent(
+          user.userId
+        );
+
+        if (Array.isArray(assignments)) {
+          // Sắp xếp theo dueDate tăng dần
+          const sorted = assignments.sort(
+            (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
+          );
+          // Lấy 3 bài tập gần nhất
+          setRecentAssignments(sorted.slice(0, 3));
+        } else {
+          setRecentAssignments([]);
+        }
+      } catch (error) {
+        console.error("Lỗi khi load assignments:", error);
+        setRecentAssignments([]);
+      } finally {
+        setLoadingAssignments(false);
+      }
+    };
+
+    fetchAssignments();
+  }, [user]);
 
   useEffect(() => {
     const fetchAttendance = async () => {
@@ -245,17 +277,31 @@ export default function HomeStudentScreen({ navigation }) {
           onPressDetail={() => navigation.navigate("DetailStudy")}
         />
 
+        {loadingAssignments ? (
+          <ActivityIndicator
+            size="large"
+            color="#00cc66"
+            style={{ marginTop: 16 }}
+          />
+        ) : (
+          <RecentAssignmentsCard
+            title="Bài tập gần đây"
+            assignments={recentAssignments.map((a) => ({
+              id: a.assignmentId,
+              name: a.title,
+              subject: a.className,
+              dueDate: a.dueDate,
+              // status: a.isExam ? "exam" : "pending",
+            }))}
+            onPressDetail={() => navigation.navigate("NopBai")}
+          />
+        )}
+
         {/* Lịch học hôm nay */}
         <TodayScheduleCard
           title="Lịch học hôm nay"
           scheduleList={todayPlan}
           onPressDetail={() => navigation.navigate("ScheduleList")}
-        />
-
-        <RecentAssignmentsCard
-          title="Bài tập gần đây"
-          assignments={recentAssignments}
-          onPressDetail={() => navigation.navigate("AssignmentsList")}
         />
       </ScrollView>
     </SafeAreaView>

@@ -150,6 +150,7 @@ export default function ClassStudentModal({
           [student.userId]: studentGrade,
         };
       });
+      await aiService.predictSubjectsForStudent(student.userId);
       await aiService.predictStudentGPA(student.userId);
       showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
     } catch (err) {

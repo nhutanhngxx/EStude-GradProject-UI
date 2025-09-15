@@ -9,10 +9,14 @@ import {
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
 import submissionService from "../../services/submissionService";
+import assignmentService from "../../services/assignmentService";
 
 export default function ChiTietBaiTapScreen({ route, navigation }) {
-  const { assignment, isExam } = route.params;
+  const { assignment: initialAssignment, isExam } = route.params;
+  const [assignmentDetail, setAssignmentDetail] = useState(assignment);
   const { user } = useContext(AuthContext);
+
+  const assignment = assignmentDetail || initialAssignment;
 
   // console.log("assignment:", assignment);
 
@@ -20,6 +24,27 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
   const [submissions, setSubmissions] = useState([]);
   const [isOverdue, setIsOverdue] = useState(false);
   const isQuiz = assignment.type === "QUIZ";
+
+  // useEffect lấy thông tin đầy đủ của assignment
+  useEffect(() => {
+    const fetchAssignment = async () => {
+      try {
+        const res = await assignmentService.getAssignmentById(
+          assignment.assignmentId
+        );
+        console.log("assignmentDetail:", res.data);
+        if (res) {
+          setAssignmentDetail(res.data);
+        }
+      } catch (err) {
+        // console.error("Lỗi khi lấy thông tin bài tập:", err);
+        setLoading(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAssignment();
+  }, [initialAssignment]);
 
   // Load submissions
   useEffect(() => {
@@ -75,8 +100,7 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
         })}
       </Text>
       <Text style={styles.info}>
-        Loại bài tập:{" "}
-        <Text style={styles.type}>{isQuiz ? "Trắc nghiệm" : "Tự luận"}</Text>
+        <Text style={styles.type}>{isQuiz ? "TRẮC NGHIỆM" : "TỰ LUẬN"}</Text>
       </Text>
       <Text style={styles.info}>
         Số lần nộp còn lại:{" "}

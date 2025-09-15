@@ -1,6 +1,7 @@
 import config from "../configs/config";
 
 const endpoints = {
+  // Lấy điểm của học sinh trong 1 môn học
   getGradesOfStudentByClassSubject:
     "/api/subject-grades/student/{studentId}/class-subject/{classSubjectId}",
 };

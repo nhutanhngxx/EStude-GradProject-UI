@@ -60,6 +60,7 @@ export async function loadAssignmentsWithStatus(
         allowLateSubmission: as.allowLateSubmission || false,
         latePenalty: as.latePenalty || 0,
         isPublished: as.isPublished || false,
+        submissionLimit: as.submissionLimit ?? null,
       };
     })
   );

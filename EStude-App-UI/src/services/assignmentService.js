@@ -6,9 +6,32 @@ const endpoints = {
   getAssignmentsBySubmission: "/api/submissions/{submissionId}/assignment",
   getAssignmentsByClassSubject:
     "/api/assignments/class-subject/{classSubjectId}",
+  getAssignment: "/api/assignments/{assignmentId}",
 };
 
 const assignmentService = {
+  getAssignmentById: async (assignmentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAssignment.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy thông tin bài tập thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin bài tập:", error);
+      return null;
+    }
+  },
   getAssignments: async () => {
     try {
       const response = await fetch(

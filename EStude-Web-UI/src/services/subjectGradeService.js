@@ -46,7 +46,8 @@ const subjectGradeService = {
       }
 
       if (!response.ok) {
-        throw new Error(`Lấy điểm thất bại (status ${response.status})`);
+        // throw new Error(`Lấy điểm thất bại (status ${response.status})`);
+        return [];
       }
 
       return await response.json();
