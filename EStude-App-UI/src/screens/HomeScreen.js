@@ -18,6 +18,9 @@ import attendanceService from "../services/attandanceService";
 import classSubjectService from "../services/classSubjectService";
 import AttendanceOverview from "../components/common/AttendanceOverview";
 import ProgressBar from "../components/common/ProgressBar";
+import StudyOverviewCard from "../components/common/StudyOverviewCard";
+import TodayScheduleCard from "../components/common/TodayScheduleCard";
+import RecentAssignmentsCard from "../components/common/RecentAssignmentsCard";
 
 const mockStudentData = {
   gpa: 8.7,
@@ -58,6 +61,30 @@ const attendanceRecord = [
   { id: 1, subject: "Toán", present: 12, late: 1, absent: 0, total: 13 },
   { id: 2, subject: "Vật lý", present: 11, late: 0, absent: 2, total: 13 },
   { id: 3, subject: "Hóa học", present: 10, late: 2, absent: 1, total: 13 },
+];
+
+const recentAssignments = [
+  {
+    id: 1,
+    name: "Bài tập 1",
+    subject: "Toán",
+    dueDate: "2025-09-15",
+    status: "pending",
+  },
+  {
+    id: 2,
+    name: "Bài tập 2",
+    subject: "Vật lý",
+    dueDate: "2025-09-14",
+    status: "submitted",
+  },
+  {
+    id: 3,
+    name: "Bài tập 3",
+    subject: "Hóa học",
+    dueDate: "2025-09-13",
+    status: "late",
+  },
 ];
 
 const quickActions = [
@@ -209,79 +236,27 @@ export default function HomeStudentScreen({ navigation }) {
         </View>
 
         {/* Tổng quan học tập */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Tổng quan học tập</Text>
-            <TouchableOpacity>
-              <Text style={styles.link}>Xem chi tiết</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Điểm TB</Text>
-              <Text style={styles.statValue}>{gpa.toFixed(2)}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Thứ hạng</Text>
-              <Text style={styles.statValue}>#{rank}</Text>
-              <Text style={styles.statNote}>trong {totalStudents}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>Tín chỉ</Text>
-              <Text style={styles.statValue}>
-                {passedCredits}/{requiredCredits}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.blockTitle}>Tiến độ tín chỉ</Text>
-          <ProgressBar value={creditPercent} />
-          <Text style={styles.progressText}>{creditPercent}% hoàn thành</Text>
-        </View>
+        <StudyOverviewCard
+          gpa={gpa}
+          rank={rank}
+          totalStudents={totalStudents}
+          passedCredits={passedCredits}
+          requiredCredits={requiredCredits}
+          onPressDetail={() => navigation.navigate("DetailStudy")}
+        />
 
         {/* Lịch học hôm nay */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Lịch học hôm nay</Text>
-            <TouchableOpacity
-              style={styles.detailButton}
-              onPress={() => navigation.navigate("ScheduleList")}
-            >
-              <Text style={styles.link}>Xem chi tiết</Text>
-            </TouchableOpacity>
-          </View>
-          {todayPlan.map((item) => (
-            <View key={item.id} style={styles.planItem}>
-              <View>
-                <Text style={styles.planSubject}>{item.subject}</Text>
-                <Text style={styles.planTime}>
-                  {item.time} • {item.room}
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.statusBadge,
-                  item.status === "in_progress" && {
-                    backgroundColor: "#28a745",
-                  },
-                  item.status === "upcoming" && { backgroundColor: "#007bff" },
-                ]}
-              >
-                {item.status === "in_progress" ? "Đang học" : "Sắp học"}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <TodayScheduleCard
+          title="Lịch học hôm nay"
+          scheduleList={todayPlan}
+          onPressDetail={() => navigation.navigate("ScheduleList")}
+        />
 
-        {/* Tổng quan điểm danh */}
-        {loadingAttendance ? (
-          <ActivityIndicator
-            size="small"
-            color="#2ecc71"
-            style={{ marginVertical: 16 }}
-          />
-        ) : (
-          <AttendanceOverview totalAttendance={totalAttendance} />
-        )}
+        <RecentAssignmentsCard
+          title="Bài tập gần đây"
+          assignments={recentAssignments}
+          onPressDetail={() => navigation.navigate("AssignmentsList")}
+        />
       </ScrollView>
     </SafeAreaView>
   );

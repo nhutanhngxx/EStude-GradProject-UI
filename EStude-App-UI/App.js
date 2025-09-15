@@ -24,6 +24,7 @@ import AssignmentDoingScreen from "./src/screens/Assignment/AssignmentDoingScree
 import AttendanceDetailScreen from "./src/screens/Attendances/AttendanceDetailScreen";
 import ForgotPasswordScreen from "./src/screens/Auth/ForgotPasswordScreen";
 import AssignmentReviewScreen from "./src/screens/Assignment/AssignmentReviewScreen";
+import DetailStudyScreen from "./src/screens/DetailStudyScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -124,6 +125,11 @@ function AppNavigator() {
             name="ExamReview"
             component={AssignmentReviewScreen}
             options={{ title: "Xem lại bài làm", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="DetailStudy"
+            component={DetailStudyScreen}
+            options={{ title: "Tổng quan học tập", headerTitleAlign: "center" }}
           />
         </>
       )}
