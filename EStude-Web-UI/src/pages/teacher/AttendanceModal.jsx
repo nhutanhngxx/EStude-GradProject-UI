@@ -67,6 +67,16 @@ export default function AttendanceModal({
 
   const handleCreateSession = async () => {
     try {
+      console.log(
+        teacherId,
+        classSubjectId,
+        sessionName,
+        startTime,
+        endTime,
+        useGPS ? gps.lat : null,
+        useGPS ? gps.lng : null
+      );
+
       const created = await attendanceService.createAttendanceSession({
         teacherId,
         classSubjectId,
@@ -76,9 +86,11 @@ export default function AttendanceModal({
         gpsLatitude: useGPS ? gps.lat : null,
         gpsLongitude: useGPS ? gps.lng : null,
       });
-      showToast("Tạo buổi điểm danh thành công!", "success");
+
+      console.log("created:", created);
 
       if (created) {
+        showToast("Tạo buổi điểm danh thành công!", "success");
         setSessions((prev) => [...prev, created]);
         setViewMode("SESSIONS");
         setSessionName("");

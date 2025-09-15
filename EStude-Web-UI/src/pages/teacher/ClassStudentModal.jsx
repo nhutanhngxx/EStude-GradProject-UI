@@ -37,6 +37,8 @@ export default function ClassStudentModal({
 
       setStudents(studentsRes);
 
+      console.log("classId, classSubjectId:", classId, classSubjectId);
+
       // Lấy điểm của từng học sinh
       const gradesRes = await Promise.all(
         studentsRes.map((s) =>

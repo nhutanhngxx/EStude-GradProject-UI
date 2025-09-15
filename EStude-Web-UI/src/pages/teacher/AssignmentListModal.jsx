@@ -13,7 +13,7 @@ import submissionService from "../../services/submissionService";
 import CreateAssignmentModal from "./CreateAssignmentModal";
 
 export default function AssignmentListModal({
-  classId,
+  // classId,
   classSubjectId,
   isOpen,
   onClose,
@@ -51,26 +51,25 @@ export default function AssignmentListModal({
   };
 
   useEffect(() => {
-    if (!isOpen || !classId || !classSubjectId) return;
+    if (!isOpen || !classSubjectId) return;
 
     const fetchAssignments = async () => {
       try {
-        const result = await assignmentService.getAssignmentsByClassId(classId);
-
-        const filtered = (result || []).filter(
-          (a) => a.classSubject?.classSubjectId === Number(classSubjectId)
+        const result = await assignmentService.getAssignmentsByClassSubjectId(
+          classSubjectId
         );
 
-        setAssignments(filtered);
+        setAssignments(result || []);
         setViewMode("ASSIGNMENTS");
         setSelectedAssignment(null);
       } catch (error) {
-        console.error("Lỗi khi lấy danh sách bài tập:", error);
+        // console.error("Lỗi khi lấy danh sách bài tập:", error);
+        return [];
       }
     };
 
     fetchAssignments();
-  }, [isOpen, classId, classSubjectId]);
+  }, [isOpen, classSubjectId]);
 
   // Lấy submissions của classSubject khi chọn 1 assignment
   const openSubmissionList = async (assignment) => {
@@ -140,7 +139,14 @@ export default function AssignmentListModal({
                     <div>
                       <p className="font-medium">{a.title}</p>
                       <p className="text-sm text-gray-500">
-                        Loại: {a.type} | Hạn nộp:{" "}
+                        {a.type === "QUIZ"
+                          ? "TRẮC NGHIỆM"
+                          : a.type === "ASSIGNMENT"
+                          ? "-"
+                          : a.type === "EXAM"
+                          ? "-"
+                          : a.type}{" "}
+                        | Hạn nộp:{" "}
                         {a.dueDate
                           ? new Date(a.dueDate).toLocaleString("vi-VN", {
                               day: "2-digit",
@@ -393,7 +399,7 @@ export default function AssignmentListModal({
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         defaultType="QUIZ"
-        classContext={{ classId, classSubjectId }}
+        classContext={{ classSubjectId }}
         onCreated={(assignment) => {
           setAssignments((prev) => [...prev, assignment]);
         }}
