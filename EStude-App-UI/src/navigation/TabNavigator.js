@@ -11,57 +11,94 @@ import ProfileScreen from "../screens/ProfileScreen";
 
 const Tab = createBottomTabNavigator();
 
+const ACTIVE_COLOR = "#00994d";
+const INACTIVE_COLOR = "#888";
+
+function TabIcon({ iconName, label, focused }) {
+  return (
+    <View
+      style={{
+        borderTopWidth: focused ? 3 : 0, // chỉ hiển thị khi active
+        borderTopColor: ACTIVE_COLOR,
+        paddingTop: 6,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <FontAwesome
+        name={iconName}
+        size={20}
+        color={focused ? ACTIVE_COLOR : INACTIVE_COLOR}
+      />
+      <Text
+        style={{
+          fontSize: 12,
+          color: focused ? ACTIVE_COLOR : INACTIVE_COLOR,
+          marginTop: 2,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 export default function TabNavigator() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: { height: 80 },
+        tabBarShowLabel: false,
+      }}
+    >
       <Tab.Screen
         name="Home"
         component={HomeStudentScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome name="home" color={color} size={size} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon iconName="home" label="Trang Chủ" focused={focused} />
           ),
-          tabBarLabel: "Trang Chủ",
         }}
       />
       <Tab.Screen
         name="Attendance"
         component={AttendanceScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome name="hand-rock-o" color={color} size={size} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconName="hand-rock-o"
+              label="Điểm Danh"
+              focused={focused}
+            />
           ),
-          tabBarLabel: "Điểm Danh",
         }}
       />
       <Tab.Screen
         name="AILearning"
         component={AILearningScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome name="laptop" color={color} size={size} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon iconName="laptop" label="Dự đoán AI" focused={focused} />
           ),
-          tabBarLabel: "Công cụ AI",
         }}
       />
       <Tab.Screen
         name="Notification"
         component={NotificationScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome name="bell" color={color} size={size} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon iconName="bell" label="Thông Báo" focused={focused} />
           ),
-          tabBarLabel: "Thông Báo",
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <FontAwesome name="user" color={color} size={size} />
+          tabBarIcon: ({ focused }) => (
+            <TabIcon iconName="user" label="Hồ Sơ" focused={focused} />
           ),
-          tabBarLabel: "Hồ Sơ",
         }}
       />
     </Tab.Navigator>

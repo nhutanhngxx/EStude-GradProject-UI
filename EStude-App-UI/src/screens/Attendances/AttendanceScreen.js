@@ -43,7 +43,13 @@ export default function AttendanceScreen({ navigation }) {
   const [rangeEnd, setRangeEnd] = useState(new Date());
 
   const activityOptions = ["Ngày", "Tuần", "Tháng", "Range"];
-  const filters = ["Tất cả", ...subjects.map((s) => s.name)];
+
+  // Lấy tất cả item trong list
+  // const filters = ["Tất cả", ...subjects.map((s) => s.name)];
+
+  // Lọc trùng tên môn
+  const uniqueSubjects = [...new Set(subjects.map((s) => s.name))];
+  const filters = ["Tất cả", ...uniqueSubjects];
 
   const startOfDay = (d) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
@@ -308,14 +314,14 @@ export default function AttendanceScreen({ navigation }) {
           <Text style={styles.cardTitle}>Điểm danh gần đây</Text>
 
           <View style={styles.filterRow}>
-            <View style={[styles.dropdownWrapper, { width: "30%" }]}>
+            <View style={[styles.dropdownWrapper, { width: "25%" }]}>
               <Dropdown
                 options={activityOptions}
                 selected={selectedActivity}
                 onSelect={setSelectedActivity}
               />
             </View>
-            <View style={[styles.dropdownWrapper, { width: "60%" }]}>
+            <View style={[styles.dropdownWrapper, { width: "70%" }]}>
               <Dropdown
                 options={filters}
                 selected={selectedFilter}
