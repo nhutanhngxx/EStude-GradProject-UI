@@ -4,11 +4,12 @@ const endpoints = {
   assignment: "/api/assignments",
   assignmentById: "/api/assignments/{assignmentId}",
   getAssignmentsByClassId: "/api/assignments/class/{classId}", // Class chứ không phải ClassSubject => phải lọc lại dữ liệu
+  getAssignmentsByClassSubjectId:
+    "/api/assignments/class-subject/{classSubjectId}",
 };
 
 const assignmentService = {
   addAssignment: async (assignment) => {
-    console.log("Thêm bài tập:", assignment);
     try {
       const response = await fetch(
         `${config.BASE_URL}${endpoints.assignment}`,
@@ -23,7 +24,7 @@ const assignmentService = {
         throw new Error("Thêm bài tập thất bại");
       }
       const result = await response.json();
-      return result.data;
+      return result;
     } catch (error) {
       console.error("Lỗi khi thêm bài tập:", error);
       return null;
@@ -71,7 +72,30 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách bài tập:", error);
+      // console.error("Lỗi khi lấy danh sách bài tập:", error);
+      return null;
+    }
+  },
+
+  getAssignmentsByClassSubjectId: async (classSubjectId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAssignmentsByClassSubjectId.replace(
+          "{classSubjectId}",
+          classSubjectId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy danh sách bài tập thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      // console.error("Lỗi khi lấy danh sách bài tập:", error);
       return null;
     }
   },

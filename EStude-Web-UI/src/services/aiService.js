@@ -1,4 +1,4 @@
-import config from "../configs/config";
+import config from "../config/config";
 
 const endpoints = {
   // Phân tích AI của bài nộp

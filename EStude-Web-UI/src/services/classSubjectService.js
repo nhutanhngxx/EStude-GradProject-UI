@@ -20,13 +20,13 @@ const classSubjectService = {
       if (!response.ok) {
         throw new Error("Thêm môn học cho lớp thất bại");
       }
-      const result = await response.json();
-      return result;
+      return await response.json();
     } catch (error) {
       console.error("Lỗi khi thêm môn học cho lớp:", error);
       return null;
     }
   },
+
   getTeacherClassSubjects: async (teacherId) => {
     try {
       const response = await fetch(
@@ -54,6 +54,7 @@ const classSubjectService = {
       return null;
     }
   },
+
   getAllClassSubjects: async () => {
     try {
       const response = await fetch(

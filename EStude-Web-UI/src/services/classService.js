@@ -18,8 +18,7 @@ const classService = {
       if (!response.ok) {
         throw new Error("Thêm lớp thất bại");
       }
-      const result = await response.json();
-      return result;
+      return await response.json();
     } catch (error) {
       console.error("Lỗi khi thêm lớp:", error);
       return null;
