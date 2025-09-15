@@ -40,10 +40,19 @@ const Modal = ({ title, children, onClose }) =>
   );
 
 const formatTerm = (termNumber, beginDate) => {
-  if (!termNumber || !beginDate) return "";
-  const beginYear = new Date(beginDate).getFullYear();
-  const endYear = beginYear + 1;
-  return `HK${termNumber} ${beginYear}-${endYear}`;
+  if (!termNumber) return "";
+  if (!beginDate) return `HK${termNumber}`;
+
+  const d = new Date(beginDate);
+  if (isNaN(d)) return `HK${termNumber}`;
+
+  // Nếu bắt đầu từ tháng 7 trở đi => học kỳ bắt đầu thuộc năm đó,
+  // ngược lại (tháng 1-6) học kỳ thuộc năm trước.
+  const month = d.getMonth(); // 0..11
+  const academicStart = month >= 6 ? d.getFullYear() : d.getFullYear() - 1;
+  const academicEnd = academicStart + 1;
+
+  return `HK${termNumber} ${academicStart} - ${academicEnd}`;
 };
 
 const ManageClasses = () => {
