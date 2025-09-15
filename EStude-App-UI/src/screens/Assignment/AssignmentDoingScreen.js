@@ -133,7 +133,7 @@ export default function ExamDoingScreen({ navigation, route }) {
         answers: answersPayload,
       };
 
-      console.log("submission:", JSON.stringify(submission, null, 2));
+      // console.log("submission:", JSON.stringify(submission, null, 2));
 
       const result = await submissionService.addSubmission(submission);
 

@@ -53,6 +53,8 @@ export default function AIDashboardScreen() {
       // 1️⃣ Gọi API để AI phân tích dữ liệu mới
       await aiService.predictSubjectsForStudent(studentId);
 
+      await aiService.predictStudentGPA(studentId);
+
       // 2️⃣ Fetch dữ liệu mới nhất
       const subj = await aiService.getLatestPredictedSubjectsForStudent(
         studentId
@@ -62,9 +64,9 @@ export default function AIDashboardScreen() {
       setSubjectAnalysis(subj?.detailedAnalysis?.data || null);
       setSemesterAnalysis(sem || null);
 
-      showToast("Dự đoán lại thành công!", "success");
+      showToast("Dự đoán lại thành công!", { type: "success" });
     } catch (err) {
-      showToast("Không thể tải dữ liệu AI", "error");
+      showToast("Không thể tải dữ liệu AI", { type: "error" });
     } finally {
       setLoadingIntro(false);
     }

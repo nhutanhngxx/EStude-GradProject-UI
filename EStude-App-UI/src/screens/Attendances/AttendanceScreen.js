@@ -315,7 +315,7 @@ export default function AttendanceScreen({ navigation }) {
                 onSelect={setSelectedActivity}
               />
             </View>
-            <View style={[styles.dropdownWrapper, { width: "50%" }]}>
+            <View style={[styles.dropdownWrapper, { width: "60%" }]}>
               <Dropdown
                 options={filters}
                 selected={selectedFilter}
@@ -440,7 +440,12 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: "#666" },
   statValue: { fontSize: 16, fontWeight: "bold", color: "#000" },
 
-  filterRow: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  filterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 10,
+  },
   dropdownWrapper: { marginHorizontal: 2 },
 
   dateBtn: {

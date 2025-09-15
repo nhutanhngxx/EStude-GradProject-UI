@@ -39,7 +39,7 @@ const classSubjectService = {
           cs.clazz.classId === classId
       );
 
-      console.log("filtered by termId:", filtered);
+      // console.log("filtered by termId:", filtered);
       return filtered;
     } catch (error) {
       console.error(

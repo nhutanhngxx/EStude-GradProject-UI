@@ -134,11 +134,11 @@ function AppNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <NavigationContainer>
+      <NavigationContainer>
+        <ToastProvider>
           <AppNavigator />
-        </NavigationContainer>
-      </ToastProvider>
+        </ToastProvider>
+      </NavigationContainer>
     </AuthProvider>
   );
 }

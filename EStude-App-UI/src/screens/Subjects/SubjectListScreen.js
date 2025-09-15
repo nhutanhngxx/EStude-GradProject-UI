@@ -64,8 +64,8 @@ function SubjectListScreen({ navigation }) {
           return;
         }
 
-        console.log("studentSubjects:", studentSubjects);
-        console.log("allClassSubjects:", allClassSubjects);
+        // console.log("studentSubjects:", studentSubjects);
+        // console.log("allClassSubjects:", allClassSubjects);
 
         // 3. Map dữ liệu để FlatList hiển thị đầy đủ
         const detailedSubjects = studentSubjects
@@ -92,7 +92,7 @@ function SubjectListScreen({ navigation }) {
           })
           .filter(Boolean);
 
-        console.log("detailedSubjects:", detailedSubjects);
+        // console.log("detailedSubjects:", detailedSubjects);
 
         setSubjects(detailedSubjects);
       } catch (error) {

@@ -19,7 +19,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const { user } = useContext(AuthContext);
   const { showToast } = useToast();
 
-  console.log("subject:", subject);
+  // console.log("subject:", subject);
 
   // const [activeTab, setActiveTab] = useState("Điểm");
   const [activeTab, setActiveTab] = useState(tab || "Điểm");

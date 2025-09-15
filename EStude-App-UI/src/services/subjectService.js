@@ -20,7 +20,7 @@ const subjectService = {
         throw new Error("Lấy danh sách môn học thất bại");
       }
       const result = await response.json();
-      console.log("[subjectClassService] result:", result);
+      // console.log("[subjectClassService] result:", result);
 
       return result;
     } catch (error) {

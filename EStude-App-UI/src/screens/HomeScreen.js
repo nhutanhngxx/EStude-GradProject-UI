@@ -8,8 +8,10 @@ import {
   Image,
   StatusBar,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+// import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
@@ -59,10 +61,9 @@ const attendanceRecord = [
 ];
 
 const quickActions = [
-  { id: "qa1", label: "Môn học", hint: "Môn đang học", icon: "🪪" },
-  { id: "qa2", label: "Bài tập", hint: "Bài hôm nay", icon: "📤" },
-  { id: "qa3", label: "Lịch học", hint: "Tuần này", icon: "📅" },
-  { id: "qa4", label: "Tra cứu điểm", hint: "Theo môn", icon: "📊" },
+  { id: "qa1", label: "Môn học", iconName: "menu-book" },
+  { id: "qa2", label: "Nộp bài", iconName: "file-upload" },
+  { id: "qa3", label: "Lịch học", iconName: "calendar-today" },
 ];
 
 export default function HomeStudentScreen({ navigation }) {
@@ -182,18 +183,27 @@ export default function HomeStudentScreen({ navigation }) {
                   }
                 }}
               >
-                <Text style={styles.quickIcon}>{action.icon}</Text>
+                <MaterialIcons
+                  name={action.iconName}
+                  size={28}
+                  color="#777777"
+                  style={styles.quickIcon}
+                />
                 <Text style={styles.quickLabel}>{action.label}</Text>
-                {/* <Text style={styles.quickHint}>{action.hint}</Text> */}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
               style={[styles.quickAction, styles.allAction]}
               onPress={() => navigation.navigate("FullChucNang")}
             >
-              <Text style={styles.quickIcon}>📂</Text>
+              <MaterialIcons
+                name="grid-view"
+                size={28}
+                color="#555555"
+                style={styles.quickIcon}
+              />
               <Text style={styles.quickLabel}>Tất cả</Text>
-              <Text style={styles.quickHint}>Xem thêm</Text>
+              {/* <Text style={styles.quickHint}>Xem thêm</Text> */}
             </TouchableOpacity>
           </View>
         </View>
@@ -430,7 +440,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   quickLabel: {
-    fontWeight: "bold",
     fontSize: 13,
     textAlign: "center",
   },
