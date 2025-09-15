@@ -4,6 +4,8 @@ const endpoints = {
   getAssignments: "/api/assignments",
   getAssignmentsByStudent: "/api/students/{studentId}/assignments",
   getAssignmentsBySubmission: "/api/submissions/{submissionId}/assignment",
+  getAssignmentsByClassSubject:
+    "/api/assignments/class-subject/{classSubjectId}",
 };
 
 const assignmentService = {
@@ -22,7 +24,7 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách bài tập:", error);
+      // console.error("Lỗi khi lấy danh sách bài tập:", error);
       return null;
     }
   },
@@ -46,7 +48,7 @@ const assignmentService = {
       const all = await assignmentService.getAssignments();
       if (!Array.isArray(all)) return [];
       return all.filter(
-        (a) => a.classSubject && a.classSubject.clazz.classId === classId
+        (a) => (a.classId || a.classSubject?.clazz?.classId) === classId
       );
     } catch (error) {
       console.error("Lỗi khi lọc bài tập theo lớp:", error);
@@ -72,7 +74,7 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách bài tập:", error);
+      // console.error("Lỗi khi lấy danh sách bài tập:", error);
       return null;
     }
   },
@@ -96,6 +98,29 @@ const assignmentService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy bài tập:", error);
+      return null;
+    }
+  },
+
+  getAssignmentsByClassSubject: async (classSubjectId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAssignmentsByClassSubject.replace(
+          "{classSubjectId}",
+          classSubjectId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        return [];
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      // console.error("Lỗi khi lấy danh sách bài tập:", error);
       return null;
     }
   },

@@ -25,13 +25,27 @@ const classSubjectService = {
     }
   },
 
-  getByClassId: async (classId) => {
+  getByClassAndTerm: async (classId, termId) => {
     try {
       const all = await classSubjectService.getAllClassSubjects();
       if (!Array.isArray(all)) return [];
-      return all.filter((cs) => cs.clazz && cs.clazz.classId === classId);
+
+      // Lọc theo termId và classId
+      const filtered = all.filter(
+        (cs) =>
+          cs.term &&
+          cs.term.termId === termId &&
+          cs.clazz &&
+          cs.clazz.classId === classId
+      );
+
+      console.log("filtered by termId:", filtered);
+      return filtered;
     } catch (error) {
-      console.error(`Lỗi khi lấy classSubject theo classId=${classId}:`, error);
+      console.error(
+        `Lỗi khi lấy classSubject theo classId=${classId} và termId=${termId}:`,
+        error
+      );
       return [];
     }
   },

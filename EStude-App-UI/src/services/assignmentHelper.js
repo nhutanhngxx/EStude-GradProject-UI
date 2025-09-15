@@ -3,18 +3,25 @@ import submissionService from "../services/submissionService";
 
 /**
  * @param {number} studentId
- * @param {number|null} classId - nếu có sẽ load assignments của lớp, null thì load tất cả
- * @param {boolean|null} isExam - nếu true/false sẽ filter assignments/exams, null = tất cả
- * @returns {Promise<Array>} list assignment kèm status và submissionId
+ * @param {number|null} classId
+ * @param {boolean|null} isExam
+ * @param {number|null} classSubjectId
+ * @returns {Promise<Array>} danh sách assignment kèm status và submissionId
  */
 export async function loadAssignmentsWithStatus(
   studentId,
   classId = null,
-  isExam = null
+  isExam = null,
+  classSubjectId = null
 ) {
   let assignments = [];
 
-  if (classId) {
+  if (classSubjectId) {
+    // Gọi API mới theo classSubjectId
+    assignments = await assignmentService.getAssignmentsByClassSubject(
+      classSubjectId
+    );
+  } else if (classId) {
     assignments = await assignmentService.getAssignmentsByClass(classId);
   } else {
     assignments = await assignmentService.getAssignmentsByStudent(studentId);
@@ -40,10 +47,10 @@ export async function loadAssignmentsWithStatus(
         status: submission?.status === "SUBMITTED" ? "Đã nộp" : "Chưa nộp",
         submissionId: submission?.submissionId || null,
         submittedAt: submission?.submittedAt || null,
-        // Thêm các trường cần thiết để check quá hạn hoặc hiển thị chi tiết
-        classId: as.classSubject?.clazz?.classId || null,
-        className: as.classSubject?.clazz?.name || null,
-        teacherName: as.classSubject?.teacher?.fullName || null,
+        classId: as.classId || as.classSubject?.clazz?.classId || null,
+        className: as.className || as.classSubject?.clazz?.name || null,
+        teacherName:
+          as.teacherName || as.classSubject?.teacher?.fullName || null,
         attachmentUrl: as.attachmentUrl || null,
         timeLimit: as.timeLimit || null,
         type: as.type || null,

@@ -19,7 +19,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const { user } = useContext(AuthContext);
   const { showToast } = useToast();
 
-  // console.log("subject:", subject);
+  console.log("subject:", subject);
 
   // const [activeTab, setActiveTab] = useState("Điểm");
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
@@ -43,13 +43,14 @@ export default function SubjectDetailScreen({ route, navigation }) {
             );
           setGrade(res);
         } else if (activeTab === "Bài tập") {
-          if (subject.clazz.classId) {
+          if (subject.classId) {
             const res = await loadAssignmentsWithStatus(
               user.userId,
-              subject.clazz.classId,
               null,
-              subject.subjectId
+              null,
+              subject.classSubjectId
             );
+            setAssignments(res);
             const assignmentsForThisClass = res.filter(
               (a) => a.classSubject?.classSubjectId === subject.classSubjectId
             );

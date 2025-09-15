@@ -2,6 +2,7 @@ import config from "../configs/config";
 
 const endpoints = {
   getSubjectsByStudent: "/api/enrollments",
+  // getSubjectsByStudent: "/api/students/{studentId}/subjects",
 };
 
 const subjectService = {
@@ -14,10 +15,13 @@ const subjectService = {
           headers: { "Content-Type": "application/json" },
         }
       );
+
       if (!response.ok) {
         throw new Error("Lấy danh sách môn học thất bại");
       }
       const result = await response.json();
+      console.log("[subjectClassService] result:", result);
+
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách môn học:", error);

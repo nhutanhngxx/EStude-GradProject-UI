@@ -45,45 +45,58 @@ function SubjectListScreen({ navigation }) {
 
       try {
         setLoading(true);
-        const result = await subjectService.getSubjectsByStudent();
-        if (!result) {
+
+        // 1. Lấy danh sách classSubject của học sinh
+        const studentSubjects =
+          await classSubjectService.getClassSubjectsByStudent({
+            studentId: user.userId,
+          });
+        if (!Array.isArray(studentSubjects) || studentSubjects.length === 0) {
           setSubjects([]);
           return;
         }
 
-        const myEnrollments = result.filter(
-          (en) => en.student.userId === user.userId
-        );
-
-        const classSubjectsFlattened = [];
-
-        for (const en of myEnrollments) {
-          const classSubjects = await classSubjectService.getByClassId(
-            en.clazz.classId
-          );
-
-          classSubjects.forEach((cs) => {
-            classSubjectsFlattened.push({
-              classSubjectId: cs.classSubjectId,
-              subjectId: cs.subject.subjectId,
-              name: cs.subject.name,
-              description: `${en.clazz.name}`,
-              semester: en.clazz.term,
-              teacherName: cs.teacher?.fullName || "Chưa có",
-              beginDate: en.clazz.beginDate,
-              endDate: en.clazz.endDate,
-              clazz: {
-                classId: en.clazz.classId,
-                name: en.clazz.name,
-                term: en.clazz.term,
-              },
-            });
-          });
+        // 2. Lấy tất cả classSubjects chi tiết
+        const allClassSubjects =
+          await classSubjectService.getAllClassSubjects();
+        if (!Array.isArray(allClassSubjects)) {
+          setSubjects([]);
+          return;
         }
 
-        setSubjects(classSubjectsFlattened);
-      } catch (err) {
-        console.error(err);
+        console.log("studentSubjects:", studentSubjects);
+        console.log("allClassSubjects:", allClassSubjects);
+
+        // 3. Map dữ liệu để FlatList hiển thị đầy đủ
+        const detailedSubjects = studentSubjects
+          .map((s) => {
+            const detail = allClassSubjects.find(
+              (cs) => cs.classSubjectId === s.classSubjectId
+            );
+            if (!detail) return null;
+
+            return {
+              classSubjectId: detail.classSubjectId,
+              classId: s.classId,
+              className: s.className,
+              name: detail.subject?.name || s.subjectName,
+              description: `${detail.subject?.name || s.subjectName} - ${
+                s.className
+              }`,
+              teacherName:
+                detail.teacher?.fullName || s.teacherName || "Chưa có",
+              semester: detail.term?.name || s.termName || "",
+              beginDate: detail.term?.beginDate || null,
+              endDate: detail.term?.endDate || null,
+            };
+          })
+          .filter(Boolean);
+
+        console.log("detailedSubjects:", detailedSubjects);
+
+        setSubjects(detailedSubjects);
+      } catch (error) {
+        console.error("Lỗi khi lấy môn học chi tiết:", error);
         setSubjects([]);
       } finally {
         setLoading(false);
@@ -128,14 +141,16 @@ function SubjectListScreen({ navigation }) {
     });
 
   const renderItem = ({ item, index }) => {
+    const today = new Date();
     const begin = new Date(item.beginDate);
     const end = new Date(item.endDate);
-    const today = new Date();
 
+    // Xác định trạng thái môn học
     let status = "Đang diễn ra";
     if (begin > today) status = "Sắp diễn ra";
-    if (end < today) status = "Đã học xong";
+    else if (end < today) status = "Đã học xong";
 
+    // Chọn màu viền theo trạng thái
     const borderStyle =
       status === "Đang diễn ra"
         ? styles.activeBorder
@@ -143,6 +158,7 @@ function SubjectListScreen({ navigation }) {
         ? styles.upcomingBorder
         : styles.finishedBorder;
 
+    // Xử lý card lưới cho số lượng lẻ
     const isLastOdd =
       isGrid &&
       index === filteredSubjects.length - 1 &&
@@ -153,19 +169,15 @@ function SubjectListScreen({ navigation }) {
         style={[
           styles.card,
           borderStyle,
-          isGrid && (isLastOdd ? styles.cardFullWidth : styles.cardGrid),
+          isGrid ? (isLastOdd ? styles.cardFullWidth : styles.cardGrid) : null,
         ]}
         onPress={() => navigation.navigate("SubjectDetail", { subject: item })}
       >
         <Text style={styles.title}>{item.name}</Text>
-        <Text style={styles.description}>{item.description}</Text>
         <Text style={styles.semester}>Học kỳ: {item.semester}</Text>
         <Text style={styles.deadline}>
-          {`Thời gian: ${formatDate(item.beginDate)} - ${formatDate(
-            item.endDate
-          )}`}
+          Thời gian: {formatDate(item.beginDate)} - {formatDate(item.endDate)}
         </Text>
-
         <Text
           style={[
             styles.status,
@@ -177,6 +189,12 @@ function SubjectListScreen({ navigation }) {
           ]}
         >
           {status}
+        </Text>
+        <Text style={{ marginTop: 4, fontSize: 12, color: "#555" }}>
+          Giáo viên: {item.teacherName}
+        </Text>
+        <Text style={{ fontSize: 12, color: "#555" }}>
+          Lớp: {item.className}
         </Text>
       </TouchableOpacity>
     );
