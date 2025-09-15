@@ -138,23 +138,17 @@ export default function ExamDoingScreen({ navigation, route }) {
       const result = await submissionService.addSubmission(submission);
 
       if (result) {
+        showToast("Bài tập của bạn đã được nộp!", "success");
         setSubmittedScore(result.score);
-
-        // call AI analysis
         try {
           const analysis = await aiService.getAIAnalysisBySubmission(
             exam.assignmentId,
             user.userId
           );
-          // console.log("AI analysis:", analysis);
-
           if (analysis?.success) {
             setAiResult(analysis.data);
-
             const rawFb = analysis.data.feedback || [];
             const normalizedFb = Array.isArray(rawFb) ? rawFb.flat() : [];
-            // console.log("normalizedFb:", normalizedFb);
-
             setAiFeedback(normalizedFb);
           } else {
             setAiResult(null);
@@ -166,24 +160,8 @@ export default function ExamDoingScreen({ navigation, route }) {
           setAiResult(null);
           setAiFeedback([]);
         }
-
         setSubmitted(true);
         setSubmitting(false);
-
-        showToast("Bài tập của bạn đã được nộp!", "success");
-
-        // Alert.alert(
-        //   "Thành công",
-        //   `Bài thi đã được nộp!\nĐiểm: ${result.score}`,
-        //   [
-        //     {
-        //       text: "OK",
-        //       onPress: () => {
-        //         navigation.goBack();
-        //       },
-        //     },
-        //   ]
-        // );
       } else {
         setSubmitting(false);
         Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");

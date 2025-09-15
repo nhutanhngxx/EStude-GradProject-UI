@@ -123,18 +123,42 @@ export default function ForgotPasswordScreen({ navigation }) {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
-                  placeholder="example@domain.com"
+                  placeholder="tencuaban@gmail.com"
+                  placeholderTextColor="#999"
                   style={styles.input}
                 />
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={handleSendOtp}
-                  disabled={loading}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
                 >
-                  <Text style={styles.buttonText}>
-                    {loading ? "Đang gửi..." : "Gửi OTP"}
-                  </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.button,
+                      {
+                        flex: 1,
+                        marginRight: 10,
+                        backgroundColor: "transparent",
+                      },
+                    ]}
+                    onPress={handleBack}
+                    disabled={loading}
+                  >
+                    <Text style={[styles.buttonText, { color: "#007f3f" }]}>
+                      Quay lại
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, { flex: 1 }]}
+                    onPress={handleSendOtp}
+                    disabled={loading}
+                  >
+                    <Text style={styles.buttonText}>
+                      {loading ? "Đang gửi..." : "Gửi OTP"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </>
             )}
 
@@ -146,7 +170,8 @@ export default function ForgotPasswordScreen({ navigation }) {
                   onChangeText={setOtp}
                   keyboardType="number-pad"
                   placeholder="123456"
-                  style={styles.input}
+                  placeholderTextColor="#999"
+                  style={[styles.input, { textAlign: "center" }]}
                 />
                 <View
                   style={{
@@ -155,11 +180,20 @@ export default function ForgotPasswordScreen({ navigation }) {
                   }}
                 >
                   <TouchableOpacity
-                    style={[styles.button, { flex: 1, marginRight: 10 }]}
+                    style={[
+                      styles.button,
+                      {
+                        flex: 1,
+                        marginRight: 10,
+                        backgroundColor: "transparent",
+                      },
+                    ]}
                     onPress={handleBack}
                     disabled={loading}
                   >
-                    <Text style={styles.buttonText}>Quay lại</Text>
+                    <Text style={[styles.buttonText, { color: "#007f3f" }]}>
+                      Quay lại
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.button, { flex: 1 }]}
@@ -186,6 +220,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                   secureTextEntry
                   placeholder="Mật khẩu mới"
                   style={styles.input}
+                  placeholderTextColor="#999"
                 />
                 <View style={styles.strengthBarContainer}>
                   <View
