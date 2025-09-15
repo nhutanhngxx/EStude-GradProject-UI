@@ -291,18 +291,13 @@ export default function AttendanceScreen({ navigation }) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.brand}>EStude</Text>
-            <Text style={styles.greeting}>
-              Xin chào,{" "}
-              <Text style={styles.highlight}>
-                {user.fullName.toUpperCase()}
-              </Text>{" "}
-              👋
-            </Text>
-            <Text style={styles.subGreeting}>
-              Nơi lưu giữ hành trình tri thức trẻ
-            </Text>
+            <Text style={styles.brand}>ESTUDE</Text>
+            <Text style={styles.subtitle}>Xin chào, {user.fullName} 👋</Text>
           </View>
+          {/* <Image
+              source={{ uri: "https://i.pravatar.cc/100?img=12" }}
+              style={styles.avatar}
+            /> */}
         </View>
 
         {/* Tổng quan */}
@@ -401,11 +396,19 @@ export default function AttendanceScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#f5f5f5" },
   container: { flex: 1, padding: 16 },
-  header: { marginBottom: 16 },
-  brand: { fontSize: 20, fontWeight: "bold", color: "#00cc66" },
   greeting: { fontSize: 16, color: "#333" },
   highlight: { fontWeight: "bold" },
   subGreeting: { fontSize: 14, color: "#777" },
+
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
+  subtitle: { fontSize: 15, color: "#555" },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
 
   card: {
     backgroundColor: "#fff",

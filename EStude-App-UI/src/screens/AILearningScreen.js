@@ -119,13 +119,13 @@ export default function AIDashboardScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.brand}>EStude AI</Text>
+              <Text style={styles.brand}>AI ESTUDE</Text>
               <Text style={styles.subtitle}>Phân tích & dự đoán học tập</Text>
             </View>
-            <Image
+            {/* <Image
               source={{ uri: "https://i.pravatar.cc/100?img=12" }}
               style={styles.avatar}
-            />
+            /> */}
           </View>
 
           {/* Button dự đoán */}
@@ -135,13 +135,17 @@ export default function AIDashboardScreen() {
           </TouchableOpacity>
 
           {/* Subject Predictions */}
-          <Text style={styles.sectionTitle}>Phân tích từng môn học</Text>
+          {subjectAnalysis?.predictions && (
+            <>
+              <Text style={styles.sectionTitle}>Phân tích từng môn học</Text>
+            </>
+          )}
           {subjectAnalysis?.predictions ? (
             Object.entries(subjectAnalysis.predictions).map(([subj, data]) =>
               renderSubjectCard(subj, data)
             )
           ) : (
-            <Text style={styles.empty}>Chưa có dữ liệu</Text>
+            <Text style={styles.empty}>Chưa có dữ liệu từ AI ESTUDE</Text>
           )}
 
           {/* Semester Overview */}

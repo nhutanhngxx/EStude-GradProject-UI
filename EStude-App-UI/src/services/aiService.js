@@ -37,7 +37,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Lấy phân tích AI thất bại");
+        // throw new Error("Lấy phân tích AI thất bại");
+        return null;
       }
       const result = await response.json();
       return result;
@@ -59,7 +60,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Lấy kết quả phân tích AI thất bại");
+        // throw new Error("Lấy kết quả phân tích AI thất bại");
+        return [];
       }
       const result = await response.json();
       return result;
@@ -82,7 +84,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Dự đoán môn học thất bại");
+        // throw new Error("Dự đoán môn học thất bại");
+        return [];
       }
       const result = await response.json();
       return result;
@@ -107,7 +110,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Lấy kết quả dự đoán môn học thất bại");
+        // throw new Error("Lấy kết quả dự đoán môn học thất bại");
+        return [];
       }
       const result = await response.json();
       return result;
@@ -130,7 +134,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Dự đoán học lực thất bại");
+        // throw new Error("Dự đoán học lực thất bại");
+        return null;
       }
       const result = await response.json();
       return result;
@@ -153,7 +158,8 @@ const aiService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Lấy kết quả dự đoán học lực thất bại");
+        // throw new Error("Lấy kết quả dự đoán học lực thất bại");
+        return null;
       }
       const result = await response.json();
       return result;
