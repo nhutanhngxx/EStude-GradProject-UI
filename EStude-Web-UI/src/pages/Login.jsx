@@ -129,7 +129,7 @@ export default function Login() {
 
       {/* Footer */}
       <p className="text-sm opacity-80 text-center py-4">
-        © 2025 EStude - Graduation Project
+        © 2025 ESTUDE - Graduation Project
       </p>
     </div>
   );

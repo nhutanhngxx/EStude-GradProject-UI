@@ -47,7 +47,7 @@ export default function RoleSelection() {
       </div>
 
       <p className="absolute bottom-4 text-sm opacity-80 text-center w-full">
-        © 2025 EStude - Graduation Project
+        © 2025 ESTUDE - Graduation Project
       </p>
     </div>
   );

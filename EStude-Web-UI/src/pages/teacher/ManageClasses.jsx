@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Eye, Trash2, User, X } from "lucide-react";
-import { FaEye, FaTrash } from "react-icons/fa";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
 import subjectService from "../../services/subjectService";
 import StudentManagement from "./StudentManagement";
-
 import { useToast } from "../../contexts/ToastContext";
 
 const Badge = ({ text, color }) => (
@@ -16,8 +14,8 @@ const Badge = ({ text, color }) => (
   </span>
 );
 
-const Modal = ({ title, children, onClose }) => {
-  return createPortal(
+const Modal = ({ title, children, onClose }) =>
+  createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center">
       <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-5/6 max-w-6xl overflow-y-auto border border-gray-200 dark:border-gray-700 animate-fade-in">
         {/* Header */}
@@ -40,20 +38,18 @@ const Modal = ({ title, children, onClose }) => {
     </div>,
     document.body
   );
-};
 
-const formatTerm = (termNumber, beginDate, endDate) => {
-  if (!termNumber || !beginDate || !endDate) return "";
+const formatTerm = (termNumber, beginDate) => {
+  if (!termNumber || !beginDate) return "";
   const beginYear = new Date(beginDate).getFullYear();
-  const endYear = new Date(endDate).getFullYear();
+  const endYear = beginYear + 1;
   return `HK${termNumber} ${beginYear}-${endYear}`;
 };
 
 const ManageClasses = () => {
   const { showToast } = useToast();
+
   const [name, setName] = useState("");
-  const [term, setTerm] = useState("");
-  const [termNumber, setTermNumber] = useState("");
   const [classSize, setClassSize] = useState(0);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -62,14 +58,15 @@ const ManageClasses = () => {
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
-  const [school, setSchool] = useState(null);
-  const [beginDate, setBeginDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [editableSemesters, setEditableSemesters] = useState([
+    { termNumber: 1, beginDate: "", endDate: "" },
+  ]);
 
   // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
 
+  // Load subjects
   useEffect(() => {
     const fetchSubjects = async () => {
       const result = await subjectService.getAllSubjects();
@@ -78,58 +75,95 @@ const ManageClasses = () => {
     fetchSubjects();
   }, []);
 
+  // Load teachers
   useEffect(() => {
     const fetchTeachers = async () => {
       const result = await teacherService.getAllTeachers();
-      // Lọc các teachers có trùng schoolId với user
       const filtered = result.filter((t) => t.school?.schoolId === schoolId);
-      if (filtered) setTeachers(filtered);
+      setTeachers(filtered);
     };
     fetchTeachers();
   }, [schoolId]);
 
-  useEffect(() => {
-    const fetchClassesWithSubjects = async () => {
+  const fetchClassesWithSubjects = useCallback(async () => {
+    try {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
-      // console.log("[DEBUG] classes by school:", allClasses);
-      if (!allClasses) return;
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
-      // console.log("[DEBUG] allClassSubjects:", allClassSubjects);
+
+      // console.log("allClasses:", allClasses);
+      // console.log("allClassSubjects:", allClassSubjects);
+
+      if (!allClasses || !allClassSubjects) return;
+
       const classesWithSubjects = allClasses.map((cls) => {
-        const subjectsForClass = allClassSubjects
-          .filter((cs) => cs.clazz.classId === cls.classId)
-          .map((cs) => ({
-            classSubjectId: cs.classSubjectId,
-            subjectId: cs.subject.subjectId,
-            name: cs.subject.name,
-            teacherId: cs.teacher?.userId ?? null,
-            teacherName: cs.teacher?.fullName ?? null,
-          }));
+        const subjectsForClass = [
+          ...new Map(
+            allClassSubjects
+              .filter((cs) =>
+                cls.terms.some((t) => t.termId === cs.term?.termId)
+              )
+              .map((cs) => [
+                cs.subject.subjectId,
+                {
+                  classSubjectId: cs.classSubjectId,
+                  subjectId: cs.subject.subjectId,
+                  name: cs.subject.name,
+                  teacherId: cs.teacher?.userId ?? null,
+                  teacherName: cs.teacher?.fullName,
+                  termId: cs.term?.termId,
+                  termName: cs.term?.name,
+                },
+              ])
+          ).values(),
+        ];
+
         return { ...cls, subjects: subjectsForClass };
       });
-      // console.log("[DEBUG] classesWithSubjects:", classesWithSubjects);
+
       setClasses(classesWithSubjects);
-    };
-    fetchClassesWithSubjects();
+      // console.log("classesWithSubjects:", classesWithSubjects);
+    } catch (err) {
+      console.error("Lỗi khi load lớp và môn:", err);
+    }
   }, [schoolId]);
 
+  useEffect(() => {
+    fetchClassesWithSubjects();
+  }, [fetchClassesWithSubjects]);
+
+  const addSemester = () => {
+    setEditableSemesters((prev) => [
+      ...prev,
+      { termNumber: prev.length + 1, beginDate: "", endDate: "" },
+    ]);
+  };
+
+  const removeSemester = (index) => {
+    setEditableSemesters((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSemester = (index, field, value) => {
+    setEditableSemesters((prev) =>
+      prev.map((sem, i) => (i === index ? { ...sem, [field]: value } : sem))
+    );
+  };
+
+  // ----------------- MODAL -----------------
   const openModal = (type, cls = null) => {
     setSelectedClass(cls);
     setModalType(type);
 
     if (type === "add") {
       setName("");
-      setTerm("");
       setClassSize(0);
       setSelectedSubjects([]);
       setSelectedTeacher("");
-      setSchool(schoolId);
+      setEditableSemesters([{ termNumber: 1, beginDate: "", endDate: "" }]);
     } else if (type === "edit" && cls) {
       setName(cls.name);
-      setTerm(cls.term || "");
       setClassSize(cls.classSize || 0);
 
-      // Map subjects của lớp thành selectedSubjects
+      // Map subjects
       setSelectedSubjects(
         cls.subjects?.map((s) => ({
           classSubjectId: s.classSubjectId,
@@ -138,8 +172,17 @@ const ManageClasses = () => {
         })) || []
       );
 
-      // Set giáo viên chủ nhiệm nếu có
+      // Chủ nhiệm
       setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
+
+      // Map terms
+      setEditableSemesters(
+        cls.terms?.map((t, idx) => ({
+          termNumber: idx + 1,
+          beginDate: t.beginDate,
+          endDate: t.endDate,
+        })) || [{ termNumber: 1, beginDate: "", endDate: "" }]
+      );
     }
   };
 
@@ -148,50 +191,25 @@ const ManageClasses = () => {
     setModalType(null);
   };
 
-  const fetchClassesWithSubjects = useCallback(async () => {
-    try {
-      const allClasses = await classService.getClassesBySchoolId(schoolId);
-      if (!allClasses) return;
-
-      const allClassSubjects = await classSubjectService.getAllClassSubjects();
-
-      const classesWithSubjects = allClasses.map((cls) => {
-        const subjectsForClass = allClassSubjects
-          .filter((cs) => cs.clazz.classId === cls.classId)
-          .map((cs) => ({
-            classSubjectId: cs.classSubjectId,
-            subjectId: cs.subject.subjectId,
-            name: cs.subject.name,
-            teacherId: cs.teacher?.userId ?? null,
-            teacherName: cs.teacher?.fullName ?? null,
-          }));
-        return { ...cls, subjects: subjectsForClass };
-      });
-
-      setClasses(classesWithSubjects);
-    } catch (error) {
-      console.error("Lỗi khi load lớp và môn:", error);
-    }
-  }, [schoolId]);
-
-  useEffect(() => {
-    fetchClassesWithSubjects();
-  }, [fetchClassesWithSubjects]);
-
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const handleSave = async () => {
     if (!name) return showToast("Vui lòng nhập tên lớp!", "warn");
-    const calculatedTerm = formatTerm(termNumber, beginDate, endDate);
+
     try {
       const classPayload = {
         name,
-        term: calculatedTerm,
         classSize,
         schoolId,
-        beginDate,
-        endDate,
+        terms: editableSemesters.map((sem) => ({
+          name: formatTerm(sem.termNumber, sem.beginDate),
+          beginDate: sem.beginDate,
+          endDate: sem.endDate,
+        })),
       };
+
       const classResult = await classService.addClass(classPayload);
+
+      // console.log("classResult:", classResult);
+
       if (!classResult?.classId) {
         showToast("Lỗi khi lưu lớp!", "error");
         return;
@@ -203,6 +221,7 @@ const ManageClasses = () => {
             classId: classResult.classId,
             subjectId: subj.subjectId,
             teacherId: subj.teacherId ?? null,
+            termIds: classResult.terms.map((t) => t.termId),
           });
         }
       }
@@ -217,7 +236,7 @@ const ManageClasses = () => {
   };
 
   const handleDelete = (classId) => {
-    setClasses(classes.filter((c) => c.classId !== classId));
+    setClasses((prev) => prev.filter((c) => c.classId !== classId));
     closeModal();
   };
 
@@ -228,9 +247,8 @@ const ManageClasses = () => {
         <div>
           <h1 className="text-2xl font-bold mb-2">Quản lý lớp học</h1>
           <p className="text-gray-600">
-            Quản lý lớp học là một công cụ giúp giáo viên tổ chức và quản lý tất
-            cả các khía cạnh của một lớp học, từ điểm danh, giao bài tập đến
-            đánh giá học sinh.
+            Quản lý lớp học là công cụ giúp giáo viên tổ chức và quản lý lớp:
+            điểm danh, giao bài, đánh giá học sinh.
           </p>
         </div>
         <button
@@ -247,8 +265,8 @@ const ManageClasses = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 w-[20%]">Tên lớp học</th>
-              <th className="px-4 py-3 w-[15%]">Học kì</th>
-              <th className="px-4 py-3 w-[30%]">Quản lý môn học</th>
+              <th className="px-4 py-3 w-[15%]">Học kỳ</th>
+              <th className="px-4 py-3 w-[30%]">Môn học</th>
               <th className="px-4 py-3 w-[25%]">Tùy chọn</th>
             </tr>
           </thead>
@@ -256,7 +274,25 @@ const ManageClasses = () => {
             {classes.map((c) => (
               <tr key={c.classId} className="border-t">
                 <td className="px-4 py-2 font-medium">{c.name}</td>
-                <td className="px-4 py-2">{c.term || "-"}</td>
+
+                {/* Terms */}
+                <td className="px-4 py-2">
+                  {c.terms?.length > 0 ? (
+                    <div className="flex flex-col gap-1">
+                      {c.terms.map((t) => (
+                        <Badge
+                          key={t.termId}
+                          text={t.name}
+                          color="bg-green-100 text-green-700"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
+                {/* Subjects */}
                 <td className="px-4 py-2">
                   {c.subjects?.length
                     ? c.subjects.map((s) => (
@@ -268,24 +304,29 @@ const ManageClasses = () => {
                       ))
                     : "-"}
                 </td>
-                <td className="px-4 py-2 flex flex-wrap gap-4">
+
+                {/* Actions */}
+                <td className="px-4 py-2 flex flex-wrap items-center gap-4">
                   <button
                     onClick={() => openModal("edit", c)}
                     className="flex items-center gap-1 text-blue-600 hover:underline"
                   >
-                    <Eye size={16} /> Xem
+                    <Eye size={16} />
+                    <span className="hidden sm:inline">Xem</span>
                   </button>
                   <button
                     onClick={() => openModal("students", c)}
                     className="flex items-center gap-1 text-green-600 hover:underline"
                   >
-                    <User size={16} /> Danh sách lớp
+                    <User size={16} />
+                    <span className="hidden sm:inline">Danh sách lớp</span>
                   </button>
                   <button
                     onClick={() => openModal("delete", c)}
                     className="flex items-center gap-1 text-red-500 hover:underline"
                   >
-                    <Trash2 size={16} /> Xóa
+                    <Trash2 size={16} />
+                    <span className="hidden sm:inline">Xóa</span>
                   </button>
                 </td>
               </tr>
@@ -294,7 +335,7 @@ const ManageClasses = () => {
         </table>
       </div>
 
-      {/* Modal Manage Students */}
+      {/* Modal Students */}
       {modalType === "students" && selectedClass && (
         <Modal
           title={`Quản lý học sinh - ${selectedClass.name}`}
@@ -307,70 +348,108 @@ const ManageClasses = () => {
       {/* Modal Add/Edit */}
       {(modalType === "add" || modalType === "edit") && (
         <Modal
-          title={modalType === "add" ? "Thêm lớp mới" : "Xem chi tiết lớp"}
+          title={modalType === "add" ? "Thêm lớp mới" : "Sửa lớp"}
           onClose={closeModal}
         >
-          <form className="space-y-4" onSubmit={handleSave}>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
+            {/* Tên lớp */}
             <input
               type="text"
-              placeholder="Class Name"
+              placeholder="Tên lớp"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-2 border rounded-lg"
             />
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <label className="block mb-2">Học kì</label>
-                <input
-                  type="number"
-                  min={1}
-                  placeholder="Số học kì"
-                  value={termNumber}
-                  onChange={(e) => setTermNumber(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              </div>
 
-              <div className="flex-1">
-                <label className="block mb-2">Ngày bắt đầu</label>
-                <input
-                  type="date"
-                  value={beginDate}
-                  onChange={(e) => setBeginDate(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
-              </div>
-
-              <div className="flex-1">
-                <label className="block mb-2">Ngày kết thúc</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
-                />
+            {/* Semesters */}
+            <div>
+              <label className="block font-semibold mb-2">
+                Danh sách học kỳ
+              </label>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border rounded-lg">
+                  <thead className="bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-3 py-2">STT</th>
+                      <th className="px-3 py-2">Số học kỳ</th>
+                      <th className="px-3 py-2">Ngày bắt đầu</th>
+                      <th className="px-3 py-2">Ngày kết thúc</th>
+                      <th className="px-3 py-2">Hành động</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editableSemesters.map((sem, index) => (
+                      <tr key={index} className="border-b">
+                        <td className="px-3 py-2">{index + 1}</td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={sem.termNumber}
+                            readOnly
+                            className="w-12 px-2 py-1 border rounded text-center"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="date"
+                            value={sem.beginDate}
+                            onChange={(e) =>
+                              updateSemester(index, "beginDate", e.target.value)
+                            }
+                            className="px-2 py-1 border rounded"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="date"
+                            value={sem.endDate}
+                            onChange={(e) =>
+                              updateSemester(index, "endDate", e.target.value)
+                            }
+                            className="px-2 py-1 border rounded"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={() => removeSemester(index)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <button
+                  type="button"
+                  onClick={addSemester}
+                  className="flex mt-4 gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                >
+                  + Thêm học kỳ
+                </button>
               </div>
             </div>
 
-            {/* Hiển thị term tự động */}
-            <p className="mt-2 text-gray-600">
-              Học kỳ:{" "}
-              {termNumber && beginDate && endDate
-                ? `HK${termNumber} ${new Date(
-                    beginDate
-                  ).getFullYear()}-${new Date(endDate).getFullYear()}`
-                : "-"}
-            </p>
-
+            {/* Class size */}
             <input
               type="number"
-              placeholder="Class Size"
+              placeholder="Sĩ số lớp"
               value={classSize}
               disabled
               onChange={(e) => setClassSize(Number(e.target.value))}
               className="w-full px-4 py-2 border rounded-lg"
             />
 
+            {/* Homeroom teacher */}
             <select
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
@@ -378,21 +457,20 @@ const ManageClasses = () => {
             >
               <option value="">-- Chọn giáo viên chủ nhiệm --</option>
               {teachers.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+                <option key={t.userId} value={t.userId}>
+                  {t.fullName}
                 </option>
               ))}
             </select>
 
+            {/* Subjects */}
             <div className="space-y-2 max-h-64 overflow-y-auto border p-2 rounded-lg">
               {subjects.map((subj) => {
                 const selected = selectedSubjects.find(
                   (s) => s.subjectId === subj.subjectId
                 );
-
                 return (
                   <div key={subj.subjectId} className="flex items-center gap-2">
-                    {/* Checkbox chọn môn */}
                     <input
                       type="checkbox"
                       checked={!!selected}
@@ -413,8 +491,6 @@ const ManageClasses = () => {
                       className="accent-blue-600"
                     />
                     <span className="flex-1">{subj.name}</span>
-
-                    {/* Select giáo viên cho môn */}
                     <select
                       value={selected?.teacherId ?? ""}
                       onChange={(e) =>
@@ -446,19 +522,13 @@ const ManageClasses = () => {
               })}
             </div>
 
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="px-4 py-2 border rounded-lg"
-              >
-                Hủy
-              </button>
+            {/* Action buttons */}
+            <div className="flex justify-end gap-2 mt-4">
               <button
                 type="submit"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-blue-500 hover:text-white transition"
               >
-                Lưu
+                Lưu lớp học
               </button>
             </div>
           </form>
@@ -480,7 +550,7 @@ const ManageClasses = () => {
               Cancel
             </button>
             <button
-              onClick={() => handleDelete(selectedClass.id)}
+              onClick={() => handleDelete(selectedClass.classId)}
               className="px-4 py-2 bg-red-600 text-white rounded-lg"
             >
               Delete

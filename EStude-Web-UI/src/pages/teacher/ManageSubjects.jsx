@@ -1,7 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { PlusCircle, Edit2, Trash2, User, FileText, Eye } from "lucide-react";
+import { PlusCircle, Edit2, Trash2, Eye } from "lucide-react";
 import subjectService from "../../services/subjectService";
 import { useToast } from "../../contexts/ToastContext";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function ManageSubjects() {
   const { showToast } = useToast();
@@ -11,19 +22,9 @@ export default function ManageSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isStudentsOpen, setIsStudentsOpen] = useState(false);
-  const [isAssignmentsOpen, setIsAssignmentsOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-
-  const [newStudentId, setNewStudentId] = useState("");
-  const [newAssignment, setNewAssignment] = useState({
-    title: "",
-    dueDate: "",
-    description: "",
-    type: "essay",
-  });
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -98,63 +99,25 @@ export default function ManageSubjects() {
     }
   };
 
-  const handleAddStudent = () => {
-    if (!newStudentId) return;
-    setSubjects((prev) =>
-      prev.map((s) =>
-        s.id === selectedSubject.id
-          ? { ...s, students: [...(s.students || []), newStudentId] }
-          : s
-      )
-    );
-    setNewStudentId("");
-  };
-
-  const handleRemoveStudent = (id) => {
-    setSubjects((prev) =>
-      prev.map((s) =>
-        s.id === selectedSubject.id
-          ? { ...s, students: s.students.filter((st) => st !== id) }
-          : s
-      )
-    );
-  };
-
-  const handleAddAssignment = () => {
-    if (
-      !newAssignment.title ||
-      (!newAssignment.dueDate && newAssignment.type === "essay")
-    )
-      return;
-    setSubjects((prev) =>
-      prev.map((s) =>
-        s.id === selectedSubject.id
-          ? {
-              ...s,
-              assignments: [
-                ...(s.assignments || []),
-                { ...newAssignment, id: Date.now() },
-              ],
-            }
-          : s
-      )
-    );
-    setNewAssignment({
-      title: "",
-      dueDate: "",
-      description: "",
-      type: "essay",
+  // Chuẩn bị dữ liệu chart
+  const classMap = {};
+  subjects.forEach((s) => {
+    s.classes?.forEach((c) => {
+      if (!classMap[c.name]) classMap[c.name] = 0;
+      classMap[c.name]++;
     });
-  };
+  });
 
-  const handleRemoveAssignment = (id) => {
-    setSubjects((prev) =>
-      prev.map((s) =>
-        s.id === selectedSubject.id
-          ? { ...s, assignments: s.assignments.filter((a) => a.id !== id) }
-          : s
-      )
-    );
+  // Chuẩn bị dữ liệu chart
+  const chartData = {
+    labels: subjects.map((s) => s.name), // tên môn học
+    datasets: [
+      {
+        label: "Số lớp được phân",
+        data: subjects.map((s) => s.classes?.length || 0), // số lớp
+        backgroundColor: "#3b82f6",
+      },
+    ],
   };
 
   return (
@@ -180,84 +143,108 @@ export default function ManageSubjects() {
         </button>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow max-w-4xl mx-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-600">
-                Tên môn
-              </th>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-600">
-                Mô tả
-              </th>
-              <th className="p-3 border-b border-gray-200 dark:border-gray-600">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {subjects.length > 0 ? (
-              subjects.map((subject) => (
-                <tr
-                  key={subject.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                >
-                  <td className="p-3 border-b border-gray-200 dark:border-gray-600">
-                    {subject.name}
-                  </td>
-                  <td className="p-3 border-b border-gray-200 dark:border-gray-600">
-                    {subject.description}
-                  </td>
-                  <td className="p-3 border-b border-gray-200 dark:border-gray-600">
-                    <div className="flex gap-5">
-                      <button
-                        className="flex items-center gap-1 text-blue-600"
-                        title="Xem chi tiết"
-                        onClick={() => {
-                          setSelectedSubject(subject);
-                          setName(subject.name);
-                          setDescription(subject.description || "");
-                          setIsFormOpen(true);
-                        }}
-                      >
-                        <Eye size={16} /> Xem
-                      </button>
-                      <button
-                        className="flex items-center gap-1 text-yellow-500"
-                        title="Sửa"
-                        onClick={() => {
-                          setSelectedSubject(subject);
-                          setName(subject.name);
-                          setDescription(subject.description || "");
-                          setIsFormOpen(true);
-                        }}
-                      >
-                        <Edit2 size={16} /> Sửa
-                      </button>
-                      <button
-                        className="flex items-center gap-1 text-red-500"
-                        title="Xóa"
-                        onClick={() => handleDeleteSubject(subject.id)}
-                      >
-                        <Trash2 size={16} /> Xóa
-                      </button>
-                    </div>
+      {/* Layout 2 cột */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left: Table */}
+        <div className="flex-1 overflow-x-auto bg-white rounded-lg shadow">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600">
+                  Tên môn
+                </th>
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600">
+                  Mô tả
+                </th>
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600">
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {subjects.length > 0 ? (
+                subjects.map((subject) => (
+                  <tr
+                    key={subject.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                  >
+                    <td className="p-3 border-b border-gray-200 dark:border-gray-600">
+                      {subject.name}
+                    </td>
+                    <td className="p-3 border-b border-gray-200 dark:border-gray-600">
+                      {subject.description}
+                    </td>
+                    <td className="p-3 border-b border-gray-200 dark:border-gray-600">
+                      <div className="flex gap-5">
+                        <button
+                          className="flex items-center gap-1 text-blue-600"
+                          title="Xem chi tiết"
+                          onClick={() => {
+                            setSelectedSubject(subject);
+                            setName(subject.name);
+                            setDescription(subject.description || "");
+                            setIsFormOpen(true);
+                          }}
+                        >
+                          <Eye size={16} /> Xem
+                        </button>
+                        {/* <button
+                          className="flex items-center gap-1 text-yellow-500"
+                          title="Sửa"
+                          onClick={() => {
+                            setSelectedSubject(subject);
+                            setName(subject.name);
+                            setDescription(subject.description || "");
+                            setIsFormOpen(true);
+                          }}
+                        >
+                          <Edit2 size={16} /> Sửa
+                        </button> */}
+                        <button
+                          className="flex items-center gap-1 text-red-500"
+                          title="Xóa"
+                          onClick={() => handleDeleteSubject(subject.id)}
+                        >
+                          <Trash2 size={16} /> Xóa
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan="3"
+                    className="p-4 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    Chưa có môn học nào.
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="3"
-                  className="p-4 text-center text-gray-500 dark:text-gray-400"
-                >
-                  Chưa có môn học nào.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Right: Chart */}
+        <div className="flex-1 bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-4">
+            Thống kê số lớp phân cho môn học
+          </h2>
+          {subjects.length > 0 ? (
+            <Bar
+              data={chartData}
+              options={{
+                responsive: true,
+                plugins: { legend: { position: "top" } },
+                scales: { y: { beginAtZero: true, stepSize: 1 } }, // để y hiển thị rõ số lớp
+              }}
+            />
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400">
+              Chưa có dữ liệu để hiển thị biểu đồ.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Modal Add/Edit Subject */}
@@ -291,8 +278,7 @@ export default function ManageSubjects() {
                 onClick={handleSaveSubject}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
               >
-                <PlusCircle size={16} />
-                Lưu
+                <PlusCircle size={16} /> Lưu
               </button>
             </div>
           </div>
