@@ -5,6 +5,7 @@ const endpoints = {
   getClassById: "/api/classes/{classId}",
   getAllClasses: "/api/classes",
   getClassesBySchoolId: `/api/classes/school/{schoolId}`,
+  updateClass: "/api/classes/{classId}",
 };
 
 const classService = {
@@ -21,6 +22,29 @@ const classService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi thêm lớp:", error);
+      return null;
+    }
+  },
+
+  updateClass: async (classData) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.updateClass.replace(
+          "{classId}",
+          classData.classId
+        )}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(classData),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Cập nhật lớp thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi cập nhật lớp:", error);
       return null;
     }
   },

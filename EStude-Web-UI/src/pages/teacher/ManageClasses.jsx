@@ -157,6 +157,13 @@ const ManageClasses = () => {
     );
   };
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "";
+    return d.toISOString().split("T")[0]; // yyyy-MM-dd
+  };
+
   // ----------------- MODAL -----------------
   const openModal = (type, cls = null) => {
     setSelectedClass(cls);
@@ -184,12 +191,13 @@ const ManageClasses = () => {
       // Chủ nhiệm
       setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
 
-      // Map terms
+      // Map terms với format ngày chuẩn
       setEditableSemesters(
         cls.terms?.map((t, idx) => ({
+          termId: t.termId, // giữ lại id để cập nhật
           termNumber: idx + 1,
-          beginDate: t.beginDate,
-          endDate: t.endDate,
+          beginDate: formatDate(t.beginDate),
+          endDate: formatDate(t.endDate),
         })) || [{ termNumber: 1, beginDate: "", endDate: "" }]
       );
     }
@@ -205,33 +213,56 @@ const ManageClasses = () => {
 
     try {
       const classPayload = {
+        classId: selectedClass?.classId, // chỉ có khi edit
         name,
         classSize,
         schoolId,
-        terms: editableSemesters.map((sem) => ({
-          name: formatTerm(sem.termNumber, sem.beginDate),
-          beginDate: sem.beginDate,
-          endDate: sem.endDate,
-        })),
+        terms: editableSemesters
+          .filter((sem) => sem.beginDate && sem.endDate) // chỉ gửi term hợp lệ
+          .map((sem) => {
+            const term = {
+              name: formatTerm(sem.termNumber, sem.beginDate),
+              beginDate: sem.beginDate,
+              endDate: sem.endDate,
+            };
+            if (sem.termId) term.termId = sem.termId; // giữ lại id khi update
+            return term;
+          }),
       };
 
-      const classResult = await classService.addClass(classPayload);
-
-      // console.log("classResult:", classResult);
+      let classResult;
+      if (modalType === "add") {
+        classResult = await classService.addClass(classPayload);
+      } else if (modalType === "edit") {
+        classResult = await classService.updateClass(classPayload);
+      }
 
       if (!classResult?.classId) {
         showToast("Lỗi khi lưu lớp!", "error");
         return;
       }
 
+      // cập nhật môn học nếu có chọn
       if (selectedSubjects.length > 0) {
         for (const subj of selectedSubjects) {
-          await classSubjectService.addClassSubject({
-            classId: classResult.classId,
-            subjectId: subj.subjectId,
-            teacherId: subj.teacherId ?? null,
-            termIds: classResult.terms.map((t) => t.termId),
-          });
+          for (const term of classResult.terms) {
+            const exists = classes.some(
+              (c) =>
+                c.classId === classResult.classId &&
+                c.subjects?.some(
+                  (s) =>
+                    s.subjectId === subj.subjectId && s.termId === term.termId
+                )
+            );
+            if (!exists) {
+              await classSubjectService.addClassSubject({
+                classId: classResult.classId,
+                subjectId: subj.subjectId,
+                teacherId: subj.teacherId ?? null,
+                termIds: [term.termId],
+              });
+            }
+          }
         }
       }
 
@@ -274,72 +305,55 @@ const ManageClasses = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-4 py-3 w-[20%]">Tên lớp học</th>
-              <th className="px-4 py-3 w-[15%]">Học kỳ</th>
+              {/* <th className="px-4 py-3 w-[15%]">Học kỳ</th> */}
               <th className="px-4 py-3 w-[30%]">Môn học</th>
               <th className="px-4 py-3 w-[25%]">Tùy chọn</th>
             </tr>
           </thead>
           <tbody>
-            {classes.map((c) => (
-              <tr key={c.classId} className="border-t">
-                <td className="px-4 py-2 font-medium">{c.name}</td>
+            {[...classes]
+              .sort((a, b) => a.name.localeCompare(b.name, "vi")) // sort theo tên lớp
+              .map((c) => (
+                <tr key={c.classId} className="border-t">
+                  <td className="px-4 py-2 font-medium">{c.name}</td>
+                  <td className="px-4 py-2">
+                    {c.subjects?.length
+                      ? c.subjects.map((s) => (
+                          <Badge
+                            key={s.subjectId}
+                            text={s.name}
+                            color="bg-blue-100 text-blue-700 mr-1"
+                          />
+                        ))
+                      : "-"}
+                  </td>
 
-                {/* Terms */}
-                <td className="px-4 py-2">
-                  {c.terms?.length > 0 ? (
-                    <div className="flex flex-col gap-1">
-                      {c.terms.map((t) => (
-                        <Badge
-                          key={t.termId}
-                          text={t.name}
-                          color="bg-green-100 text-green-700"
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    "-"
-                  )}
-                </td>
-
-                {/* Subjects */}
-                <td className="px-4 py-2">
-                  {c.subjects?.length
-                    ? c.subjects.map((s) => (
-                        <Badge
-                          key={s.subjectId}
-                          text={s.name}
-                          color="bg-blue-100 text-blue-700 mr-1"
-                        />
-                      ))
-                    : "-"}
-                </td>
-
-                {/* Actions */}
-                <td className="px-4 py-2 flex flex-wrap items-center gap-4">
-                  <button
-                    onClick={() => openModal("edit", c)}
-                    className="flex items-center gap-1 text-blue-600 hover:underline"
-                  >
-                    <Eye size={16} />
-                    <span className="hidden sm:inline">Xem</span>
-                  </button>
-                  <button
-                    onClick={() => openModal("students", c)}
-                    className="flex items-center gap-1 text-green-600 hover:underline"
-                  >
-                    <User size={16} />
-                    <span className="hidden sm:inline">Danh sách lớp</span>
-                  </button>
-                  <button
-                    onClick={() => openModal("delete", c)}
-                    className="flex items-center gap-1 text-red-500 hover:underline"
-                  >
-                    <Trash2 size={16} />
-                    <span className="hidden sm:inline">Xóa</span>
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  {/* Actions */}
+                  <td className="px-4 py-2 flex flex-wrap items-center gap-4">
+                    <button
+                      onClick={() => openModal("edit", c)}
+                      className="flex items-center gap-1 text-blue-600 hover:underline"
+                    >
+                      <Eye size={16} />
+                      <span className="hidden sm:inline">Xem</span>
+                    </button>
+                    <button
+                      onClick={() => openModal("students", c)}
+                      className="flex items-center gap-1 text-green-600 hover:underline"
+                    >
+                      <User size={16} />
+                      <span className="hidden sm:inline">Danh sách lớp</span>
+                    </button>
+                    <button
+                      onClick={() => openModal("delete", c)}
+                      className="flex items-center gap-1 text-red-500 hover:underline"
+                    >
+                      <Trash2 size={16} />
+                      <span className="hidden sm:inline">Xóa</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </div>
