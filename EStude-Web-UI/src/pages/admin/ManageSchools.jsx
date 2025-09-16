@@ -428,7 +428,7 @@ const ManageSchools = () => {
                 onClick={addRow}
                 className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               >
-                Thêm dòng
+                Thêm trường
               </button>
             </div>
 
