@@ -2,7 +2,14 @@ import { useEffect, useState } from "react";
 import teacherService from "../../services/teacherService";
 import ClassStudentModal from "./ClassStudentModal";
 import CreateAssignmentModal from "./CreateAssignmentModal";
-import { BookOpen, Users, Calendar, FileText, CheckSquare } from "lucide-react";
+import {
+  BookOpen,
+  Users,
+  Calendar,
+  FileText,
+  CheckSquare,
+  Search,
+} from "lucide-react";
 import AttendanceModal from "./AttendanceModal";
 import AssignmentListModal from "./AssignmentListModal";
 
@@ -18,10 +25,11 @@ export default function MyClasses() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
-  const [selectedTermIdMap, setSelectedTermIdMap] = useState({}); // lưu học kỳ chọn theo mỗi lớp + môn
+  const [selectedTermIdMap, setSelectedTermIdMap] = useState({});
 
   // Bộ lọc
   const [filterStatus, setFilterStatus] = useState("all");
+  const [keyword, setKeyword] = useState(""); // <-- thêm keyword
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,12 +43,8 @@ export default function MyClasses() {
       const result = await teacherService.getClassSubjectByTeacherId(
         user.userId
       );
-      if (result) {
-        // console.log("classes:", result);
-        setClasses(result);
-      }
+      if (result) setClasses(result);
     };
-
     fetchMyClasses();
   }, [user.userId]);
 
@@ -72,10 +76,10 @@ export default function MyClasses() {
     }, {})
   );
 
-  const filteredClasses = groupedClasses.filter((cls) => {
+  // lọc theo trạng thái
+  const statusFiltered = groupedClasses.filter((cls) => {
     if (filterStatus === "all") return true;
-
-    const termMatch = cls.termList.some((t) => {
+    return cls.termList.some((t) => {
       const begin = new Date(t.beginDate);
       const end = new Date(t.endDate);
       if (filterStatus === "current") return begin <= today && today <= end;
@@ -83,8 +87,16 @@ export default function MyClasses() {
       if (filterStatus === "ended") return today > end;
       return true;
     });
+  });
 
-    return termMatch;
+  // lọc theo keyword
+  const filteredClasses = statusFiltered.filter((cls) => {
+    if (!keyword.trim()) return true;
+    const kw = keyword.toLowerCase();
+    return (
+      cls.className.toLowerCase().includes(kw) ||
+      cls.subjectName.toLowerCase().includes(kw)
+    );
   });
 
   const handleTermChange = (classKey, termId) => {
@@ -98,12 +110,24 @@ export default function MyClasses() {
         <p className="text-gray-600">Danh sách lớp đang giảng dạy của bạn.</p>
       </div>
 
-      {/* Bộ lọc trạng thái */}
+      {/* Bộ lọc trạng thái + tìm kiếm */}
       <div className="flex flex-wrap gap-4 items-center">
+        {/* Ô tìm kiếm */}
+        <div className="relative flex-1 max-w-xs">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <input
+            type="text"
+            placeholder="Tìm lớp hoặc môn..."
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            className="pl-10 pr-3 py-2 border rounded-lg w-full focus:outline-none focus:ring focus:ring-blue-200"
+          />
+        </div>
+
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            Trạng thái:
-          </label>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -117,6 +141,7 @@ export default function MyClasses() {
         </div>
       </div>
 
+      {/* Danh sách lớp */}
       {filteredClasses.length === 0 ? (
         <p className="text-gray-500 mt-4">Không có lớp nào phù hợp.</p>
       ) : (
@@ -125,7 +150,6 @@ export default function MyClasses() {
             const classKey = cls.key;
             const selectedTermId =
               selectedTermIdMap[classKey] || cls.termList[0]?.termId;
-
             const selectedTerm = cls.termList.find(
               (t) => t.termId === selectedTermId
             );
@@ -142,16 +166,15 @@ export default function MyClasses() {
                     <h2 className="text-base font-semibold text-gray-800">
                       {cls.className}
                     </h2>
-                    <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <p className="text-sm text-gray-500">
                       <span className="font-medium">{cls.subjectName}</span>
                     </p>
                   </div>
                 </div>
-
                 {/* Học kỳ chọn */}
                 <div className="mb-3">
                   <label className="text-sm font-medium text-gray-700">
-                    Học kỳ:{" "}
+                    Học kỳ:
                   </label>
                   <select
                     value={selectedTermId}
@@ -165,7 +188,6 @@ export default function MyClasses() {
                     ))}
                   </select>
                 </div>
-
                 {/* Body */}
                 <div className="space-y-2 text-sm text-gray-600 flex-1">
                   <p className="flex items-center gap-2">
@@ -174,7 +196,7 @@ export default function MyClasses() {
                   </p>
                   <p className="flex items-center gap-2">
                     <Calendar size={16} className="text-gray-400" />
-                    Thời gian:{" "}
+                    Thời gian:
                     {selectedTerm
                       ? `${formatDateVN(
                           selectedTerm.beginDate
@@ -182,7 +204,6 @@ export default function MyClasses() {
                       : "-"}
                   </p>
                 </div>
-
                 {/* Actions */}
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
@@ -197,13 +218,10 @@ export default function MyClasses() {
                       });
                       setIsModalOpen(true);
                     }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 
-                       text-gray-700 hover:bg-gray-100 transition"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
                   >
-                    <Users size={16} />
-                    <span>Nhập điểm</span>
+                    <Users size={16} /> <span>Nhập điểm</span>
                   </button>
-
                   <button
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
                     onClick={() => {
@@ -217,10 +235,8 @@ export default function MyClasses() {
                       setIsAttendanceOpen(true);
                     }}
                   >
-                    <CheckSquare size={16} />
-                    <span>Điểm danh</span>
+                    <CheckSquare size={16} /> <span>Điểm danh</span>
                   </button>
-
                   <button
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
                     onClick={() => {
@@ -233,25 +249,9 @@ export default function MyClasses() {
                       setIsAssignmentListOpen(true);
                     }}
                   >
-                    <FileText size={16} />
-                    <span>Bài tập</span>
+                    <FileText size={16} /> <span>Bài tập</span>
                   </button>
-
-                  {/* <button
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                    onClick={() => {
-                      setCtx({
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: selectedTerm?.termId,
-                        classSubjectId: selectedTerm?.classSubjectId,
-                      });
-                      setIsCreateOpen(true);
-                    }}
-                  >
-                    <FileText size={16} />
-                    <span>Tạo bài tập/bài thi</span>
-                  </button> */}
+                  {/* <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition" onClick={() => { setCtx({ className: cls.className, subjectName: cls.subjectName, termId: selectedTerm?.termId, classSubjectId: selectedTerm?.classSubjectId, }); setIsCreateOpen(true); }} > <FileText size={16} /> <span>Tạo bài tập/bài thi</span> </button> */}
                 </div>
               </div>
             );
