@@ -1,6 +1,6 @@
 # **Xây dựng hệ thống quản lý học tập EStude tích hợp AI**
 
-_(Hình ảnh minh họa banner dự án)_
+![_(Hình ảnh minh họa banner dự án)_](EStude-Web-UI/src/assets/banner-github.png)
 
 ## <b>Giới thiệu</b>
 
