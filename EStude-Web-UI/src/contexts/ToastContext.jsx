@@ -68,7 +68,7 @@ export const ToastProvider = ({ children }) => {
       {children}
 
       {/* Toast container */}
-      <div className="fixed top-20 right-8 z-50 flex flex-col gap-3 items-end">
+      <div className="fixed top-20 right-8 z-[2147483647] flex flex-col gap-3 items-end">
         {toasts.map((t) => {
           const cfg = getConfig(t.type);
           return (
