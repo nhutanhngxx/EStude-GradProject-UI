@@ -1,20 +1,21 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Bell, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const NotificationBell = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const menuRef = useRef(null);
 
-  // Demo danh sách thông báo
   const notifications = [
-    { id: 1, text: "Bạn có bài tập mới từ Giáo viên A", time: "5 phút trước" },
-    { id: 2, text: "Lớp học sẽ bắt đầu vào lúc 14:00", time: "1 giờ trước" },
-    { id: 3, text: "Điểm kiểm tra đã được cập nhật", time: "Hôm qua" },
-    { id: 4, text: "Giáo viên B đã gửi thông báo mới", time: "2 ngày trước" },
-    { id: 5, text: "Kết quả thi cuối kỳ đã có", time: "3 ngày trước" },
+    { id: 1, text: t("notifications.newAssignment"), time: "5 phút trước" },
+    { id: 2, text: t("notifications.classStart"), time: "1 giờ trước" },
+    { id: 3, text: t("notifications.gradeUpdated"), time: t("time.yesterday") },
+    { id: 4, text: t("notifications.newTeacherNotice"), time: "2 ngày trước" },
+    { id: 5, text: t("notifications.examResult"), time: "3 ngày trước" },
   ];
 
-  // Đóng dropdown khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -22,37 +23,34 @@ const NotificationBell = () => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
     <>
-      {/* Icon chuông */}
+      {/* Bell Icon */}
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setOpen((prev) => !prev)}
           className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
         >
-          🔔
+          <Bell className="w-5 h-5 text-gray-700 dark:text-gray-200" />
           {notifications.length > 0 && (
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           )}
         </button>
 
-        {/* Dropdown thông báo */}
+        {/* Dropdown */}
         <div
           className={`absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50 transform transition-all duration-200 origin-top-right
             ${
               open
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 -translate-y-2 scale-95 pointer-events-none"
-            }
-          `}
+            }`}
         >
           <div className="px-4 py-2 border-b dark:border-gray-700 font-semibold text-gray-800 dark:text-gray-200">
-            Thông báo
+            {t("notifications.title")}
           </div>
           {notifications.length > 0 ? (
             <ul className="max-h-64 overflow-y-auto">
@@ -70,7 +68,7 @@ const NotificationBell = () => {
             </ul>
           ) : (
             <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-              Không có thông báo mới
+              {t("notifications.empty")}
             </div>
           )}
           <div className="px-4 py-2 border-t dark:border-gray-700 text-center">
@@ -81,39 +79,35 @@ const NotificationBell = () => {
               }}
               className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
             >
-              Xem tất cả
+              {t("notifications.viewAll")}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Modal toàn màn hình */}
+      {/* Modal */}
       <div
         className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200
-          ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}
-        `}
+          ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
       >
-        {/* Nền mờ */}
         <div
           className="absolute inset-0 bg-black bg-opacity-50"
           onClick={() => setShowModal(false)}
         ></div>
 
-        {/* Nội dung modal */}
         <div
           className={`relative bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl h-[80vh] p-6 z-10 transform transition-all duration-200
-            ${showModal ? "scale-100" : "scale-95"}
-          `}
+            ${showModal ? "scale-100" : "scale-95"}`}
         >
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-              Tất cả thông báo
+              {t("notifications.all")}
             </h2>
             <button
               onClick={() => setShowModal(false)}
-              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-lg"
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
             >
-              ✖
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -132,7 +126,7 @@ const NotificationBell = () => {
               </ul>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center mt-4">
-                Không có thông báo nào
+                {t("notifications.empty")}
               </p>
             )}
           </div>
