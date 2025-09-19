@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FaEye, FaTrash } from "react-icons/fa";
+import { Eye, Trash2, X } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useTranslation } from "react-i18next";
 import schoolService from "../../services/schoolService";
+import { useToast } from "../../contexts/ToastContext";
 
 const Badge = ({ text, color }) => (
   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color}`}>
@@ -11,16 +13,16 @@ const Badge = ({ text, color }) => (
 
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-5xl w-full p-6">
-      <div className="flex justify-between items-center border-b dark:border-gray-600 pb-2 mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm max-w-5xl w-full p-6">
+      <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {title}
         </h2>
         <button
-          className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+          className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           onClick={onClose}
         >
-          ✖
+          <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
       {children}
@@ -29,6 +31,9 @@ const Modal = ({ title, children, onClose }) => (
 );
 
 const ManageSchools = () => {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
+  const [darkMode, setDarkMode] = useState(false);
   const [message, setMessage] = useState("");
   const [schools, setSchools] = useState([]);
   const [excelSchools, setExcelSchools] = useState([]);
@@ -37,6 +42,17 @@ const ManageSchools = () => {
   ]);
   const [modalType, setModalType] = useState(null);
   const [selectedSchool, setSelectedSchool] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Load dark mode từ localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
   useEffect(() => {
     const fetchSchools = async () => {
       try {
@@ -53,24 +69,35 @@ const ManageSchools = () => {
           setSchools(mappedSchools);
         }
       } catch (error) {
-        console.error("Lỗi khi load danh sách trường:", error);
+        console.error("Error loading schools:", error);
       }
     };
     fetchSchools();
-  }, []); // chạy 1 lần khi load trang
+  }, []);
+
   const openModal = (type, school = null) => {
     setSelectedSchool(school);
     setModalType(type);
   };
+
   const closeModal = () => {
     setSelectedSchool(null);
     setModalType(null);
     setExcelSchools([]);
   };
+
   const deleteSchool = (id) => {
     setSchools(schools.filter((s) => s.id !== id));
     closeModal();
   };
+
+  const filteredSchools = schools.filter((s) =>
+    [s.code, s.name, s.address, s.email, s.phone]
+      .join(" ")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  );
+
   const handleExcelUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -95,31 +122,45 @@ const ManageSchools = () => {
       }));
 
       setExcelSchools(newSchools);
-      console.log(newSchools);
     };
 
     reader.readAsArrayBuffer(file);
   };
+
   const addRow = () => {
     setEditableSchools([
       ...editableSchools,
       { code: "", name: "", address: "", email: "", phone: "" },
     ]);
   };
+
   const removeRow = (index) => {
     const updated = [...editableSchools];
     updated.splice(index, 1);
     setEditableSchools(updated);
   };
+
   const updateCell = (index, field, value) => {
     const updated = [...editableSchools];
     updated[index][field] = value;
     setEditableSchools(updated);
   };
+
   const saveSchools = async () => {
     try {
+      const existingCodes = schools.map((s) => s.code.toLowerCase());
+      const existingNames = schools.map((s) => s.name.toLowerCase());
+
+      const uniqueSchools = editableSchools.filter(
+        (s) =>
+          s.code &&
+          s.name &&
+          !existingCodes.includes(s.code.toLowerCase()) &&
+          !existingNames.includes(s.name.toLowerCase())
+      );
+
       let count = 0;
-      for (let s of editableSchools) {
+      for (let s of uniqueSchools) {
         const newSchool = {
           schoolCode: s.code,
           schoolName: s.name,
@@ -127,31 +168,44 @@ const ManageSchools = () => {
           contactEmail: s.email,
           contactPhone: s.phone,
         };
-        console.log("Thêm trường:", newSchool);
         const result = await schoolService.addSchool(newSchool);
-        if (result) {
-          count++;
-        }
-        if (result) {
-          console.log("Thêm thành công:", result);
-        }
+        if (result) count++;
       }
+
+      const skipped = editableSchools.length - uniqueSchools.length;
+
       setEditableSchools([
         { code: "", name: "", address: "", email: "", phone: "" },
       ]);
       closeModal();
+
       if (count > 0) {
-        setMessage(`Đã thêm thành công ${count} trường`);
-        setTimeout(() => setMessage(""), 3000);
+        showToast(t("school.addSuccess", { count }), "success");
+      }
+      if (skipped > 0) {
+        showToast(t("school.addSkipped", { count: skipped }), "warning");
       }
     } catch (error) {
       console.error("Lỗi khi lưu:", error);
+      showToast(t("school.addError"), "error");
     }
   };
+
   const handleSubmitExcelSchools = async () => {
     try {
+      const existingCodes = schools.map((s) => s.code.toLowerCase());
+      const existingNames = schools.map((s) => s.name.toLowerCase());
+
+      const uniqueExcelSchools = excelSchools.filter(
+        (s) =>
+          s.code &&
+          s.name &&
+          !existingCodes.includes(s.code.toLowerCase()) &&
+          !existingNames.includes(s.name.toLowerCase())
+      );
+
       let count = 0;
-      for (let s of excelSchools) {
+      for (let s of uniqueExcelSchools) {
         const newSchool = {
           schoolCode: s.code,
           schoolName: s.name,
@@ -160,83 +214,81 @@ const ManageSchools = () => {
           contactPhone: s.phone,
         };
         const result = await schoolService.addSchool(newSchool);
-        if (result) {
-          count++;
-        }
+        if (result) count++;
       }
+
+      const skipped = excelSchools.length - uniqueExcelSchools.length;
+
       setExcelSchools([]);
       closeModal();
+
       if (count > 0) {
-        setMessage(`Import thành công ${count} trường từ Excel`);
-        setTimeout(() => setMessage(""), 3000);
+        showToast(t("school.importSuccess", { count }), "success");
+      }
+      if (skipped > 0) {
+        showToast(t("school.importSkipped", { count: skipped }), "warning");
       }
     } catch (error) {
       console.error("Lỗi khi import:", error);
+      showToast(t("school.importError"), "error");
     }
   };
+
   return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {message && (
-        <div
-          className="fixed top-14 right-5 z-50 px-4 py-3 rounded-lg shadow-lg 
-               bg-green-500 text-white transform transition-all duration-500
-               animate-slide-in"
-        >
-          {message}
-        </div>
-      )}
+    <div className="p-6 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <div className="md:w-4/6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Quản lý Trường học
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-2">
-            Quản lý thông tin trường học: mã trường, tên, địa chỉ, email, số
-            điện thoại. Dễ dàng thêm, xem và xóa trường.
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">{t("manageSchools.title")}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t("manageSchools.subtitle")}
           </p>
         </div>
-        <button
-          onClick={() => openModal("add")}
-          className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold shadow hover:bg-blue-700 transition"
-        >
-          + Thêm trường mới
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => openModal("add")}
+            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-indigo-700 rounded-lg text-white text-sm shadow"
+          >
+            + {t("manageSchools.addButton")}
+          </button>
+        </div>
       </div>
 
       {/* Search & Filter */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 items-center mb-6">
         <input
           type="text"
-          placeholder="Tìm kiếm trường.."
-          className="flex-1 min-w-[200px] px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder={t("common.searchSchool")}
+          className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow">
-          Bộ lọc
+        <button className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {t("common.filter")}
         </button>
-        <button className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition shadow">
-          Xuất excel
+        <button className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {t("common.exportExcel")}
         </button>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
-        <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
+        <table className="w-full text-sm">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3">Mã trường</th>
-              <th className="px-4 py-3">Tên trường</th>
-              <th className="px-4 py-3">Địa chỉ</th>
-              <th className="px-4 py-3">Email liên hệ</th>
-              <th className="px-4 py-3">Số điện thoại</th>
-              <th className="px-4 py-3">Tùy chọn</th>
+              <th className="px-4 py-3 text-left">{t("fields.code")}</th>
+              <th className="px-4 py-3 text-left">{t("fields.name")}</th>
+              <th className="px-4 py-3 text-left">{t("fields.address")}</th>
+              <th className="px-4 py-3 text-left">{t("fields.email")}</th>
+              <th className="px-4 py-3 text-left">{t("fields.phone")}</th>
+              <th className="px-4 py-3 text-left">{t("common.actions")}</th>
             </tr>
           </thead>
           <tbody>
-            {schools.map((s) => (
+            {filteredSchools.map((s) => (
               <tr
                 key={s.id}
-                className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
                 <td className="px-4 py-3">{s.code}</td>
                 <td className="px-4 py-3">{s.name}</td>
@@ -246,15 +298,15 @@ const ManageSchools = () => {
                 <td className="px-4 py-3 flex gap-2">
                   <button
                     onClick={() => openModal("view", s)}
-                    className="text-blue-600 dark:text-blue-400 hover:underline transition"
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline"
                   >
-                    <FaEye />
+                    <Eye className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => openModal("delete", s)}
-                    className="text-red-600 dark:text-red-400 hover:underline transition"
+                    className="text-red-600 dark:text-red-400 hover:underline"
                   >
-                    <FaTrash />
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </td>
               </tr>
@@ -263,13 +315,11 @@ const ManageSchools = () => {
         </table>
       </div>
 
-      {/* Modals */}
       {modalType === "add" && (
-        <Modal title="Thêm trường mới" onClose={closeModal}>
+        <Modal title={t("manageSchools.addTitle")} onClose={closeModal}>
           <div className="space-y-4">
-            {/* Link tải file Excel mẫu */}
-            <div className="text-sm text-gray-700 dark:text-gray-200 flex gap-2">
-              <p>Tải file Excel mẫu để thêm nhiều trường nhanh:</p>
+            <div className="text-sm text-gray-700 dark:text-gray-400 flex gap-1">
+              <p>{t("manageSchools.downloadTemplate")}</p>
               <a
                 href="#"
                 onClick={(e) => {
@@ -277,62 +327,69 @@ const ManageSchools = () => {
                   const wb = XLSX.utils.book_new();
                   const wsData = [
                     [
-                      "Mã trường",
-                      "Tên trường",
-                      "Địa chỉ",
-                      "Email",
-                      "Số điện thoại",
+                      t("fields.code"),
+                      t("fields.name"),
+                      t("fields.address"),
+                      t("fields.email"),
+                      t("fields.phone"),
                     ],
                   ];
                   const ws = XLSX.utils.aoa_to_sheet(wsData);
                   XLSX.utils.book_append_sheet(wb, ws, "Schools");
                   XLSX.writeFile(wb, "schools-template.xlsx");
                 }}
-                className="text-blue-600 dark:text-blue-400 hover:underline"
+                className="text-green-700 font-medium dark:text-green-200 hover:underline"
               >
-                Tải file mẫu tại đây
+                {t("manageSchools.downloadHere")}
               </a>
             </div>
 
-            {/* Upload file Excel */}
             <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-200">
-                Upload Excel
+              <label className="block mb-1 text-gray-700 dark:text-gray-400">
+                {t("manageSchools.uploadExcel")}
               </label>
               <input
                 type="file"
                 accept=".xlsx, .xls"
-                className="w-full px-4 py-2 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 onChange={handleExcelUpload}
               />
             </div>
 
-            {/* Hiển thị bảng review dữ liệu Excel */}
             {excelSchools.length > 0 && (
-              <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow mt-4">
-                {/* Thêm scroll theo chiều dọc */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
                 <div className="max-h-64 overflow-y-auto">
-                  <table className="w-full text-sm text-left text-gray-700 dark:text-gray-200">
+                  <table className="w-full text-sm">
                     <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
                       <tr>
-                        <th className="px-4 py-2">Mã trường</th>
-                        <th className="px-4 py-2">Tên trường</th>
-                        <th className="px-4 py-2">Địa chỉ</th>
-                        <th className="px-4 py-2">Email</th>
-                        <th className="px-4 py-2">Số điện thoại</th>
+                        <th className="px-4 py-3 text-left">
+                          {t("fields.code")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("fields.name")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("fields.address")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("fields.email")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("fields.phone")}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {excelSchools.map((s) => (
                         <tr
                           key={s.id}
-                          className="border-b hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                          className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                         >
-                          <td className="px-4 py-2">{s.code}</td>
-                          <td className="px-4 py-2">{s.name}</td>
-                          <td className="px-4 py-2">{s.address}</td>
-                          <td className="px-4 py-2">{s.email}</td>
-                          <td className="px-4 py-2">{s.phone}</td>
+                          <td className="px-4 py-3">{s.code}</td>
+                          <td className="px-4 py-3">{s.name}</td>
+                          <td className="px-4 py-3">{s.address}</td>
+                          <td className="px-4 py-3">{s.email}</td>
+                          <td className="px-4 py-3">{s.phone}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -341,82 +398,89 @@ const ManageSchools = () => {
               </div>
             )}
 
-            <p className="text-gray-500 dark:text-gray-400 text-xs mt-2">
-              Hoặc điền thông tin trường bên dưới:
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t("manageSchools.orFill")}
             </p>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border rounded-lg">
+              <table className="w-full text-sm border rounded-lg">
                 <thead className="bg-gray-100 dark:bg-gray-700">
                   <tr>
-                    <th className="px-4 py-2">Mã trường</th>
-                    <th className="px-4 py-2">Tên trường</th>
-                    <th className="px-4 py-2">Địa chỉ</th>
-                    <th className="px-4 py-2">Email</th>
-                    <th className="px-4 py-2">Số điện thoại</th>
-                    <th className="px-4 py-2">Hành động</th>
+                    <th className="px-4 py-3 text-left">{t("fields.code")}</th>
+                    <th className="px-4 py-3 text-left">{t("fields.name")}</th>
+                    <th className="px-4 py-3 text-left">
+                      {t("fields.address")}
+                    </th>
+                    <th className="px-4 py-3 text-left">{t("fields.email")}</th>
+                    <th className="px-4 py-3 text-left">{t("fields.phone")}</th>
+                    <th className="px-4 py-3 text-left">
+                      {t("actions.action")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {editableSchools.map((s, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="px-2 py-1">
+                    <tr
+                      key={index}
+                      className="border-b border-gray-200 dark:border-gray-700"
+                    >
+                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={s.code}
                           onChange={(e) =>
                             updateCell(index, "code", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={s.name}
                           onChange={(e) =>
                             updateCell(index, "name", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={s.address}
                           onChange={(e) =>
                             updateCell(index, "address", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-4 py-3">
                         <input
                           type="email"
                           value={s.email}
                           onChange={(e) =>
                             updateCell(index, "email", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-4 py-3">
                         <input
                           type="text"
                           value={s.phone}
                           onChange={(e) =>
                             updateCell(index, "phone", e.target.value)
                           }
-                          className="w-full px-2 py-1 border rounded"
+                          className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
                         />
                       </td>
-                      <td className="px-2 py-1">
+                      <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => removeRow(index)}
-                          className="text-red-600 hover:underline"
+                          className="text-red-600 dark:text-red-400 hover:underline"
                         >
-                          Xóa
+                          {t("actions.delete")}
                         </button>
                       </td>
                     </tr>
@@ -426,20 +490,20 @@ const ManageSchools = () => {
               <button
                 type="button"
                 onClick={addRow}
-                className="mt-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                className="mt-2 px-4 py-2 text-green-700 dark:text-green-200 hover:underline"
               >
-                Thêm trường
+                {t("actions.addSchool")}
               </button>
             </div>
 
-            <div className="flex justify-end gap-2 mt-2">
-              <button
+            <div className="flex justify-end gap-2 mt-4">
+              {/* <button
                 type="button"
                 onClick={closeModal}
-                className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-600"
+                className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                Hủy bỏ
-              </button>
+                {t("actions.cancel")}
+              </button> */}
               <button
                 type="button"
                 onClick={
@@ -447,37 +511,59 @@ const ManageSchools = () => {
                     ? handleSubmitExcelSchools
                     : saveSchools
                 }
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-indigo-700"
               >
-                Lưu
+                {t("actions.save")}
               </button>
             </div>
           </div>
         </Modal>
       )}
 
+      {modalType === "delete" && selectedSchool && (
+        <Modal title={t("manageSchools.confirmDelete")} onClose={closeModal}>
+          <p className="text-gray-800 dark:text-gray-200">
+            {t("manageSchools.confirmDeleteMsg", { name: selectedSchool.name })}
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <button
+              onClick={closeModal}
+              className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              onClick={() => deleteSchool(selectedSchool.id)}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              {t("common.delete")}
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {modalType === "view" && selectedSchool && (
-        <Modal title="Chi tiết trường" onClose={closeModal}>
+        <Modal title={t("manageSchools.viewTitle")} onClose={closeModal}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Mã trường
+                {t("fields.code")}
               </p>
-              <p className="text-base font-semibold text-gray-900 dark:text-white">
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {selectedSchool.code}
               </p>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Tên trường
+                {t("fields.name")}
               </p>
-              <p className="text-base font-semibold text-gray-900 dark:text-white">
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
                 {selectedSchool.name}
               </p>
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm md:col-span-2">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Địa chỉ
+                {t("fields.address")}
               </p>
               <p className="text-base font-medium text-gray-800 dark:text-gray-200">
                 {selectedSchool.address}
@@ -485,7 +571,7 @@ const ManageSchools = () => {
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Email liên hệ
+                {t("fields.email")}
               </p>
               <p className="text-base font-medium text-gray-800 dark:text-gray-200">
                 {selectedSchool.email}
@@ -493,34 +579,12 @@ const ManageSchools = () => {
             </div>
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-sm">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Số điện thoại
+                {t("fields.phone")}
               </p>
               <p className="text-base font-medium text-gray-800 dark:text-gray-200">
                 {selectedSchool.phone}
               </p>
             </div>
-          </div>
-        </Modal>
-      )}
-
-      {modalType === "delete" && selectedSchool && (
-        <Modal title="Xác nhận xóa" onClose={closeModal}>
-          <p className="text-gray-800 dark:text-gray-200">
-            Bạn có chắc muốn xóa <strong>{selectedSchool.name}</strong> không?
-          </p>
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={() => deleteSchool(selectedSchool.id)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
-            >
-              Xóa
-            </button>
           </div>
         </Modal>
       )}
