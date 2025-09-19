@@ -1,0 +1,209 @@
+{
+  "userMenu": {
+    "accountInfo": "Xem thông tin tài khoản",
+    "logout": "Đăng xuất",
+    "adminCode": "Mã Admin",
+    "teacherCode": "Mã Giáo viên"
+  },
+  "roles": {
+    "admin": "QUẢN TRỊ VIÊN",
+    "teacher": "GIÁO VIÊN",
+    "student": "HỌC SINH"
+  },
+  "common": {
+    "close": "Đóng",
+    "language": "Ngôn ngữ",
+    "darkMode": "Chế độ tối",
+    "searchSchool": "Tìm kiếm trường...",
+    "filter": "Bộ lọc",
+    "exportExcel": "Xuất Excel",
+    "actions": "Tùy chọn",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "save": "Lưu",
+    "lightMode": "Chế độ sáng"
+  },
+  "sidebar": {
+    "overview": "Tổng quan",
+    "schools": "Quản lý trường học",
+    "users": "Quản lý người dùng",
+    "classes": "Quản lý lớp học",
+    "reports": "Phân tích & Báo cáo",
+    "notifications": "Gửi thông báo"
+  },
+  "dashboard": {
+    "overview": "Tổng quan",
+    "welcome": "Chào mừng bạn đến với trang quản trị",
+    "createReport": "Tạo báo cáo",
+    "reportCreated": "Báo cáo đã được tạo (giả lập)",
+    "manageAccounts": "Quản lý tài khoản",
+    "manageClasses": "Quản lý lớp học",
+    "manageNotifications": "Quản lý thông báo",
+    "studentStats": "Thống kê học sinh",
+    "recentActivities": "Hoạt động gần đây",
+    "newStudents": "Số lượng học sinh mới",
+    "activity1": "Thêm tài khoản mới cho GV Nguyễn Văn A",
+    "activity2": "Học sinh Lê Văn B nộp bài tập Toán",
+    "activity3": "Cập nhật điểm môn Lý cho lớp 12A",
+    "activity4": "Gửi thông báo về lịch thi HK1"
+  },
+  "manageSchools": {
+    "title": "Quản lý Trường học",
+    "viewTitle": "Xem thông tin trường",
+    "subtitle": "Quản lý thông tin trường học: mã trường, tên, địa chỉ, email, số điện thoại.",
+    "addButton": "Thêm trường mới",
+    "confirmDelete": "Xác nhận xóa",
+    "confirmDeleteMsg": "Bạn có chắc muốn xóa {{name}} không?",
+    "addTitle": "Thêm trường mới",
+    "downloadTemplate": "Tải file Excel mẫu để thêm nhiều trường nhanh:",
+    "downloadHere": "Tải file mẫu tại đây",
+    "uploadExcel": "Chọn file để import",
+    "orFill": "Hoặc điền thông tin trường bên dưới:"
+  },
+  "school": {
+    "addSuccess": "Đã thêm thành công {{count}} trường.",
+    "addSkipped": "Bỏ qua {{count}} trường do trùng mã hoặc tên.",
+    "addError": "Lỗi khi lưu trường.",
+    "importSuccess": "Import thành công {{count}} trường.",
+    "importSkipped": "Bỏ qua {{count}} trường do trùng mã hoặc tên.",
+    "importError": "Lỗi khi import trường từ Excel."
+  },
+  "fields": {
+    "code": "Mã trường",
+    "name": "Tên trường",
+    "address": "Địa chỉ",
+    "email": "Email liên hệ",
+    "phone": "Số điện thoại"
+  },
+  "actions": {
+    "action": "Hành động",
+    "delete": "Xóa",
+    "addSchool": "Thêm trường",
+    "cancel": "Hủy bỏ",
+    "save": "Lưu"
+  },
+  "manageAccounts": {
+    "title": "Quản lý tài khoản",
+    "subtitle": "Quản lý người dùng (học sinh, giáo viên, quản trị) trong hệ thống.",
+    "addNewUser": "Thêm người dùng",
+    "exportExcel": "Xuất Excel",
+    "searchPlaceholder": "Tìm kiếm theo tên hoặc email...",
+    "user": "Người dùng",
+    "role": "Vai trò",
+    "phone": "Số điện thoại",
+    "dob": "Ngày sinh",
+    "actions": "Hành động",
+    "loginCode": "Mã đăng nhập",
+
+    "downloadTemplate": "Tải file Excel mẫu để thêm nhiều trường nhanh:",
+    "downloadHere": "Tải file mẫu tại đây",
+    "uploadExcel": "Upload Excel",
+    "orFill": "Hoặc điền thông tin trường bên dưới:",
+
+    "roles": {
+      "student": "Học sinh",
+      "teacher": "Giáo viên",
+      "admin": "Quản trị viên"
+    },
+    "filters": {
+      "all": "Tất cả"
+    },
+
+    "addUserModal": {
+      "title": "Thêm người dùng"
+    },
+    "viewUserModal": {
+      "title": "Thông tin người dùng",
+      "fullName": "Họ và tên",
+      "email": "Email",
+      "role": "Vai trò",
+      "phone": "Số điện thoại",
+      "dob": "Ngày sinh"
+    },
+    "deleteUserModal": {
+      "title": "Xóa người dùng",
+      "confirm": "Bạn có chắc chắn muốn xóa người dùng {{name}}?"
+    },
+    "passwordModal": {
+      "title": "Mật khẩu đã tạo",
+      "description": "Mật khẩu mặc định của người dùng là:"
+    },
+
+    "homeroomTeacher": "Giáo viên chủ nhiệm",
+    "schoolStaff": "Nhân viên trường",
+    "selectSchool": "Chọn trường",
+
+    "placeholders": {
+      "fullName": "Họ và tên",
+      "email": "Email",
+      "phone": "Số điện thoại",
+      "dob": "Ngày sinh"
+    },
+
+    "addUserFailed": "Thêm người dùng thất bại. Vui lòng thử lại.",
+    "importSuccess": "Import thành công {{count}} người dùng."
+  },
+
+  "manageClasses": {
+    "title": "Quản lý lớp học (Admin)",
+    "className": "Tên lớp học",
+    "subtitle": "Quản lý toàn bộ lớp học của hệ thống, hỗ trợ thêm/xóa/sửa khi cần thiết.",
+    "addNewClass": "Thêm lớp mới",
+    "searchPlaceholder": "Tìm kiếm lớp/môn...",
+    "selectSchool": "-- Chọn trường --",
+    "selectTeacher": "-- Chọn giáo viên --",
+    "selectHomeroomTeacher": "-- Chọn giáo viên chủ nhiệm --",
+    "cancel": "Hủy bỏ",
+    "saveClass": "Lưu",
+    "filters": {
+      "current": "Đang diễn ra",
+      "upcoming": "Sắp diễn ra",
+      "ended": "Đã xong",
+      "all": "Tất cả",
+      "allSchools": "Tất cả trường"
+    },
+    "table": {
+      "name": "Tên lớp học",
+      "school": "Trường",
+      "subjects": "Môn học",
+      "actions": "Tùy chọn",
+      "semesterNumber": "Số học kỳ",
+      "startDate": "Bắt đầu",
+      "beginDate": "Bắt đầu",
+      "endDate": "Kết thúc",
+      "classSize": "Sĩ số",
+      "homeroomTeacher": "Giáo viên chủ nhiệm",
+      "terms": "Học kỳ",
+      "delete": "Xóa"
+    },
+    "placeholders": {
+      "name": "Tên lớp",
+      "classSize": "Sĩ số lớp"
+    },
+    "semesters": "Danh sách học kỳ",
+    "subjects": "Môn học",
+    "addSemester": "Thêm học kỳ",
+    "exportExcel": "Xuất Excel",
+    "fetchSchoolsError": "Lỗi khi tải danh sách trường",
+    "fetchSubjectsError": "Lỗi khi tải danh sách môn học",
+    "fetchTeachersError": "Lỗi khi tải danh sách giáo viên",
+    "fetchClassesError": "Lỗi khi tải danh sách lớp học",
+    "missingName": "Vui lòng nhập tên lớp!",
+    "saveSuccess": "Lưu lớp thành công!",
+    "saveError": "Lỗi khi lưu lớp!",
+    "deleteSuccess": "Xóa lớp thành công!",
+    "deleteError": "Lỗi khi xóa lớp!",
+    "noData": "Không có dữ liệu",
+    "addClassModal": {
+      "title": "Thêm lớp mới"
+    },
+    "editClassModal": {
+      "title": "Thông tin lớp học"
+    },
+    "deleteClassModal": {
+      "title": "Xác nhận xóa",
+      "confirm": "Bạn có chắc chắn muốn xóa lớp {name}?"
+    },
+    "studentManagement": "Quản lý học sinh - {name}"
+  }
+}

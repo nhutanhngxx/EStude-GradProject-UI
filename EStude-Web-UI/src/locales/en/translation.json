@@ -1,0 +1,214 @@
+{
+  "userMenu": {
+    "accountInfo": "View account information",
+    "logout": "Logout",
+    "adminCode": "Admin Code",
+    "teacherCode": "Teacher Code"
+  },
+  "roles": {
+    "admin": "ADMIN",
+    "teacher": "TEACHER",
+    "student": "STUDENT"
+  },
+  "common": {
+    "close": "Close",
+    "language": "Language",
+    "darkMode": "Dark Mode",
+    "searchSchool": "Search school...",
+    "filter": "Filter",
+    "exportExcel": "Export Excel",
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "save": "Save"
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "schools": "Manage Schools",
+    "users": "Manage Users",
+    "classes": "Manage Classes",
+    "reports": "Analytics & Reports",
+    "notifications": "Send Notifications"
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "welcome": "Welcome to the admin dashboard",
+    "createReport": "Create Report",
+    "reportCreated": "Report has been created (simulation)",
+    "manageAccounts": "Manage Accounts",
+    "manageClasses": "Manage Classes",
+    "manageNotifications": "Manage Notifications",
+    "studentStats": "Student Statistics",
+    "recentActivities": "Recent Activities",
+    "newStudents": "New Students",
+    "activity1": "Added a new account for teacher Nguyen Van A",
+    "activity2": "Student Le Van B submitted Math homework",
+    "activity3": "Updated Physics grades for class 12A",
+    "activity4": "Sent notification about Semester 1 exam schedule"
+  },
+
+  "manageSchools": {
+    "title": "School Management",
+    "viewTitle": "View School",
+    "subtitle": "Manage school information: code, name, address, email, phone number.",
+    "addButton": "Add new school",
+    "confirmDelete": "Confirm Delete",
+    "confirmDeleteMsg": "Are you sure you want to delete {{name}}?",
+    "addTitle": "Add New School",
+    "downloadTemplate": "Download sample Excel file to quickly add multiple schools:",
+    "downloadHere": "Download template here",
+    "uploadExcel": "Choose file to import",
+    "orFill": "Or fill in school information below:"
+  },
+
+  "school": {
+    "addSuccess": "Successfully added {{count}} school(s).",
+    "addSkipped": "Skipped {{count}} duplicate school(s).",
+    "addError": "Failed to save school.",
+    "importSuccess": "Successfully imported {{count}} school(s).",
+    "importSkipped": "Skipped {{count}} duplicate school(s).",
+    "importError": "Failed to import schools from Excel."
+  },
+
+  "fields": {
+    "code": "School Code",
+    "name": "School Name",
+    "address": "Address",
+    "email": "Contact Email",
+    "phone": "Phone Number"
+  },
+  "actions": {
+    "action": "Action",
+    "delete": "Delete",
+    "addSchool": "Add School",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+
+  "manageAccounts": {
+    "title": "Account Management",
+    "subtitle": "Manage users (students, teachers, and admins) in the system.",
+    "addNewUser": "Add New User",
+    "exportExcel": "Export Excel",
+    "searchPlaceholder": "Search by name or email...",
+    "user": "User",
+    "role": "Role",
+    "phone": "Phone Number",
+    "dob": "Date of Birth",
+    "actions": "Actions",
+    "loginCode": "Login code",
+
+    "downloadTemplate": "Download sample Excel file to quickly add multiple schools:",
+    "downloadHere": "Download template here",
+    "uploadExcel": "Upload Excel",
+    "orFill": "Or fill in school information below:",
+
+    "roles": {
+      "student": "Student",
+      "teacher": "Teacher",
+      "admin": "Admin"
+    },
+    "filters": {
+      "all": "All"
+    },
+
+    "addUserModal": {
+      "title": "Add User"
+    },
+    "viewUserModal": {
+      "title": "User Information",
+      "fullName": "Full Name",
+      "email": "Email",
+      "role": "Role",
+      "phone": "Phone Number",
+      "dob": "Date of Birth"
+    },
+    "deleteUserModal": {
+      "title": "Delete User",
+      "confirm": "Are you sure you want to delete user {{name}}?"
+    },
+    "passwordModal": {
+      "title": "Generated Password",
+      "description": "The default password for this user is:"
+    },
+
+    "homeroomTeacher": "Homeroom Teacher",
+    "schoolStaff": "School Staff",
+    "selectSchool": "Select School",
+
+    "placeholders": {
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone number",
+      "dob": "Date of birth"
+    },
+
+    "addUserFailed": "Failed to add user. Please try again.",
+    "importSuccess": "Successfully imported {{count}} users."
+  },
+
+  "manageClasses": {
+    "title": "Class Management (Admin)",
+    "className": "Class Name",
+    "subtitle": "Manage all classes in the system with options to add, edit, or delete when needed.",
+    "addNewClass": "Add New Class",
+    "searchPlaceholder": "Search class/subject...",
+    "selectSchool": "-- Select School --",
+    "selectTeacher": "-- Select Teacher --",
+    "selectHomeroomTeacher": "-- Select Homeroom Teacher --",
+    "semesterNumber": "Semester Number",
+    "cancel": "Cancel",
+    "saveClass": "Save Class",
+    "filters": {
+      "current": "Ongoing",
+      "upcoming": "Upcoming",
+      "ended": "Ended",
+      "all": "All",
+      "allSchools": "All Schools"
+    },
+    "table": {
+      "name": "Class Name",
+      "school": "School",
+      "subjects": "Subjects",
+      "actions": "Actions",
+      "semesterNumber": "Semester Number",
+      "startDate": "Start Date",
+      "beginDate": "Start Date",
+      "endDate": "End Date",
+      "classSize": "Class Size",
+      "homeroomTeacher": "Homeroom Teacher",
+      "terms": "Semesters"
+    },
+    "placeholders": {
+      "name": "Class Name",
+      "classSize": "Class Size"
+    },
+    "semesters": "Semester List",
+    "subjects": "Subjects",
+    "addSemester": "Add Semester",
+    "exportExcel": "Export Excel",
+    "fetchSchoolsError": "Error while loading schools",
+    "fetchSubjectsError": "Error while loading subjects",
+    "fetchTeachersError": "Error while loading teachers",
+    "fetchClassesError": "Error while loading classes",
+    "missingName": "Please enter the class name!",
+    "saveSuccess": "Class saved successfully!",
+    "saveError": "Error while saving class!",
+    "deleteSuccess": "Class deleted successfully!",
+    "deleteError": "Error while deleting class!",
+    "noData": "No data available",
+    "addClassModal": {
+      "title": "Add New Class"
+    },
+    "editClassModal": {
+      "title": "Class Information"
+    },
+    "deleteClassModal": {
+      "title": "Confirm Deletion",
+      "confirm": "Are you sure you want to delete class {name}?"
+    },
+    "selectTeacherForSubject": "-- Select Teacher --",
+    "studentManagement": "Student Management - {name}",
+    "selectSubjects": "Subjects"
+  }
+}
