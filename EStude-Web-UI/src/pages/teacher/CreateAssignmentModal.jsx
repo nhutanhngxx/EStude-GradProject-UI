@@ -54,6 +54,12 @@ export default function CreateAssignmentModal({
   const [isAutoGraded, setIsAutoGraded] = useState(false);
   const [isExam, setIsExam] = useState(false);
 
+  const toVNISOString = (date) => {
+    return new Date(
+      date.getTime() - date.getTimezoneOffset() * 60000
+    ).toISOString();
+  };
+
   // question builder
   const [questions, setQuestions] = useState([]);
   const [excelQuestions, setExcelQuestions] = useState([]);
@@ -243,12 +249,12 @@ export default function CreateAssignmentModal({
     return {
       title,
       description,
-      startDate: startDate ? new Date(startDate).toISOString() : null,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      startDate: startDate ? toVNISOString(new Date(startDate)) : null,
+      dueDate: dueDate ? toVNISOString(new Date(dueDate)) : null,
       timeLimit: Number(timeLimit) || 0,
       type: type === "MIXED" ? "QUIZ" : type,
-      attachmentUrl: attachmentFile ? attachmentFile.name : null, // placeholder — implement real upload if needed
-      answerKeyFileUrl: answerKeyFile ? answerKeyFile.name : null, // placeholder
+      attachmentUrl: attachmentFile ? attachmentFile.name : null, 
+      answerKeyFileUrl: answerKeyFile ? answerKeyFile.name : null, 
       maxScore: Number(maxScore) || totalPoints || 0,
       isPublished,
       allowLateSubmission,
@@ -317,6 +323,8 @@ export default function CreateAssignmentModal({
         await questionService.addQuestion(assignmentId, q);
       }
 
+      showToast("Tạo bài tập/bài thi thành công!", "success");
+
       setTitle("");
       setDescription("");
       setStartDate("");
@@ -334,8 +342,6 @@ export default function CreateAssignmentModal({
       setAnswerKeyFile(null);
       setQuestions([]);
       setTab("build");
-
-      showToast("Tạo bài tập/bài thi thành công!", "success");
 
       close();
     } catch (err) {

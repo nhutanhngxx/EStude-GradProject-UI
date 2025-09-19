@@ -421,6 +421,7 @@ const ManageClasses = () => {
           <div className="flex flex-col h-[60vh]">
             {/* Nội dung chính */}
             <form
+              id="classForm"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSave();
