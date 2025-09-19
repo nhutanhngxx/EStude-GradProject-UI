@@ -30,8 +30,9 @@ import StudentManageClasses from "./pages/student/ManageClasses";
 import StudentReports from "./pages/student/Reports";
 import StudentNotifications from "./pages/student/Notifications";
 
-// thêm
 import ProtectedRoute from "./components/ProtectedRoute";
+
+import "./i18n";
 
 function App() {
   return (
