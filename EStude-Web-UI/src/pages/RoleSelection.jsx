@@ -7,11 +7,32 @@ export default function RoleSelection() {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
 
-  // kiểm tra theme
+  // kiểm tra theme từ localStorage hoặc prefers-color-scheme
   useEffect(() => {
-    const darkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setIsDark(darkMode);
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setIsDark(savedTheme === "dark");
+      if (savedTheme === "dark") document.documentElement.classList.add("dark");
+    } else {
+      const darkMode = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches;
+      setIsDark(darkMode);
+      if (darkMode) document.documentElement.classList.add("dark");
+    }
   }, []);
+
+  // đổi theme
+  const toggleTheme = () => {
+    if (isDark) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    }
+    setIsDark(!isDark);
+  };
 
   const roles = [
     { name: "Giáo viên", value: "teacher" },
@@ -20,6 +41,14 @@ export default function RoleSelection() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white px-4">
+      {/* Toggle dark mode button */}
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600"
+      >
+        {isDark ? "☀️" : "🌙"}
+      </button>
+
       <img
         src={isDark ? bannerDark : bannerLight}
         alt="EStude Banner"
@@ -36,10 +65,10 @@ export default function RoleSelection() {
           <button
             key={role.value}
             onClick={() => navigate(`/login?role=${role.value}`)}
-            className="bg-white text-green-700 h-24 w-full rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all flex flex-col items-center justify-center gap-2 border border-green-200 hover:bg-green-50"
+            className="bg-white text-green-700 h-24 w-full rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all flex flex-col items-center justify-center gap-2 border border-green-200 hover:bg-green-50 dark:bg-gray-800 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900"
           >
             <span className="text-xl font-semibold">{role.name}</span>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-300">
               Đăng nhập với tư cách {role.name.toLowerCase()}
             </span>
           </button>
