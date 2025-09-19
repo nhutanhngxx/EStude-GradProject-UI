@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bar } from "react-chartjs-2";
 import {
@@ -10,6 +10,8 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { Users, BookOpen, Bell, FileBarChart, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 ChartJS.register(
   CategoryScale,
@@ -22,15 +24,41 @@ ChartJS.register(
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  // Data mẫu cho biểu đồ
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Load dark mode từ localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "dark") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    if (newMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  };
+
+  // Data biểu đồ
   const chartData = {
     labels: ["T1", "T2", "T3", "T4", "T5", "T6"],
     datasets: [
       {
-        label: "Số lượng học sinh mới",
+        label: t("dashboard.newStudents"),
         data: [10, 20, 15, 30, 25, 40],
-        backgroundColor: "#3b82f6",
+        backgroundColor: "#6366f1",
+        borderRadius: 6,
       },
     ],
   };
@@ -40,53 +68,66 @@ const Dashboard = () => {
     plugins: {
       legend: { display: false },
     },
+    scales: {
+      y: { beginAtZero: true },
+    },
   };
 
   const cards = [
     {
-      title: "Quản lý tài khoản",
+      title: t("dashboard.manageAccounts"),
       value: "150",
-      color: "bg-blue-500",
+      icon: <Users className="w-6 h-6 text-indigo-600" />,
       path: "/admin/users",
     },
     {
-      title: "Quản lý lớp học",
+      title: t("dashboard.manageClasses"),
       value: "25",
-      color: "bg-green-500",
+      icon: <BookOpen className="w-6 h-6 text-green-600" />,
       path: "/admin/classes",
     },
     {
-      title: "Quản lý thông báo",
+      title: t("dashboard.manageNotifications"),
       value: "45",
-      color: "bg-red-500",
+      icon: <Bell className="w-6 h-6 text-red-600" />,
       path: "/admin/notifications",
     },
   ];
 
+  // Hoạt động gần đây
   const activities = [
-    { time: "09:00", action: "Thêm tài khoản mới cho GV Nguyễn Văn A" },
-    { time: "10:15", action: "Học sinh Lê Văn B nộp bài tập Toán" },
-    { time: "11:00", action: "Cập nhật điểm môn Lý cho lớp 12A" },
-    { time: "14:20", action: "Gửi thông báo về lịch thi HK1" },
+    { time: "09:00", action: t("dashboard.activity1") },
+    { time: "10:15", action: t("dashboard.activity2") },
+    { time: "11:00", action: t("dashboard.activity3") },
+    { time: "14:20", action: t("dashboard.activity4") },
   ];
 
   const createReport = () => {
-    alert("Báo cáo đã được tạo (giả lập)");
+    alert(t("dashboard.reportCreated"));
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="p-6 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Tổng quan</h1>
-          <p className="text-gray-600">Chào mừng bạn đến với trang quản trị!</p>
+          <h1 className="text-2xl font-bold">{t("dashboard.overview")}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {t("dashboard.welcome")}
+          </p>
         </div>
-        <button
-          onClick={createReport}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white"
-        >
-          Tạo báo cáo
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Nút báo cáo */}
+          <button
+            onClick={createReport}
+            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-indigo-700 rounded-lg text-white text-sm shadow"
+          >
+            <FileBarChart className="w-4 h-4" />
+            <span className="hidden sm:inline">
+              {t("dashboard.createReport")}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Cards */}
@@ -95,32 +136,49 @@ const Dashboard = () => {
           <div
             key={idx}
             onClick={() => navigate(card.path)}
-            className={`p-4 rounded-lg shadow cursor-pointer transition transform hover:scale-105 ${card.color} text-white`}
+            className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm cursor-pointer hover:shadow-md transition"
           >
-            <h2 className="text-lg font-semibold">{card.title}</h2>
-            <p className="text-3xl font-bold">{card.value}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {card.title}
+                </h2>
+                <p className="text-2xl font-bold mt-1">{card.value}</p>
+              </div>
+              <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                {card.icon}
+              </div>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Biểu đồ + Hoạt động gần đây */}
+      {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Biểu đồ */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Thống kê học sinh</h2>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">
+            {t("dashboard.studentStats")}
+          </h2>
           <Bar data={chartData} options={chartOptions} />
         </div>
 
         {/* Hoạt động gần đây */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Hoạt động gần đây</h2>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">
+            {t("dashboard.recentActivities")}
+          </h2>
           <ul className="space-y-3">
             {activities.map((act, idx) => (
               <li
                 key={idx}
-                className="border-b border-gray-300 dark:border-gray-700 pb-2"
+                className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0"
               >
-                <span className="font-bold">{act.time}</span> - {act.action}
+                <Clock className="w-4 h-4 mt-1 text-gray-500 dark:text-gray-400" />
+                <div>
+                  <span className="font-semibold">{act.time}</span> -{" "}
+                  <span>{act.action}</span>
+                </div>
               </li>
             ))}
           </ul>
