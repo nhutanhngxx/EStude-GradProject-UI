@@ -4,6 +4,7 @@
 
 html {
   scroll-behavior: smooth;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* @keyframes slideIn {
@@ -49,4 +50,33 @@ html {
 
 .animate-slide-out {
   animation: slide-out 0.4s ease-in forwards;
+}
+
+/* styles.css hoặc global.css */
+.table-style {
+  @apply min-w-[600px] w-full table-fixed text-sm text-left border-collapse;
+}
+
+.table-style thead {
+  @apply bg-gray-50;
+}
+
+.table-style th {
+  @apply px-4 py-3 font-semibold text-gray-700;
+}
+
+.table-style td {
+  @apply px-4 py-3;
+}
+
+.table-style tbody tr {
+  @apply border-t;
+}
+
+.table-style tbody tr:hover {
+  @apply bg-gray-50;
+}
+
+.table-style-empty {
+  @apply px-4 py-6 text-center text-gray-500;
 }
