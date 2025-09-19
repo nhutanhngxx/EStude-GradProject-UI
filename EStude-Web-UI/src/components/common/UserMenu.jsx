@@ -1,9 +1,22 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { Mail, Phone, Calendar, User, Shield } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Mail, Phone, Calendar, User, Shield, LogOut, X } from "lucide-react";
+
+const Example = () => {
+  const { t } = useTranslation();
+
+  return (
+    <div>
+      <h1>{t("userMenu.accountInfo")}</h1>
+      <button>{t("common.close")}</button>
+    </div>
+  );
+};
 
 const UserMenu = () => {
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const menuRef = useRef(null);
@@ -22,7 +35,7 @@ const UserMenu = () => {
 
   return (
     <>
-      {/* User menu */}
+      {/* Avatar + Name */}
       <div className="relative" ref={menuRef}>
         <div
           className="flex items-center gap-2 cursor-pointer"
@@ -43,35 +56,35 @@ const UserMenu = () => {
         {/* Dropdown */}
         <div
           className={`absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 shadow-lg rounded-lg py-2 z-50 transform transition-all duration-200 origin-top-right
-            ${
-              open
-                ? "opacity-100 translate-y-0 scale-100"
-                : "opacity-0 -translate-y-2 scale-95 pointer-events-none"
-            }`}
+    ${
+      open
+        ? "opacity-100 translate-y-0 scale-100"
+        : "opacity-0 -translate-y-2 scale-95 pointer-events-none"
+    }`}
         >
           <button
             onClick={() => {
               setOpen(false);
               setShowModal(true);
             }}
-            className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="flex items-center gap-2 w-full text-left px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-green-100 dark:hover:bg-green-700 transition-colors rounded-lg"
           >
             <User size={18} />
-            Xem thông tin tài khoản
+            {t("userMenu.accountInfo")}
           </button>
           <button
             onClick={logout}
-            className="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-700 dark:hover:text-white"
+            className="flex items-center gap-2 w-full text-left px-4 py-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-700 dark:hover:text-white transition-colors rounded-lg"
           >
-            <Shield size={18} />
-            Đăng xuất
+            <LogOut size={18} />
+            {t("userMenu.logout")}
           </button>
         </div>
       </div>
 
       {/* Modal */}
       <div
-        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200 
+        className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200
           ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
       >
         {/* Overlay */}
@@ -86,7 +99,7 @@ const UserMenu = () => {
             ${showModal ? "scale-100" : "scale-50"}`}
         >
           {/* Header */}
-          <div className="flex flex-col items-center mb-6">
+          <div className="flex flex-col items-center mb-6 relative">
             <img
               src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
                 user.fullName || user.username
@@ -97,13 +110,29 @@ const UserMenu = () => {
             <h2 className="text-xl font-bold text-gray-800 dark:text-white">
               {user.fullName || user.username}
             </h2>
-            <span className="px-3 py-1 mt-1 text-sm font-medium rounded-full bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200">
+            <span
+              className={`px-3 py-1 mt-1 text-sm font-medium rounded-full ${
+                user.role === "ADMIN"
+                  ? "bg-red-100 text-red-700 dark:bg-red-800 dark:text-red-200"
+                  : user.role === "TEACHER"
+                  ? "bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-200"
+                  : "bg-blue-100 text-blue-700 dark:bg-blue-800 dark:text-blue-200"
+              }`}
+            >
               {user.role === "ADMIN"
-                ? "QUẢN TRỊ VIÊN"
+                ? t("roles.admin")
                 : user.role === "TEACHER"
-                ? "GIÁO VIÊN"
-                : user.role}
+                ? t("roles.teacher")
+                : t("roles.student")}
             </span>
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-0 right-0 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            >
+              <X size={20} />
+            </button>
           </div>
 
           {/* Details grid */}
@@ -135,13 +164,17 @@ const UserMenu = () => {
                   size={16}
                   className="text-gray-500 dark:text-gray-400"
                 />
-                <span>Mã Admin: {user.adminCode}</span>
+                <span>
+                  {t("userMenu.adminCode")}: {user.adminCode}
+                </span>
               </div>
             )}
             {user.role === "TEACHER" && user.teacherCode && (
               <div className="flex items-center gap-2">
                 <User size={16} className="text-gray-500 dark:text-gray-400" />
-                <span>Mã Giáo viên: {user.teacherCode}</span>
+                <span>
+                  {t("userMenu.teacherCode")}: {user.teacherCode}
+                </span>
               </div>
             )}
           </div>
@@ -152,7 +185,7 @@ const UserMenu = () => {
               onClick={() => setShowModal(false)}
               className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition"
             >
-              Đóng
+              {t("common.close")}
             </button>
           </div>
         </div>
