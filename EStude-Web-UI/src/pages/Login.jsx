@@ -17,6 +17,12 @@ export default function Login() {
   const { login } = useAuth();
   const { showToast } = useToast();
 
+  const roleLabel = {
+    TEACHER: "GIÁO VIÊN",
+    ADMIN: "QUẢN TRỊ VIÊN",
+    // STUDENT: "HỌC SINH",
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
@@ -81,7 +87,7 @@ export default function Login() {
           className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-lg w-full max-w-md border border-gray-200 dark:border-gray-700"
         >
           <h2 className="text-2xl font-extrabold mb-2 capitalize text-center">
-            Đăng nhập {role}
+            {roleLabel[role.toUpperCase()] || role.toUpperCase()} ĐĂNG NHẬP
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-6">
             Vui lòng nhập thông tin để tiếp tục
@@ -96,7 +102,11 @@ export default function Login() {
             placeholder="Tên đăng nhập"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-4 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-4 
+             bg-gray-50 dark:bg-gray-700 
+             text-gray-900 dark:text-gray-100
+             placeholder-gray-400 dark:placeholder-gray-300
+             focus:outline-none focus:ring-2 focus:ring-green-500"
           />
 
           <input
@@ -104,7 +114,11 @@ export default function Login() {
             placeholder="Mật khẩu"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-2 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-2 
+             bg-gray-50 dark:bg-gray-700 
+             text-gray-900 dark:text-gray-100
+             placeholder-gray-400 dark:placeholder-gray-300
+             focus:outline-none focus:ring-2 focus:ring-green-500"
           />
 
           {/* Quên mật khẩu */}
@@ -124,6 +138,35 @@ export default function Login() {
           >
             Đăng nhập
           </button>
+          {/* Sau button Đăng nhập */}
+          <div className="mt-4 flex flex-col sm:flex-row justify-between gap-2">
+            {/* Nút Quay lại */}
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="w-full sm:w-auto px-4 py-3 rounded-lg dark:border-gray-600 
+               bg-transparent text-gray-800 dark:text-gray-100 
+               hover:underline dark:hover:underline transition-all"
+            >
+              Quay lại trang chủ
+            </button>
+
+            {/* Nút Chuyển role */}
+            <button
+              type="button"
+              onClick={() => {
+                const roles = ["ADMIN", "TEACHER"];
+                const currentIndex = roles.indexOf(role.toUpperCase());
+                const nextRole = roles[(currentIndex + 1) % roles.length];
+                navigate(`/login?role=${nextRole}`);
+              }}
+              className="w-full sm:w-auto px-4 py-3 rounded-lg dark:border-gray-600 
+               bg-transparent text-gray-800 dark:text-gray-100 
+               hover:underline dark:hover:underline transition-all"
+            >
+              Chuyển vai trò
+            </button>
+          </div>
         </form>
       </div>
 
