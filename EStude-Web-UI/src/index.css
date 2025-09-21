@@ -7,6 +7,12 @@ html {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+html,
+body,
+#root {
+  @apply h-full;
+}
+
 /* @keyframes slideIn {
   0% {
     opacity: 0;
@@ -52,31 +58,58 @@ html {
   animation: slide-out 0.4s ease-in forwards;
 }
 
-/* styles.css hoặc global.css */
 .table-style {
-  @apply min-w-[600px] w-full table-fixed text-sm text-left border-collapse;
+  @apply min-w-[800px] w-full table-fixed text-sm border-collapse;
 }
 
 .table-style thead {
-  @apply bg-gray-50;
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200;
 }
 
-.table-style th {
-  @apply px-4 py-3 font-semibold text-gray-700;
-}
-
+.table-style th,
 .table-style td {
-  @apply px-4 py-3;
+  @apply px-3 py-2 border text-center;
 }
 
 .table-style tbody tr {
-  @apply border-t;
+  @apply border-t hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors;
 }
 
-.table-style tbody tr:hover {
-  @apply bg-gray-50;
+.table-style tbody tr td input {
+  @apply w-16 mx-1 px-1 py-0.5 border rounded text-center
+         bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+         border-gray-300 dark:border-gray-600
+         focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400;
 }
 
-.table-style-empty {
-  @apply px-4 py-6 text-center text-gray-500;
+.table-style tbody tr td input:disabled {
+  @apply bg-gray-100 dark:bg-gray-600 cursor-not-allowed;
+}
+
+.table-custom {
+  @apply w-full text-sm border-collapse table-auto;
+}
+
+.table-custom thead {
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200;
+}
+
+.table-custom th,
+.table-custom td {
+  @apply px-3 py-2 border text-center;
+}
+
+.table-custom tbody tr {
+  @apply border-b hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors;
+}
+
+.table-custom tbody tr td input {
+  @apply w-16 mx-1 px-1 py-0.5 border rounded text-center
+         bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+         border-gray-300 dark:border-gray-600
+         focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400;
+}
+
+.table-custom tbody tr td input:disabled {
+  @apply bg-gray-100 dark:bg-gray-600 cursor-not-allowed;
 }
