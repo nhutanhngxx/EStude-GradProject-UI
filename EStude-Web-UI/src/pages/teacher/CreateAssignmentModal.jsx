@@ -34,7 +34,6 @@ export default function CreateAssignmentModal({
   onCreated,
 }) {
   const { showToast } = useToast();
-
   const [tab, setTab] = useState("build");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
@@ -54,22 +53,16 @@ export default function CreateAssignmentModal({
   const [isAutoGraded, setIsAutoGraded] = useState(false);
   const [isExam, setIsExam] = useState(false);
 
-  const toVNISOString = (date) => {
-    return new Date(
-      date.getTime() - date.getTimezoneOffset() * 60000
-    ).toISOString();
-  };
-
   // question builder
   const [questions, setQuestions] = useState([]);
   const [excelQuestions, setExcelQuestions] = useState([]);
 
-  // uploads (client-side placeholder)
+  // uploads
   const [attachmentFile, setAttachmentFile] = useState(null);
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [importFile, setImportFile] = useState(null);
 
-  // --- computed ---
+  // computed
   const totalPoints = useMemo(
     () => questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0),
     [questions]
@@ -80,14 +73,15 @@ export default function CreateAssignmentModal({
     if (!maxScore || maxScore === 0) {
       setMaxScore(totalPoints);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalPoints]);
 
   if (!isOpen) return null;
 
-  function close() {
-    onClose?.();
-  }
+  const toVNISOString = (date) => {
+    return new Date(
+      date.getTime() - date.getTimezoneOffset() * 60000
+    ).toISOString();
+  };
 
   const handleDownloadTemplate = () => {
     const wb = XLSX.utils.book_new();
@@ -126,6 +120,7 @@ export default function CreateAssignmentModal({
     const file = e.target.files[0];
     if (!file) return;
 
+    setImportFile(file);
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target.result);
@@ -133,7 +128,6 @@ export default function CreateAssignmentModal({
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      // Bỏ dòng tiêu đề
       const rows = jsonData.slice(1);
       const newQuestions = rows.map((row, i) => ({
         stt: row[0] || i + 1,
@@ -144,17 +138,16 @@ export default function CreateAssignmentModal({
         optionC: row[5] || "",
         optionD: row[6] || "",
         correct: row[7] || "",
-        score: row[8] || 1,
+        tremor: row[8] || 1,
         note: row[9] || "",
       }));
 
       setExcelQuestions(newQuestions);
-      console.log("Câu hỏi import:", newQuestions);
     };
     reader.readAsArrayBuffer(file);
   };
 
-  function addQuestion(kind = "MULTIPLE_CHOICE") {
+  const addQuestion = (kind = "MULTIPLE_CHOICE") => {
     if (kind === "MULTIPLE_CHOICE") {
       setQuestions((prev) => [
         ...prev,
@@ -193,23 +186,23 @@ export default function CreateAssignmentModal({
         },
       ]);
     }
-  }
+  };
 
-  function removeQuestion(tempId) {
+  const removeQuestion = (tempId) => {
     setQuestions((prev) =>
       prev
         .filter((q) => q.tempId !== tempId)
         .map((q, idx) => ({ ...q, questionOrder: idx + 1 }))
     );
-  }
+  };
 
-  function updateQuestion(tempId, patch) {
+  const updateQuestion = (tempId, patch) => {
     setQuestions((prev) =>
       prev.map((q) => (q.tempId === tempId ? { ...q, ...patch } : q))
     );
-  }
+  };
 
-  function addOption(qid) {
+  const addOption = (qid) => {
     setQuestions((prev) =>
       prev.map((q) =>
         q.tempId === qid
@@ -228,9 +221,9 @@ export default function CreateAssignmentModal({
           : q
       )
     );
-  }
+  };
 
-  function removeOption(qid, oid) {
+  const removeOption = (qid, oid) => {
     setQuestions((prev) =>
       prev.map((q) =>
         q.tempId === qid
@@ -243,30 +236,28 @@ export default function CreateAssignmentModal({
           : q
       )
     );
-  }
+  };
 
-  function buildAssignmentPayload() {
-    return {
-      title,
-      description,
-      startDate: startDate ? toVNISOString(new Date(startDate)) : null,
-      dueDate: dueDate ? toVNISOString(new Date(dueDate)) : null,
-      timeLimit: Number(timeLimit) || 0,
-      type: type === "MIXED" ? "QUIZ" : type,
-      attachmentUrl: attachmentFile ? attachmentFile.name : null, 
-      answerKeyFileUrl: answerKeyFile ? answerKeyFile.name : null, 
-      maxScore: Number(maxScore) || totalPoints || 0,
-      isPublished,
-      allowLateSubmission,
-      latePenalty: Number(latePenalty) || 0,
-      submissionLimit: Number(submissionLimit) || 0,
-      isAutoGraded,
-      isExam,
-    };
-  }
+  const buildAssignmentPayload = () => ({
+    title,
+    description,
+    startDate: startDate ? toVNISOString(new Date(startDate)) : null,
+    dueDate: dueDate ? toVNISOString(new Date(dueDate)) : null,
+    timeLimit: Number(timeLimit) || 0,
+    type: type === "MIXED" ? "QUIZ" : type,
+    attachmentUrl: attachmentFile ? attachmentFile.name : null,
+    answerKeyFileUrl: answerKeyFile ? answerKeyFile.name : null,
+    maxScore: Number(maxScore) || totalPoints || 0,
+    isPublished,
+    allowLateSubmission,
+    latePenalty: Number(latePenalty) || 0,
+    submissionLimit: Number(submissionLimit) || 0,
+    isAutoGraded,
+    isExam,
+  });
 
-  function buildQuestionsPayload() {
-    return questions.map((q, idx) => ({
+  const buildQuestionsPayload = () =>
+    questions.map((q, idx) => ({
       questionText: q.questionText,
       points: Number(q.points) || 0,
       questionType: q.questionType,
@@ -281,9 +272,8 @@ export default function CreateAssignmentModal({
             }))
           : [],
     }));
-  }
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e?.preventDefault();
 
     if (!title.trim()) {
@@ -309,7 +299,6 @@ export default function CreateAssignmentModal({
       };
 
       const assignment = await assignmentService.addAssignment(payload);
-
       const assignmentId = assignment?.data?.assignmentId;
 
       if (!assignmentId) {
@@ -319,11 +308,10 @@ export default function CreateAssignmentModal({
       }
 
       for (const q of buildQuestionsPayload()) {
-        // console.log("Sending question payload:", q);
         await questionService.addQuestion(assignmentId, q);
       }
-
       showToast("Tạo bài tập/bài thi thành công!", "success");
+      onCreated?.(assignment?.data);
 
       setTitle("");
       setDescription("");
@@ -341,9 +329,11 @@ export default function CreateAssignmentModal({
       setAttachmentFile(null);
       setAnswerKeyFile(null);
       setQuestions([]);
+      setExcelQuestions([]);
+      setImportFile(null);
       setTab("build");
 
-      close();
+      onClose?.();
     } catch (err) {
       console.error("Tạo bài thất bại:", err);
       showToast(
@@ -351,9 +341,8 @@ export default function CreateAssignmentModal({
         "error"
       );
     }
-  }
+  };
 
-  // import questions from a JSON file (expected array of question-like objects)
   const handleImportQuestions = () => {
     if (!importFile) {
       showToast("Vui lòng chọn file JSON chứa câu hỏi", "warn");
@@ -394,15 +383,17 @@ export default function CreateAssignmentModal({
   };
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen bg-black/40 backdrop-blur-sm flex justify-center items-center">
-      <div className="bg-white dark:bg-gray-900 w-full max-w-7xl rounded-2xl shadow-xl overflow-hidden">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 w-11/12 md:w-3/4 max-w-7xl h-[85vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
-            <FilePlus2 className="text-blue-600" size={20} />
-            <h2 className="text-lg font-semibold">Tạo bài tập/bài thi</h2>
+            <FilePlus2 className="text-blue-600 dark:text-blue-400" size={20} />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Tạo bài tập/bài thi
+            </h2>
             {classContext?.className && (
-              <span className="ml-2 text-sm text-gray-500 flex items-center gap-1">
+              <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <BookOpen size={16} /> {classContext.className}
                 {classContext.subjectName ? (
                   <>
@@ -413,7 +404,10 @@ export default function CreateAssignmentModal({
               </span>
             )}
           </div>
-          <button onClick={close} className="p-2 rounded-lg hover:bg-gray-100">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          >
             <X size={18} />
           </button>
         </div>
@@ -422,35 +416,39 @@ export default function CreateAssignmentModal({
         <div className="px-5 pt-4 flex items-center gap-2">
           <button
             onClick={() => setTab("build")}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-              tab === "build"
-                ? "border-blue-600 text-blue-700 bg-blue-50"
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition
+              ${
+                tab === "build"
+                  ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
+                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
           >
             <LayoutGrid size={16} /> Tạo trực tiếp
           </button>
           <button
             onClick={() => setTab("upload")}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${
-              tab === "upload"
-                ? "border-blue-600 text-blue-700 bg-blue-50"
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition
+              ${
+                tab === "upload"
+                  ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
+                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
           >
             <UploadCloud size={16} /> Tải từ file
           </button>
         </div>
 
         {/* Content */}
-        <div className="px-5 pb-5">
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left column: Meta info */}
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-600">Tiêu đề</label>
+                <label className="text-sm text-gray-600 dark:text-gray-300">
+                  Tiêu đề
+                </label>
                 <input
-                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ví dụ: Kiểm tra giữa kỳ – Phần 1"
@@ -458,9 +456,11 @@ export default function CreateAssignmentModal({
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">Mô tả</label>
+                <label className="text-sm text-gray-600 dark:text-gray-300">
+                  Mô tả
+                </label>
                 <textarea
-                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -469,24 +469,24 @@ export default function CreateAssignmentModal({
 
               <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                  <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
                     <CalendarClock size={14} /> Ngày bắt đầu
                   </label>
                   <input
                     type="datetime-local"
-                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                   />
                 </div>
 
                 <div className="flex-1">
-                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                  <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
                     <CalendarClock size={14} /> Hạn nộp
                   </label>
                   <input
                     type="datetime-local"
-                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
@@ -495,24 +495,24 @@ export default function CreateAssignmentModal({
 
               <div className="flex items-center gap-3">
                 <div className="w-40">
-                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                  <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
                     <Clock size={14} /> Thời gian (phút)
                   </label>
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={timeLimit}
                     onChange={(e) => setTimeLimit(Number(e.target.value))}
                   />
                 </div>
 
                 <div className="flex-1">
-                  <label className="text-sm text-gray-600 flex items-center gap-1">
+                  <label className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
                     <Settings2 size={14} /> Loại bài
                   </label>
                   <select
-                    className="mt-1 w-full rounded-xl border px-3 py-2"
+                    className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={type}
                     onChange={(e) => setType(e.target.value)}
                   >
@@ -524,92 +524,74 @@ export default function CreateAssignmentModal({
               </div>
 
               <div>
-                <label className="text-sm text-gray-600">
+                <label className="text-sm text-gray-600 dark:text-gray-300">
                   Điểm tối đa của bài tập/bài thi
                 </label>
                 <input
                   type="number"
                   min={0}
-                  className="mt-1 w-full rounded-xl border px-3 py-2"
+                  className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                   value={maxScore}
                   onChange={(e) => setMaxScore(Number(e.target.value))}
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Tổng điểm câu hỏi hiện tại: {totalPoints}
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-4">
-                <label className="flex items-center gap-1 text-sm text-gray-600">
+              <div className="flex items-center flex-wrap gap-4">
+                <label className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    className="accent-blue-600"
+                    className="accent-blue-600 dark:accent-blue-400"
                     checked={isExam}
                     onChange={(e) => setIsExam(e.target.checked)}
-                  />{" "}
+                  />
                   Đây là bài thi
                 </label>
-                <label className="flex items-center gap-1 text-sm text-gray-600">
+                <label className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    className="accent-blue-600"
+                    className="accent-blue-600 dark:accent-blue-400"
                     checked={isPublished}
                     onChange={(e) => setIsPublished(e.target.checked)}
-                  />{" "}
+                  />
                   Công khai
                 </label>
-
-                <label className="flex items-center gap-1 text-sm text-gray-600">
+                <label className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
                   <input
                     type="checkbox"
-                    className="accent-blue-600"
+                    className="accent-blue-600 dark:accent-blue-400"
                     checked={allowLateSubmission}
                     onChange={(e) => setAllowLateSubmission(e.target.checked)}
-                  />{" "}
+                  />
                   Cho nộp trễ
                 </label>
-                <label className="flex items-center gap-1 text-sm text-gray-600">
-                  Giới hạn lần nộp:{" "}
+                <label className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300">
+                  Giới hạn lần nộp:
                   <input
                     type="number"
                     min={1}
-                    className="mt-1 w-16 rounded-xl border px-3 py-2"
+                    className="ml-2 w-16 rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={submissionLimit}
                     onChange={(e) => setSubmissionLimit(Number(e.target.value))}
                   />
                 </label>
               </div>
-
-              {/* 
-              {allowLateSubmission && (
-                <div>
-                  <label className="text-sm text-gray-600">
-                    Phạt trễ (số điểm hoặc % do backend xử lý)
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    className="mt-1 w-full rounded-xl border px-3 py-2"
-                    value={latePenalty}
-                    onChange={(e) => setLatePenalty(Number(e.target.value))}
-                  />
-                </div>
-              )} */}
             </div>
 
             {/* Right column: Question builder / Upload */}
             <div className="flex flex-col gap-4">
-              {/* If upload tab: show importer */}
               {tab === "upload" ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-sm text-gray-600">
+                    <label className="text-sm text-gray-600 dark:text-gray-300">
                       Chọn file Excel chứa danh sách câu hỏi
                     </label>
                     <input
                       type="file"
                       accept=".xlsx,.xls"
-                      className="mt-1 w-full rounded-xl border px-3 py-2"
+                      className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                       onChange={handleExcelUpload}
                     />
                   </div>
@@ -618,7 +600,7 @@ export default function CreateAssignmentModal({
                     <button
                       type="button"
                       onClick={handleDownloadTemplate}
-                      className="items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                     >
                       Tải file mẫu
                     </button>
@@ -630,7 +612,6 @@ export default function CreateAssignmentModal({
                           return;
                         }
 
-                        // Convert excelQuestions -> questions state
                         const parsedQuestions = excelQuestions.map(
                           (q, idx) => ({
                             tempId: genId(),
@@ -674,7 +655,7 @@ export default function CreateAssignmentModal({
                           "success"
                         );
                       }}
-                      className="items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                     >
                       Import từ Excel
                     </button>
@@ -685,7 +666,7 @@ export default function CreateAssignmentModal({
                         setExcelQuestions([]);
                         setTab("build");
                       }}
-                      className="px-4 py-2 rounded-lg border"
+                      className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                     >
                       Hủy
                     </button>
@@ -694,19 +675,19 @@ export default function CreateAssignmentModal({
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold flex items-center gap-2 text-gray-700">
+                    <h3 className="font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
                       <ListChecks size={18} /> Câu hỏi
                     </h3>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => addQuestion("MULTIPLE_CHOICE")}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                       >
                         <Plus size={16} /> Trắc nghiệm
                       </button>
                       <button
                         onClick={() => addQuestion("ESSAY")}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                       >
                         <Plus size={16} /> Tự luận
                       </button>
@@ -715,7 +696,7 @@ export default function CreateAssignmentModal({
 
                   <div className="max-h-96 overflow-y-auto pr-2 space-y-4">
                     {questions.length === 0 && (
-                      <div className="rounded-xl border border-dashed p-6 text-center text-gray-400">
+                      <div className="rounded-xl border border-dashed p-6 text-center text-gray-400 dark:text-gray-500">
                         Chưa có câu hỏi nào.
                       </div>
                     )}
@@ -723,17 +704,21 @@ export default function CreateAssignmentModal({
                     {questions.map((q) => (
                       <div
                         key={q.tempId}
-                        className="rounded-xl border bg-white shadow-sm p-4 space-y-3"
+                        className="rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm p-4 space-y-3"
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-1 flex flex-col gap-2">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 flex-wrap">
                               <select
-                                className="rounded-lg border px-2 py-1 text-sm"
+                                className="rounded-lg border border-gray-300 dark:border-gray-600 px-2 py-1 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                                 value={q.questionType}
                                 onChange={(e) =>
                                   updateQuestion(q.tempId, {
                                     questionType: e.target.value,
+                                    options:
+                                      e.target.value === "ESSAY"
+                                        ? []
+                                        : q.options,
                                   })
                                 }
                               >
@@ -743,7 +728,7 @@ export default function CreateAssignmentModal({
                                 <option value="ESSAY">Tự luận</option>
                               </select>
                               <input
-                                className="flex-1 rounded-lg border px-3 py-2"
+                                className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                                 placeholder="Nhập nội dung câu hỏi"
                                 value={q.questionText}
                                 onChange={(e) =>
@@ -755,7 +740,7 @@ export default function CreateAssignmentModal({
                               <input
                                 type="number"
                                 min={0}
-                                className="w-24 rounded-lg border px-3 py-2 text-sm"
+                                className="w-24 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                                 value={q.points}
                                 onChange={(e) =>
                                   updateQuestion(q.tempId, {
@@ -770,11 +755,11 @@ export default function CreateAssignmentModal({
                                 {q.options.map((o) => (
                                   <div
                                     key={o.tempId}
-                                    className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg"
+                                    className="flex items-center gap-2 bg-gray-50 dark:bg-gray-600 p-2 rounded-lg"
                                   >
                                     <input
                                       type="checkbox"
-                                      className="accent-blue-600"
+                                      className="accent-blue-600 dark:accent-blue-400"
                                       checked={!!o.isCorrect}
                                       onChange={(e) =>
                                         updateQuestion(q.tempId, {
@@ -790,7 +775,7 @@ export default function CreateAssignmentModal({
                                       }
                                     />
                                     <input
-                                      className="flex-1 rounded-lg border px-3 py-2"
+                                      className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                                       placeholder="Nội dung phương án"
                                       value={o.optionText}
                                       onChange={(e) =>
@@ -807,7 +792,7 @@ export default function CreateAssignmentModal({
                                       }
                                     />
                                     <button
-                                      className="p-2 rounded-lg hover:bg-gray-200"
+                                      className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 transition"
                                       onClick={() =>
                                         removeOption(q.tempId, o.tempId)
                                       }
@@ -818,7 +803,7 @@ export default function CreateAssignmentModal({
                                 ))}
                                 <button
                                   onClick={() => addOption(q.tempId)}
-                                  className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                                  className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                                 >
                                   <Plus size={16} /> Thêm phương án
                                 </button>
@@ -826,14 +811,14 @@ export default function CreateAssignmentModal({
                             )}
 
                             {q.questionType === "ESSAY" && (
-                              <div className="text-sm text-gray-500 flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
+                              <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 bg-gray-50 dark:bg-gray-600 p-3 rounded-lg">
                                 <FileText size={16} /> Câu hỏi tự luận — học
                                 sinh sẽ nhập câu trả lời dạng văn bản.
                               </div>
                             )}
                           </div>
                           <button
-                            className="p-2 rounded-lg hover:bg-gray-200"
+                            className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 transition"
                             onClick={() => removeQuestion(q.tempId)}
                           >
                             <Trash2 size={18} />
@@ -844,64 +829,13 @@ export default function CreateAssignmentModal({
                   </div>
                 </>
               )}
-
-              {/* FILE ĐÍNH KÈM */}
-              {/* <div>
-                <label className="text-sm text-gray-600">
-                  File đính kèm (tài liệu/đề)
-                </label>
-                <input
-                  type="file"
-                  className="mt-1 w-full rounded-xl border px-3 py-2"
-                  onChange={(e) =>
-                    setAttachmentFile(e.target.files?.[0] ?? null)
-                  }
-                />
-                {attachmentFile && (
-                  <div className="mt-1 text-sm text-gray-500 flex items-center gap-2">
-                    <FileText size={14} /> {attachmentFile.name}
-                  </div>
-                )}
-              </div> */}
-
-              {/* ĐÁP ÁN CHUẨN */}
-              {/* <div>
-                <label className="text-sm text-gray-600">
-                  File đáp án chuẩn (nếu có)
-                </label>
-                <input
-                  type="file"
-                  className="mt-1 w-full rounded-xl border px-3 py-2"
-                  onChange={(e) =>
-                    setAnswerKeyFile(e.target.files?.[0] ?? null)
-                  }
-                />
-                {answerKeyFile && (
-                  <div className="mt-1 text-sm text-gray-500 flex items-center gap-2">
-                    <FileText size={14} /> {answerKeyFile.name}
-                  </div>
-                )}
-              </div> */}
-
-              {/* TỰ ĐỘNG CHẤM */}
-              {/* <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 text-sm text-gray-600">
-                  <input
-                    type="checkbox"
-                    className="accent-blue-600"
-                    checked={isAutoGraded}
-                    onChange={(e) => setIsAutoGraded(e.target.checked)}
-                  />{" "}
-                  Tự động chấm
-                </label>
-              </div> */}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t px-5 py-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600 flex items-center gap-3">
+        <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-4 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-3">
             <span className="flex items-center gap-1">
               <ListChecks size={16} /> {questions.length} câu hỏi
             </span>
@@ -911,14 +845,14 @@ export default function CreateAssignmentModal({
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-4 py-2 rounded-lg border hover:bg-gray-50"
-              onClick={close}
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+              onClick={onClose}
             >
-              Huỷ
+              Hủy
             </button>
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-700 transition"
               onClick={handleSubmit}
             >
               Lưu bài
