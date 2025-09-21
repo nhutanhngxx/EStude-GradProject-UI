@@ -9,15 +9,17 @@ import StudentManagement from "./StudentManagement";
 import { useToast } from "../../contexts/ToastContext";
 
 const Badge = ({ text, color }) => (
-  <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
+  <span
+    className={`px-2 py-1 text-xs font-medium rounded-full ${color} dark:bg-blue-900/30 dark:text-blue-300`}
+  >
     {text}
   </span>
 );
 
 const Modal = ({ title, children, onClose }) =>
   createPortal(
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-5/6 max-w-6xl overflow-y-auto border border-gray-200 dark:border-gray-700 animate-fade-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-11/12 max-w-6xl max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -25,10 +27,10 @@ const Modal = ({ title, children, onClose }) =>
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             aria-label="Đóng modal"
           >
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -62,12 +64,12 @@ const Toolbar = ({ filterStatus, setFilterStatus, keyword, setKeyword }) => (
         placeholder="Tìm kiếm lớp/môn..."
         value={keyword}
         onChange={(e) => setKeyword(e.target.value)}
-        className="px-3 py-2 border rounded-lg flex-1"
+        className="px-3 py-2 w-full sm:w-64 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
       />
       <select
         value={filterStatus}
         onChange={(e) => setFilterStatus(e.target.value)}
-        className="px-3 py-2 border rounded-lg"
+        className="px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
       >
         <option value="current">Đang diễn ra</option>
         <option value="upcoming">Sắp diễn ra</option>
@@ -156,8 +158,9 @@ const ManageClasses = () => {
       setClasses(classesWithSubjects);
     } catch (err) {
       console.error("Lỗi khi load lớp và môn:", err);
+      showToast("Lỗi khi tải dữ liệu lớp học!", "error");
     }
-  }, [schoolId]);
+  }, [schoolId, showToast]);
 
   useEffect(() => {
     fetchClassesWithSubjects();
@@ -285,27 +288,32 @@ const ManageClasses = () => {
       showToast("Lưu lớp thành công!", "success");
       closeModal();
     } catch (error) {
-      console.error(error);
+      console.error("Lỗi khi lưu lớp:", error);
       showToast("Lỗi khi lưu lớp!", "error");
     }
   };
 
-  const handleDelete = (classId) => {
-    setClasses((prev) => prev.filter((c) => c.classId !== classId));
-    closeModal();
+  const handleDelete = async (classId) => {
+    try {
+      await classService.deleteClass(classId);
+      setClasses((prev) => prev.filter((c) => c.classId !== classId));
+      showToast("Xóa lớp thành công!", "success");
+      closeModal();
+    } catch (error) {
+      console.error("Lỗi khi xóa lớp:", error);
+      showToast("Lỗi khi xóa lớp!", "error");
+    }
   };
 
   // ----------------- Render -----------------
   const filteredClasses = classes
     .filter((c) => {
-      if (keyword) {
-        const kw = keyword.toLowerCase();
-        return (
-          c.name.toLowerCase().includes(kw) ||
-          c.subjects?.some((s) => s.name.toLowerCase().includes(kw))
-        );
-      }
-      return true;
+      if (!keyword.trim()) return true;
+      const kw = keyword.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(kw) ||
+        c.subjects?.some((s) => s.name.toLowerCase().includes(kw))
+      );
     })
     .filter((c) => {
       if (filterStatus === "all") return true;
@@ -323,19 +331,19 @@ const ManageClasses = () => {
     });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Quản lý lớp học</h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Quản lý lớp học là công cụ giúp giáo viên tổ chức và quản lý lớp:
             điểm danh, giao bài, đánh giá học sinh.
           </p>
         </div>
         <button
           onClick={() => openModal("add")}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
         >
           + Thêm lớp mới
         </button>
@@ -348,50 +356,65 @@ const ManageClasses = () => {
         setKeyword={setKeyword}
       />
       {/* Table */}
-      <div className="overflow-x-auto bg-white rounded-lg shadow mt-4">
+      <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow mt-4 border border-gray-200 dark:border-gray-600">
         <table className="min-w-[600px] w-full table-fixed text-sm text-left border-collapse">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3 w-[20%]">Tên lớp học</th>
-              <th className="px-4 py-3 w-[30%]">Môn học</th>
-              <th className="px-4 py-3 w-[25%]">Tùy chọn</th>
+              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+                Tên lớp học
+              </th>
+              <th className="px-4 py-3 w-[30%] text-gray-900 dark:text-gray-100">
+                Môn học
+              </th>
+              <th className="px-4 py-3 w-[25%] text-gray-900 dark:text-gray-100">
+                Tùy chọn
+              </th>
             </tr>
           </thead>
           <tbody>
             {[...filteredClasses]
               .sort((a, b) => a.name.localeCompare(b.name, "vi"))
               .map((c) => (
-                <tr key={c.classId} className="border-t">
-                  <td className="px-4 py-3 font-medium">{c.name}</td>
+                <tr
+                  key={c.classId}
+                  className="border-t border-gray-200 dark:border-gray-700"
+                >
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                    {c.name}
+                  </td>
                   <td className="px-4 py-3">
-                    {c.subjects?.length
-                      ? c.subjects.map((s) => (
-                          <Badge
-                            key={s.subjectId}
-                            text={s.name}
-                            color="bg-blue-100 text-blue-700 mr-1"
-                          />
-                        ))
-                      : "-"}
+                    {c.subjects?.length ? (
+                      c.subjects.map((s) => (
+                        <Badge
+                          key={s.subjectId}
+                          text={s.name}
+                          color="bg-blue-100 text-blue-700 mr-1 dark:bg-blue-900/30 dark:text-blue-300"
+                        />
+                      ))
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        -
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 flex flex-wrap items-center gap-4">
                     <button
                       onClick={() => openModal("edit", c)}
-                      className="flex items-center gap-1 text-blue-600 hover:underline"
+                      className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       <Eye size={16} />
                       <span className="hidden sm:inline">Xem</span>
                     </button>
                     <button
                       onClick={() => openModal("students", c)}
-                      className="flex items-center gap-1 text-green-600 hover:underline"
+                      className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline"
                     >
                       <User size={16} />
                       <span className="hidden sm:inline">Danh sách lớp</span>
                     </button>
                     <button
                       onClick={() => openModal("delete", c)}
-                      className="flex items-center gap-1 text-red-500 hover:underline"
+                      className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline"
                     >
                       <Trash2 size={16} />
                       <span className="hidden sm:inline">Xóa</span>
@@ -436,7 +459,7 @@ const ManageClasses = () => {
                   placeholder="Tên lớp"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
 
                 {/* Sĩ số */}
@@ -446,14 +469,14 @@ const ManageClasses = () => {
                   value={classSize}
                   disabled
                   onChange={(e) => setClassSize(Number(e.target.value))}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
 
                 {/* GVCN */}
                 <select
                   value={selectedTeacher}
                   onChange={(e) => setSelectedTeacher(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg"
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 >
                   <option value="">-- Chọn giáo viên chủ nhiệm --</option>
                   {teachers.map((t) => (
@@ -465,29 +488,40 @@ const ManageClasses = () => {
 
                 {/* Học kỳ */}
                 <div>
-                  <label className="block font-semibold mb-2">
+                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
                     Danh sách học kỳ
                   </label>
-                  <div className="overflow-x-auto border rounded-lg">
-                    <table className="w-full text-sm text-left overflow-y-auto">
-                      <thead className="bg-gray-100">
+                  <div className="overflow-x-auto border rounded-lg border-gray-300 dark:border-gray-600">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-gray-100 dark:bg-gray-700">
                         <tr>
-                          <th className="px-3 py-2">Số học kỳ</th>
-                          <th className="px-3 py-2">Bắt đầu</th>
-                          <th className="px-3 py-2">Kết thúc</th>
-                          <th className="px-3 py-2">Hành động</th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Số học kỳ
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Bắt đầu
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Kết thúc
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Hành động
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {editableSemesters.map((sem, index) => (
-                          <tr key={index} className="border-b">
+                          <tr
+                            key={index}
+                            className="border-b border-gray-200 dark:border-gray-700"
+                          >
                             <td className="px-3 py-2">
                               <input
                                 type="number"
                                 min={1}
                                 value={sem.termNumber}
                                 readOnly
-                                className="w-12 px-2 py-1 border rounded text-center"
+                                className="w-12 px-2 py-1 border rounded text-center bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                               />
                             </td>
                             <td className="px-3 py-2">
@@ -501,7 +535,7 @@ const ManageClasses = () => {
                                     e.target.value
                                   )
                                 }
-                                className="px-2 py-1 border rounded"
+                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                               />
                             </td>
                             <td className="px-3 py-2">
@@ -515,14 +549,14 @@ const ManageClasses = () => {
                                     e.target.value
                                   )
                                 }
-                                className="px-2 py-1 border rounded"
+                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                               />
                             </td>
                             <td className="px-3 py-2">
                               <button
                                 type="button"
                                 onClick={() => removeSemester(index)}
-                                className="text-red-600 hover:underline"
+                                className="text-red-600 dark:text-red-400 hover:underline"
                               >
                                 Xóa
                               </button>
@@ -535,7 +569,7 @@ const ManageClasses = () => {
                   <button
                     type="button"
                     onClick={addSemester}
-                    className="mt-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                    className="mt-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                   >
                     + Thêm học kỳ
                   </button>
@@ -546,8 +580,10 @@ const ManageClasses = () => {
               <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
                 {/* Môn học */}
                 <div>
-                  <label className="block font-semibold mb-2">Môn học</label>
-                  <div className="space-y-2 border p-2 rounded-lg">
+                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                    Môn học
+                  </label>
+                  <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
                     {subjects.map((subj) => {
                       const selected = selectedSubjects.find(
                         (s) => s.subjectId === subj.subjectId
@@ -577,9 +613,11 @@ const ManageClasses = () => {
                                 );
                               }
                             }}
-                            className="accent-blue-600"
+                            className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
                           />
-                          <span className="flex-1">{subj.name}</span>
+                          <span className="flex-1 text-gray-900 dark:text-gray-100">
+                            {subj.name}
+                          </span>
                           <select
                             value={selected?.teacherId ?? ""}
                             onChange={(e) =>
@@ -596,7 +634,7 @@ const ManageClasses = () => {
                                 )
                               )
                             }
-                            className="px-2 py-1 border rounded-lg"
+                            className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                             disabled={!selected}
                           >
                             <option value="">-- Chọn giáo viên --</option>
@@ -617,10 +655,15 @@ const ManageClasses = () => {
             {/* Action buttons */}
             <div className="flex justify-end gap-2 mt-4">
               <button
+                onClick={closeModal}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                Hủy
+              </button>
+              <button
                 type="submit"
                 form="classForm"
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 
-               hover:bg-blue-500 hover:text-white transition"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 transition"
               >
                 {modalType === "add" ? "Lưu lớp học" : "Lưu thay đổi"}
               </button>
@@ -631,20 +674,20 @@ const ManageClasses = () => {
 
       {/* Modal Delete */}
       {modalType === "delete" && selectedClass && (
-        <Modal title="Confirm Delete" onClose={closeModal}>
-          <p>
+        <Modal title="Xác nhận xóa" onClose={closeModal}>
+          <p className="text-gray-700 dark:text-gray-200">
             Bạn có chắc chắn muốn xóa <strong>{selectedClass.name}</strong>?
           </p>
           <div className="flex justify-end gap-2 mt-4">
             <button
               onClick={closeModal}
-              className="px-4 py-2 border rounded-lg"
+              className="px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
             >
               Hủy
             </button>
             <button
               onClick={() => handleDelete(selectedClass.classId)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg"
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-500 transition"
             >
               Xóa
             </button>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { PlusCircle, Trash2, Eye, CheckSquare } from "lucide-react";
+import { PlusCircle, Trash2, Eye, CheckSquare, X } from "lucide-react";
 import studentService from "../../services/studentService";
 import enrollmentService from "../../services/enrollmentService";
-
 import { useToast } from "../../contexts/ToastContext";
 
 const StudentManagement = ({ classId }) => {
@@ -15,12 +14,12 @@ const StudentManagement = ({ classId }) => {
   const [searchText, setSearchText] = useState("");
   const [selectAll, setSelectAll] = useState(false);
 
-  // Load tất cả học sinh
+  // Load all students
   useEffect(() => {
     studentService.getAllStudents().then((res) => res && setAllStudents(res));
   }, []);
 
-  // Load học sinh trong lớp
+  // Load students in class
   useEffect(() => {
     const fetchEnrollments = async () => {
       try {
@@ -38,11 +37,12 @@ const StudentManagement = ({ classId }) => {
           }));
         setStudentsInClass(filtered);
       } catch (err) {
-        console.error(err);
+        console.error("Lỗi khi tải danh sách học sinh:", err);
+        showToast("Lỗi khi tải danh sách học sinh!", "error");
       }
     };
     fetchEnrollments();
-  }, [classId]);
+  }, [classId, showToast]);
 
   const handleToggle = (userId) => {
     setSelectedStudentIds((prev) =>
@@ -53,29 +53,23 @@ const StudentManagement = ({ classId }) => {
   };
 
   const handleSelectAll = () => {
+    const availableStudents = filteredStudents.map((s) => s.userId);
     if (selectAll) {
       setSelectedStudentIds([]);
     } else {
-      setSelectedStudentIds(allStudents.map((s) => s.userId));
+      setSelectedStudentIds(availableStudents);
     }
     setSelectAll(!selectAll);
   };
 
   const handleEnroll = async () => {
     if (selectedStudentIds.length === 0)
-      return showToast("Chọn ít nhất 01 học sinh để thêm vào lớp!", "warn");
-    const newIds = selectedStudentIds.filter(
-      (id) => !studentsInClass.find((s) => s.userId === id)
-    );
-    if (newIds.length === 0) {
-      setSelectedStudentIds([]);
-      return showToast("Các học sinh đã trong lớp!", "warn");
-    }
+      return showToast("Vui lòng chọn ít nhất 1 học sinh để thêm!", "warn");
 
     try {
       const enrollments = await enrollmentService.enrollStudentsBatch(
         classId,
-        newIds
+        selectedStudentIds
       );
       const newStudents = enrollments.map((en) => ({
         enrollmentId: en.enrollmentId,
@@ -87,58 +81,70 @@ const StudentManagement = ({ classId }) => {
       }));
       setStudentsInClass((prev) => [...prev, ...newStudents]);
       setSelectedStudentIds([]);
+      setSelectAll(false);
       showToast("Thêm học sinh vào lớp thành công!", "success");
     } catch (err) {
-      console.error(err);
-      showToast("Lỗi khi thêm học sinh vào lớp", "error");
+      console.error("Lỗi khi thêm học sinh:", err);
+      showToast("Lỗi khi thêm học sinh vào lớp!", "error");
     }
   };
 
   const handleRemove = async (enrollmentId) => {
-    if (!confirm("Xóa học sinh khỏi lớp?")) return;
-    const success = await enrollmentService.unenrollStudent(enrollmentId);
-    if (success) {
-      showToast("Xóa học sinh khỏi lớp thành công!", "error");
+    if (!window.confirm("Bạn có chắc chắn muốn xóa học sinh khỏi lớp?")) return;
+    try {
+      await enrollmentService.unenrollStudent(enrollmentId);
       setStudentsInClass((prev) =>
         prev.filter((s) => s.enrollmentId !== enrollmentId)
       );
+      showToast("Xóa học sinh khỏi lớp thành công!", "success");
+    } catch (err) {
+      console.error("Lỗi khi xóa học sinh:", err);
+      showToast("Lỗi khi xóa học sinh khỏi lớp!", "error");
     }
   };
 
   const handleRemoveMultiple = async () => {
-    // if (selectedStudentIds.length === 0)
-    //   return showToast("Chọn ít nhất 01 học sinh để xóa!", "warn");
-    // if (!confirm("Xóa các học sinh đã chọn khỏi lớp?")) return;
+    if (selectedStudentIds.length === 0)
+      return showToast("Vui lòng chọn ít nhất 1 học sinh để xóa!", "warn");
+    if (!window.confirm("Xóa các học sinh đã chọn khỏi lớp?")) return;
 
-    // for (const id of selectedStudentIds) {
-    //   const student = studentsInClass.find((s) => s.userId === id);
-    //   if (student)
-    //     await enrollmentService.unenrollStudent(student.enrollmentId);
-    // }
-
-    // setStudentsInClass((prev) =>
-    //   prev.filter((s) => !selectedStudentIds.includes(s.userId))
-    // );
-    showToast("Chức năng đang được phát triển!", "warn");
-    // setSelectedStudentIds([]);
+    try {
+      for (const id of selectedStudentIds) {
+        const student = studentsInClass.find((s) => s.userId === id);
+        if (student) {
+          await enrollmentService.unenrollStudent(student.enrollmentId);
+        }
+      }
+      setStudentsInClass((prev) =>
+        prev.filter((s) => !selectedStudentIds.includes(s.userId))
+      );
+      setSelectedStudentIds([]);
+      showToast("Xóa học sinh khỏi lớp thành công!", "success");
+    } catch (err) {
+      console.error("Lỗi khi xóa nhiều học sinh:", err);
+      showToast("Lỗi khi xóa học sinh khỏi lớp!", "error");
+    }
   };
 
-  const filteredStudents = allStudents.filter((s) =>
-    s.fullName.toLowerCase().includes(searchText.toLowerCase())
+  // Filter students not already in class
+  const filteredStudents = allStudents.filter(
+    (s) =>
+      !studentsInClass.some((sc) => sc.userId === s.userId) &&
+      s.fullName.toLowerCase().includes(searchText.toLowerCase())
   );
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-      {/* Danh sách học sinh */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700">
-          Danh sách học sinh
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full p-4 h-96 max-h-full">
+      {/* Danh sách học sinh có thể thêm */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          Thêm học sinh
         </h2>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleSelectAll}
-            className="flex items-center gap-1 px-3 py-2 border rounded-lg hover:bg-gray-100 transition"
+            className="flex items-center justify-center gap-2 px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           >
             <CheckSquare size={18} />
             {selectAll ? "Bỏ chọn tất cả" : "Chọn tất cả"}
@@ -148,96 +154,97 @@ const StudentManagement = ({ classId }) => {
             placeholder="Tìm kiếm học sinh..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            className="flex-1 px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 text-sm"
           />
         </div>
 
-        <div className="max-h-80 overflow-y-auto border rounded-lg p-3 bg-gray-50 space-y-2">
+        <div className="max-h-[400px] overflow-y-auto border rounded-lg p-3 bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 space-y-2">
           {filteredStudents.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
+            <p className="text-gray-500 dark:text-gray-400 text-center py-6 text-sm">
               Không tìm thấy học sinh
             </p>
           ) : (
             filteredStudents.map((s) => (
               <label
                 key={s.userId}
-                className="flex items-center gap-3 p-3 bg-white border rounded-xl shadow-sm hover:shadow-md transition cursor-pointer"
+                className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 border rounded-lg shadow-sm hover:shadow-md transition cursor-pointer border-gray-200 dark:border-gray-600"
               >
                 <input
                   type="checkbox"
                   checked={selectedStudentIds.includes(s.userId)}
                   onChange={() => handleToggle(s.userId)}
-                  className="mt-1 w-4 h-4 accent-blue-600"
+                  className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-gray-800">{s.fullName}</p>
-                  <p className="text-gray-500 text-sm">
+                  <p className="font-medium text-gray-800 dark:text-gray-100 text-sm">
+                    {s.fullName}
+                  </p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
                     {s.dob ? `Ngày sinh: ${s.dob}` : "Chưa có ngày sinh"}
                   </p>
-                  <p className="text-xs text-gray-400">MSSV: {s.studentCode}</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs">
+                    MSSV: {s.studentCode}
+                  </p>
                 </div>
               </label>
             ))
           )}
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleEnroll}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-          >
-            <PlusCircle size={18} /> Thêm vào lớp
-          </button>
-        </div>
+        <button
+          onClick={handleEnroll}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 transition text-sm"
+        >
+          <PlusCircle size={18} /> Thêm vào lớp
+        </button>
       </div>
 
       {/* Học sinh trong lớp */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-700">
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           Học sinh trong lớp
         </h2>
 
-        <div className="border rounded-lg max-h-96 overflow-y-auto divide-y divide-gray-200 bg-white shadow-sm">
+        <div className="border rounded-lg max-h-[400px] overflow-y-auto bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 shadow-sm">
           {studentsInClass.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
+            <p className="text-gray-500 dark:text-gray-400 text-center py-6 text-sm">
               Chưa có học sinh nào
             </p>
           ) : (
             studentsInClass.map((s) => (
               <div
                 key={s.enrollmentId}
-                className="flex items-center justify-between p-3 hover:bg-gray-50 transition cursor-pointer"
+                className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition border-b border-gray-200 dark:border-gray-600"
               >
-                {/* Checkbox chọn học sinh */}
-                <input
-                  type="checkbox"
-                  className="w-5 h-5 accent-blue-600 mr-3"
-                />
-
-                {/* Thông tin học sinh */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 truncate">
-                    {s.fullName}
-                  </p>
-                  <p className="text-gray-500 text-sm truncate">
-                    {s.dob ? `Ngày sinh: ${s.dob}` : "Chưa có ngày sinh"}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">
-                    MSSV: {s.studentCode}
-                  </p>
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedStudentIds.includes(s.userId)}
+                    onChange={() => handleToggle(s.userId)}
+                    className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 dark:text-gray-100 text-sm truncate">
+                      {s.fullName}
+                    </p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs truncate">
+                      {s.dob ? `Ngày sinh: ${s.dob}` : "Chưa có ngày sinh"}
+                    </p>
+                    <p className="text-gray-400 dark:text-gray-500 text-xs truncate">
+                      MSSV: {s.studentCode}
+                    </p>
+                  </div>
                 </div>
-
-                {/* Nút hành động */}
                 <div className="flex gap-2 ml-4">
                   <button
                     onClick={() => setEditingStudent(s)}
-                    className="flex items-center gap-1 text-blue-600 px-3 py-1 rounded-md hover:bg-blue-50 transition"
+                    className="flex items-center gap-1 text-blue-600 dark:text-blue-400 px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition text-sm"
                   >
                     <Eye size={16} /> Xem
                   </button>
                   <button
                     onClick={() => handleRemove(s.enrollmentId)}
-                    className="flex items-center gap-1 text-red-600 px-3 py-1 rounded-md hover:bg-red-50 transition"
+                    className="flex items-center gap-1 text-red-600 dark:text-red-400 px-2 py-1 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition text-sm"
                   >
                     <Trash2 size={16} /> Xóa
                   </button>
@@ -247,22 +254,31 @@ const StudentManagement = ({ classId }) => {
           )}
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleRemoveMultiple}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-          >
-            <Trash2 size={18} /> Xóa khỏi lớp
-          </button>
-        </div>
+        <button
+          onClick={handleRemoveMultiple}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-500 transition text-sm"
+        >
+          <Trash2 size={18} /> Xóa khỏi lớp
+        </button>
       </div>
 
       {/* Modal chỉnh sửa học sinh */}
       {editingStudent && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Thông tin học sinh</h3>
-            <div className="space-y-3">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Thông tin học sinh
+              </h3>
+              <button
+                onClick={() => setEditingStudent(null)}
+                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                aria-label="Đóng modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
               <input
                 type="text"
                 value={editingStudent.fullName}
@@ -272,7 +288,7 @@ const StudentManagement = ({ classId }) => {
                     fullName: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 placeholder="Họ và tên"
               />
               <input
@@ -281,7 +297,7 @@ const StudentManagement = ({ classId }) => {
                 onChange={(e) =>
                   setEditingStudent({ ...editingStudent, dob: e.target.value })
                 }
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
               />
               <input
                 type="text"
@@ -292,7 +308,7 @@ const StudentManagement = ({ classId }) => {
                     studentCode: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 placeholder="MSSV"
               />
               <input
@@ -304,20 +320,23 @@ const StudentManagement = ({ classId }) => {
                     email: e.target.value,
                   })
                 }
-                className="w-full border rounded-lg px-3 py-2"
+                className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 placeholder="Email"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => setEditingStudent(null)}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-100 transition"
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
               >
                 Đóng
               </button>
               <button
-                onClick={() => alert("Lưu thông tin")}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                onClick={() => {
+                  showToast("Chức năng lưu đang được phát triển!", "warn");
+                  setEditingStudent(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition text-sm"
               >
                 Lưu
               </button>

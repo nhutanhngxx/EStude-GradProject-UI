@@ -16,6 +16,12 @@ export default function ClassStudentModal({
   const [grades, setGrades] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
 
+  const [commentModal, setCommentModal] = useState({
+    isOpen: false,
+    studentId: null,
+    value: "",
+  });
+
   useEffect(() => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
@@ -54,20 +60,12 @@ export default function ClassStudentModal({
         const g = gradesRes[idx];
         if (g) {
           initGrades[s.userId] = {
-            regularScores: g.regularScores || ["", "", ""],
+            regularScores: g.regularScores || ["", "", "", "", ""],
             midtermScore: g.midtermScore ?? "",
             finalScore: g.finalScore ?? "",
             actualAverage: g.actualAverage ?? "",
             comment: g.comment ?? "",
-            // lock theo từng ô
-            // lockedRegular: (g.regularScores || ["", "", ""]).map(
-            //   (x) => x !== null && x !== ""
-            // ),
-            // lockedMidterm: g.midtermScore !== null && g.midtermScore !== "",
-            // lockedFinal: g.finalScore !== null && g.finalScore !== "",
-            // lockedComment: g.comment !== null && g.comment !== "",
-
-            lockedRegular: (g.regularScores || ["", "", ""]).map(
+            lockedRegular: (g.regularScores || ["", "", "", "", ""]).map(
               (x) => !!x // chỉ lock khi có giá trị truthy (số điểm hoặc text), còn null/"" thì không lock
             ),
             lockedMidterm: g.midtermScore ? true : false,
@@ -76,12 +74,12 @@ export default function ClassStudentModal({
           };
         } else {
           initGrades[s.userId] = {
-            regularScores: ["", "", ""],
+            regularScores: ["", "", "", "", "", ""],
             midtermScore: "",
             finalScore: "",
             actualAverage: "",
             comment: "",
-            lockedRegular: [false, false, false],
+            lockedRegular: [false, false, false, false, false],
             lockedMidterm: false,
             lockedFinal: false,
             lockedComment: false,
@@ -150,9 +148,11 @@ export default function ClassStudentModal({
           [student.userId]: studentGrade,
         };
       });
+
+      if (res) showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
+
       await aiService.predictSubjectsForStudent(student.userId);
       await aiService.predictStudentGPA(student.userId);
-      showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
     } catch (err) {
       console.error(err);
       alert("Lưu điểm thất bại!");
@@ -163,16 +163,18 @@ export default function ClassStudentModal({
 
   return (
     <div className="fixed -top-6 left-0 w-screen h-screen bg-black/40 backdrop-blur-sm flex justify-center items-center">
-      <div className="bg-white dark:bg-gray-900 w-4/6 max-w-6xl h-3/5 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 border dark:border-gray-400 w-5/6 max-w-7xl h-3/5 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b px-5 py-4">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
             <ListChecks className="text-blue-600" size={20} />
-            <h2 className="text-lg font-semibold">Danh sách học sinh</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Danh sách học sinh
+            </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           >
             <X size={18} />
           </button>
@@ -180,67 +182,68 @@ export default function ClassStudentModal({
 
         {/* Content */}
         <div className="flex-1 overflow-auto px-5 py-4">
-          <div className="overflow-x-auto">
-            <table className="table-auto border-collapse w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 text-gray-700">
-                  <th className="border px-3 py-2">Tên học sinh</th>
-                  <th className="border px-3 py-2">Điểm thường xuyên</th>
-                  <th className="border px-3 py-2">Giữa kỳ</th>
-                  <th className="border px-3 py-2">Cuối kỳ</th>
-                  <th className="border px-3 py-2">Trung bình</th>
-                  <th className="border px-3 py-2">Nhận xét</th>
-                  <th className="border px-3 py-2">Hành động</th>
+          <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
+            <table
+              className="w-full text-sm text-left table-auto border-separate"
+              style={{ borderSpacing: 0 }}
+            >
+              <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                <tr>
+                  <th className="px-3 py-2 rounded-tl-lg">Tên học sinh</th>
+                  <th className="px-3 py-2">Điểm thường xuyên</th>
+                  <th className="px-3 py-2">Giữa kỳ</th>
+                  <th className="px-3 py-2">Cuối kỳ</th>
+                  <th className="px-3 py-2">Trung bình</th>
+                  <th className="px-3 py-2">Nhận xét</th>
+                  <th className="px-3 py-2 rounded-tr-lg">Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map((s) => {
                   const g = grades[s.userId] || {};
                   return (
-                    <tr key={s.userId} className="hover:bg-gray-50">
-                      <td className="border px-3 py-2">{s.fullName}</td>
-
-                      {/* Regular scores */}
-                      <td className="border px-3 py-2 text-center">
-                        {[0, 1, 2].map((i) => {
-                          const val = g.regularScores?.[i] ?? "";
-                          const isLocked = g.lockedRegular?.[i];
-                          return (
-                            <input
-                              key={i}
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.1"
-                              value={val}
-                              disabled={!isAdmin && isLocked}
-                              onChange={(e) =>
-                                handleChange(
-                                  s.userId,
-                                  "regularScores",
-                                  e.target.value,
-                                  i
-                                )
-                              }
-                              className={`w-16 mx-1 px-1 py-0.5 border rounded text-center ${
-                                !isAdmin && isLocked
-                                  ? "bg-gray-100 cursor-not-allowed"
-                                  : ""
-                              }`}
-                            />
-                          );
-                        })}
+                    <tr
+                      key={s.userId}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
+                      <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                        {s.fullName}
+                      </td>
+                      <td className="px-3 py-2">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <input
+                            key={i}
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={g.regularScores?.[i] ?? ""}
+                            disabled={!isAdmin && g.lockedRegular?.[i]}
+                            onChange={(e) =>
+                              handleChange(
+                                s.userId,
+                                "regularScores",
+                                e.target.value,
+                                i
+                              )
+                            }
+                            className="w-16 mx-1 px-1 py-0.5 border rounded text-center
+                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                    border-gray-300 dark:border-gray-600
+                    focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                    disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
+                          />
+                        ))}
                       </td>
 
-                      {/* Midterm */}
-                      <td className="border px-3 py-2 text-center">
+                      <td className="px-3 py-2">
                         <input
                           type="number"
                           min="0"
                           max="10"
                           step="0.1"
-                          disabled={!isAdmin && g.lockedMidterm}
                           value={g.midtermScore ?? ""}
+                          disabled={!isAdmin && g.lockedMidterm}
                           onChange={(e) =>
                             handleChange(
                               s.userId,
@@ -248,63 +251,71 @@ export default function ClassStudentModal({
                               e.target.value
                             )
                           }
-                          className={`w-16 px-1 py-0.5 border rounded text-center ${
-                            !isAdmin && g.lockedMidterm
-                              ? "bg-gray-100 cursor-not-allowed"
-                              : ""
-                          }`}
+                          className="w-16 px-1 py-0.5 border rounded text-center
+                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                  border-gray-300 dark:border-gray-600
+                  focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                  disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
                         />
                       </td>
 
                       {/* Final */}
-                      <td className="border px-3 py-2 text-center">
+                      <td className="px-3 py-2">
                         <input
                           type="number"
                           min="0"
                           max="10"
                           step="0.1"
-                          disabled={!isAdmin && g.lockedFinal}
                           value={g.finalScore ?? ""}
+                          disabled={!isAdmin && g.lockedFinal}
                           onChange={(e) =>
                             handleChange(s.userId, "finalScore", e.target.value)
                           }
-                          className={`w-16 px-1 py-0.5 border rounded text-center ${
-                            !isAdmin && g.lockedFinal
-                              ? "bg-gray-100 cursor-not-allowed"
-                              : ""
-                          }`}
+                          className="w-16 px-1 py-0.5 border rounded text-center
+                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                  border-gray-300 dark:border-gray-600
+                  focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                  disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
                         />
                       </td>
 
-                      {/* Actual average */}
-                      <td className="border px-3 py-2 text-center font-medium">
-                        {g.actualAverage ?? ""}
+                      {/* Trung bình */}
+                      <td className="px-3 py-2">
+                        <div
+                          className="w-16 px-1 py-0.5 border rounded text-center
+                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                  border-gray-300 dark:border-gray-600
+                  focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                  disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                          {g.actualAverage ?? ""}
+                        </div>
                       </td>
 
-                      {/* Comment */}
-                      <td className="border px-3 py-2">
-                        <input
-                          type="text"
-                          disabled={!isAdmin && g.lockedComment}
-                          value={g.comment ?? ""}
-                          onChange={(e) =>
-                            handleChange(s.userId, "comment", e.target.value)
+                      <td className="px-3 py-2">
+                        <div
+                          onClick={() =>
+                            setCommentModal({
+                              isOpen: true,
+                              studentId: s.userId,
+                              value: g.comment ?? "",
+                            })
                           }
-                          className={`w-full px-2 py-1 border rounded ${
-                            !isAdmin && g.lockedComment
-                              ? "bg-gray-100 cursor-not-allowed"
-                              : ""
-                          }`}
-                        />
+                          className="cursor-pointer w-full rounded text-gray-900 dark:text-gray-100
+               overflow-hidden whitespace-nowrap text-ellipsis"
+                          style={{ maxWidth: "200px" }}
+                        >
+                          {g.comment ? g.comment : "Thêm nhận xét"}
+                        </div>
                       </td>
 
-                      {/* Action */}
-                      <td className="border px-3 py-2 text-center">
+                      {/* Hành động */}
+                      <td className="px-3 py-2">
                         <button
                           onClick={() => handleSaveOne(s)}
-                          className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                          className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
                         >
-                          <Save size={16} /> Lưu
+                          <Save size={16} />
                         </button>
                       </td>
                     </tr>
@@ -314,17 +325,57 @@ export default function ClassStudentModal({
             </table>
           </div>
         </div>
-
-        {/* Footer */}
-        {/* <div className="border-t px-5 py-3 flex justify-end">
-          <button
-            className="px-4 py-2 rounded-lg border hover:bg-gray-50"
-            onClick={onClose}
-          >
-            Đóng
-          </button>
-        </div> */}
       </div>
+      {commentModal.isOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg w-1/3 p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">
+              Nhận xét cho học sinh
+            </h3>
+            <textarea
+              value={commentModal.value}
+              onChange={(e) =>
+                setCommentModal((prev) => ({
+                  ...prev,
+                  value: e.target.value,
+                }))
+              }
+              className="w-full h-32 p-3 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() =>
+                  setCommentModal({
+                    isOpen: false,
+                    studentId: null,
+                    value: "",
+                  })
+                }
+                className="px-4 py-1 border rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  handleChange(
+                    commentModal.studentId,
+                    "comment",
+                    commentModal.value
+                  );
+                  setCommentModal({
+                    isOpen: false,
+                    studentId: null,
+                    value: "",
+                  });
+                }}
+                className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Lưu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
