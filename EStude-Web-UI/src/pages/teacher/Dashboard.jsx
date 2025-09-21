@@ -97,12 +97,14 @@ const TeacherDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="p-6 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       {/* Tiêu đề */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Bảng điều khiển</h1>
-          <p className="text-gray-600">Chào mừng bạn đến với trang quản trị!</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            Chào mừng bạn đến với trang quản trị!
+          </p>
         </div>
       </div>
 
@@ -112,7 +114,7 @@ const TeacherDashboard = () => {
           <div
             key={idx}
             onClick={() => navigate(card.path)}
-            className={`p-4 rounded-lg shadow cursor-pointer transition transform hover:scale-105 ${card.color} text-white`}
+            className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm cursor-pointer hover:shadow-md transition"
           >
             <h2 className="text-lg font-semibold">{card.title}</h2>
             <p className="text-3xl font-bold">{card.value}</p>
