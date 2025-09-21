@@ -6,11 +6,9 @@ export default function TeacherLayout() {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-800 transition-colors duration-300">
       <TeacherSidebar />
-
       <div className="flex flex-col flex-1">
         <TeacherHeader />
-
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
+        <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
           <Outlet />
         </main>
       </div>
