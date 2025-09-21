@@ -6,7 +6,9 @@ import {
   Eye,
   UploadCloud,
   Download,
+  X,
 } from "lucide-react";
+
 import subjectService from "../../services/subjectService";
 import { useToast } from "../../contexts/ToastContext";
 import { useConfirm } from "../../contexts/ConfirmContext";
@@ -32,11 +34,8 @@ export default function ManageSubjects() {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-
-  // file input ref (ẩn)
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -51,10 +50,11 @@ export default function ManageSubjects() {
         }
       } catch (error) {
         console.error("Lỗi khi lấy môn học:", error);
+        showToast("Lỗi khi tải danh sách môn học!", "error");
       }
     };
     fetchSubjects();
-  }, [schoolId]);
+  }, [schoolId, showToast]);
 
   const resetForm = () => {
     setName("");
@@ -68,11 +68,10 @@ export default function ManageSubjects() {
       return;
     }
 
-    // Kiểm tra trùng tên trong danh sách môn học hiện tại (cùng schoolId)
     const isDuplicate = subjects.some(
       (s) =>
         s.name.trim().toLowerCase() === name.trim().toLowerCase() &&
-        (!selectedSubject || s.id !== selectedSubject.id)
+        (!selectedSubject || s.subjectId !== selectedSubject.subjectId)
     );
     if (isDuplicate) {
       showToast("Môn học này đã tồn tại trong trường của bạn.", "error");
@@ -82,7 +81,6 @@ export default function ManageSubjects() {
     try {
       let result;
       if (selectedSubject) {
-        // --- Update ---
         result = await subjectService.updateSubject({
           subjectId: selectedSubject.subjectId,
           name,
@@ -101,11 +99,9 @@ export default function ManageSubjects() {
                 : s
             )
           );
-
           showToast("Cập nhật môn học thành công!", "success");
         }
       } else {
-        // --- Add new ---
         result = await subjectService.addSubject({
           name,
           description,
@@ -139,23 +135,26 @@ export default function ManageSubjects() {
   const handleDeleteSubject = async (subjectId) => {
     const ok = await confirm(
       "Xóa môn học vĩnh viễn!",
-      "Việc xoá môn học sẽ ảnh hưởng tới hệ thống (lớp học, bài tập, thống kê...). Bạn có chắc chắn?"
+      "Việc xóa môn học sẽ ảnh hưởng tới hệ thống (lớp học, bài tập, thống kê...). Bạn có chắc chắn?"
     );
 
     if (!ok) return;
 
-    const success = await subjectService.deleteSubject(subjectId);
-    if (success) {
-      setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
-      showToast("Xoá môn học thành công", "success");
-    } else {
-      showToast("Xoá môn học thất bại", "error");
+    try {
+      const success = await subjectService.deleteSubject(subjectId);
+      if (success) {
+        setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
+        showToast("Xóa môn học thành công!", "success");
+      } else {
+        showToast("Xóa môn học thất bại!", "error");
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa môn học:", error);
+      showToast("Lỗi khi xóa môn học!", "error");
     }
   };
 
   // ---------------- Excel template & import/export ----------------
-
-  // Tạo workbook mẫu và trigger download (xlsx)
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const wsData = [
@@ -168,7 +167,6 @@ export default function ManageSubjects() {
     XLSX.writeFile(wb, "subjects-template.xlsx");
   };
 
-  // Xử lý file khi người dùng chọn
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -180,17 +178,15 @@ export default function ManageSubjects() {
       const worksheet = workbook.Sheets[sheetName];
       const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
-      // json is an array of objects where keys are header names
       const rows = json.map((row, idx) => ({
         rowIndex: idx + 2,
         name: (row.name || row.Name || "").toString().trim(),
         description: (row.description || row.Description || "")
           .toString()
           .trim(),
-        schoolId: schoolId, // luôn lấy từ user đang đăng nhập
+        schoolId: schoolId,
       }));
 
-      // Validate rows
       const invalid = rows.filter((r) => !r.name);
       if (invalid.length > 0) {
         showToast(
@@ -204,7 +200,6 @@ export default function ManageSubjects() {
         return;
       }
 
-      // Lọc trùng tên với subjects trong state
       const duplicates = rows.filter((r) =>
         subjects.some(
           (s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase()
@@ -221,7 +216,6 @@ export default function ManageSubjects() {
         );
       }
 
-      // Chỉ giữ lại môn chưa có để import
       const rowsToImport = rows.filter(
         (r) =>
           !subjects.some(
@@ -234,15 +228,6 @@ export default function ManageSubjects() {
         e.target.value = null;
         return;
       }
-
-      // if (
-      //   !window.confirm(
-      //     `Import ${rowsToImport.length} môn học mới từ file Excel?`
-      //   )
-      // ) {
-      //   e.target.value = null;
-      //   return;
-      // }
 
       showToast("Đang import... Vui lòng chờ.", "info");
       const added = [];
@@ -264,7 +249,7 @@ export default function ManageSubjects() {
         setSubjects((prev) => [
           ...prev,
           ...added.map((res) => ({
-            id: res.id || Date.now() + Math.random(),
+            subjectId: res.subjectId,
             name: res.name,
             description: res.description || "",
           })),
@@ -284,24 +269,25 @@ export default function ManageSubjects() {
 
   // ---------------- Chart data ----------------
   const chartData = {
-    labels: subjects.map((s) => s.name), // tên môn học
+    labels: subjects.map((s) => s.name),
     datasets: [
       {
         label: "Số lớp được phân",
-        data: subjects.map((s) => s.classes?.length || 0), // số lớp
-        // không đặt màu cứng nếu bạn muốn chart.js pick defaults, nhưng trước đó bạn dùng hex
+        data: subjects.map((s) => s.classes?.length || 0),
         backgroundColor: "#3b82f6",
+        borderColor: "#2563eb",
+        borderWidth: 1,
       },
     ],
   };
 
   return (
-    <div className="p-6 dark:bg-gray-900 dark:text-white">
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Quản lý môn học</h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
             Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập
             và đánh giá học sinh.
           </p>
@@ -312,32 +298,24 @@ export default function ManageSubjects() {
               setIsFormOpen(true);
               resetForm();
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
           >
-            <PlusCircle size={16} />
-            Thêm mới môn học
+            <PlusCircle size={16} /> Thêm mới môn học
           </button>
-
-          {/* Download mẫu */}
           <button
             onClick={downloadTemplate}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
             title="Tải file mẫu Excel"
           >
-            <Download size={16} />
-            Tải file mẫu
+            <Download size={16} /> Tải file mẫu
           </button>
-
-          {/* Import file */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
             title="Import file Excel"
           >
-            <UploadCloud size={16} />
-            Import Excel
+            <UploadCloud size={16} /> Import Excel
           </button>
-
           <input
             ref={fileInputRef}
             type="file"
@@ -351,37 +329,34 @@ export default function ManageSubjects() {
       {/* Layout 2 cột */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Table */}
-        <div className="flex-1 overflow-x-auto bg-white rounded-lg shadow">
+        <div className="flex-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-600">
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="p-3 border-b border-gray-200 dark:border-gray-600">
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                   Tên môn
                 </th>
-                {/* <th className="p-3 border-b border-gray-200 dark:border-gray-600">
-                  Mô tả
-                </th> */}
-                <th className="p-3 border-b border-gray-200 dark:border-gray-600">
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
                   Thao tác
                 </th>
               </tr>
             </thead>
             <tbody>
               {subjects.length > 0 ? (
-                [...subjects] // copy để không mutate state trực tiếp
-                  .sort((a, b) => a.name.localeCompare(b.name, "vi")) // sort theo tên, có hỗ trợ tiếng Việt
+                [...subjects]
+                  .sort((a, b) => a.name.localeCompare(b.name, "vi"))
                   .map((subject) => (
                     <tr
                       key={subject.subjectId}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                      className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                     >
-                      <td className="p-3 border-b border-gray-200 dark:border-gray-600">
+                      <td className="p-3 text-gray-900 dark:text-gray-100">
                         {subject.name}
                       </td>
-                      <td className="p-3 border-b border-gray-200 dark:border-gray-600">
+                      <td className="p-3">
                         <div className="flex gap-5">
                           <button
-                            className="flex items-center gap-1 text-blue-600"
+                            className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline text-sm"
                             title="Xem chi tiết"
                             onClick={() => {
                               setSelectedSubject(subject);
@@ -393,7 +368,7 @@ export default function ManageSubjects() {
                             <Eye size={16} /> Xem
                           </button>
                           <button
-                            className="flex items-center gap-1 text-red-500"
+                            className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:underline text-sm"
                             title="Xóa"
                             onClick={() =>
                               handleDeleteSubject(subject.subjectId)
@@ -408,8 +383,8 @@ export default function ManageSubjects() {
               ) : (
                 <tr>
                   <td
-                    colSpan="3"
-                    className="p-4 text-center text-gray-500 dark:text-gray-400"
+                    colSpan="2"
+                    className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm"
                   >
                     Chưa có môn học nào.
                   </td>
@@ -420,8 +395,8 @@ export default function ManageSubjects() {
         </div>
 
         {/* Right: Chart */}
-        <div className="flex-1 bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">
+        <div className="flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-600">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
             Thống kê số lớp phân cho môn học
           </h2>
           {subjects.length > 0 ? (
@@ -434,7 +409,7 @@ export default function ManageSubjects() {
               }}
             />
           ) : (
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
               Chưa có dữ liệu để hiển thị biểu đồ.
             </p>
           )}
@@ -443,36 +418,45 @@ export default function ManageSubjects() {
 
       {/* Modal Add/Edit Subject */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">
-              {selectedSubject ? "Sửa môn học" : "Thêm môn học"}
-            </h2>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {selectedSubject ? "Sửa môn học" : "Thêm môn học"}
+              </h2>
+              <button
+                onClick={() => setIsFormOpen(false)}
+                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                aria-label="Đóng modal"
+              >
+                <X size={18} />
+              </button>
+            </div>
             <input
               type="text"
               placeholder="Tên môn"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700"
+              className="w-full mb-3 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-400"
             />
             <textarea
               placeholder="Mô tả môn học"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg dark:bg-gray-700 min-h-[80px]"
+              className="w-full mb-3 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-400 min-h-[80px]"
             />
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setIsFormOpen(false)}
-                className="px-4 py-2 border rounded-lg"
+                className="px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSaveSubject}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
               >
-                <PlusCircle size={16} /> Lưu
+                Lưu
               </button>
             </div>
           </div>
