@@ -10,6 +10,8 @@ import {
   CheckSquare,
   Search,
 } from "lucide-react";
+
+import Pagination from "../../components/common/Pagination";
 import AttendanceModal from "./AttendanceModal";
 import AssignmentListModal from "./AssignmentListModal";
 
@@ -37,6 +39,14 @@ export default function MyClasses() {
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [isAssignmentListOpen, setIsAssignmentListOpen] = useState(false);
   const [ctx, setCtx] = useState(null);
+
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [keyword, filterStatus]);
 
   useEffect(() => {
     const fetchMyClasses = async () => {
@@ -103,11 +113,22 @@ export default function MyClasses() {
     setSelectedTermIdMap((prev) => ({ ...prev, [classKey]: Number(termId) }));
   };
 
+  // Tính dữ liệu phân trang
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedClasses = filteredClasses.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Lớp giảng dạy</h1>
-        <p className="text-gray-600">Danh sách lớp đang giảng dạy của bạn.</p>
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Lớp giảng dạy</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Danh sách lớp đang giảng dạy của bạn.
+          </p>
+        </div>
       </div>
 
       {/* Bộ lọc trạng thái + tìm kiếm */}
@@ -115,7 +136,7 @@ export default function MyClasses() {
         {/* Ô tìm kiếm */}
         <div className="relative flex-1 max-w-xs">
           <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
             size={18}
           />
           <input
@@ -123,7 +144,11 @@ export default function MyClasses() {
             placeholder="Tìm lớp hoặc môn..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            className="pl-10 pr-3 py-2 border rounded-lg w-full focus:outline-none focus:ring focus:ring-blue-200"
+            className="pl-10 pr-3 py-2 w-full border rounded-lg 
+                 bg-gray-50 dark:bg-gray-700 dark:border-gray-600
+                 text-gray-900 dark:text-gray-100 
+                 placeholder-gray-400 dark:placeholder-gray-300
+                 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
           />
         </div>
 
@@ -131,7 +156,11 @@ export default function MyClasses() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-lg"
+            className="px-3 py-2 border rounded-lg
+                 bg-gray-50 dark:bg-gray-700
+                 text-gray-900 dark:text-gray-100
+                 border-gray-300 dark:border-gray-600
+                 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
           >
             <option value="current">Đang diễn ra</option>
             <option value="upcoming">Sắp diễn ra</option>
@@ -140,125 +169,156 @@ export default function MyClasses() {
           </select>
         </div>
       </div>
-
       {/* Danh sách lớp */}
       {filteredClasses.length === 0 ? (
-        <p className="text-gray-500 mt-4">Không có lớp nào phù hợp.</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-4">
+          Không có lớp nào phù hợp.
+        </p>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-          {filteredClasses.map((cls) => {
-            const classKey = cls.key;
-            const selectedTermId =
-              selectedTermIdMap[classKey] || cls.termList[0]?.termId;
-            const selectedTerm = cls.termList.find(
-              (t) => t.termId === selectedTermId
-            );
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+            {paginatedClasses.map((cls) => {
+              const classKey = cls.key;
+              const selectedTermId =
+                selectedTermIdMap[classKey] ?? cls.termList[0]?.termId ?? null;
+              const selectedTerm = cls.termList.find(
+                (t) => t.termId === selectedTermId
+              );
 
-            return (
-              <div
-                key={classKey}
-                className="bg-white border rounded-2xl shadow-sm hover:shadow-md transition p-5 flex flex-col"
-              >
-                {/* Header */}
-                <div className="mb-4 flex items-center gap-3">
-                  <BookOpen className="text-blue-600" size={22} />
-                  <div>
-                    <h2 className="text-base font-semibold text-gray-800">
-                      {cls.className}
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium">{cls.subjectName}</span>
+              return (
+                <div
+                  key={classKey}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 
+                     rounded-2xl shadow-sm hover:shadow-md transition p-5 flex flex-col"
+                >
+                  {/* Header */}
+                  <div className="mb-4 flex items-center gap-3">
+                    <BookOpen
+                      className="text-green-600 dark:text-green-400"
+                      size={22}
+                    />
+                    <div>
+                      <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
+                        {cls.className}
+                      </h2>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="font-medium">{cls.subjectName}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Học kỳ chọn */}
+                  <div className="mb-3">
+                    <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                      Học kỳ:{" "}
+                    </label>
+                    <select
+                      value={selectedTermId}
+                      onChange={(e) =>
+                        handleTermChange(classKey, e.target.value)
+                      }
+                      className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg w-auto mt-1 
+                         bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 
+                         focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                    >
+                      {cls.termList.map((t) => (
+                        <option key={t.termId} value={t.termId}>
+                          {t.termName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Body */}
+                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 flex-1">
+                    <p className="flex items-center gap-2">
+                      <Users
+                        size={16}
+                        className="text-gray-400 dark:text-gray-500"
+                      />
+                      Sĩ số: <span className="font-medium">0</span>
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Calendar
+                        size={16}
+                        className="text-gray-400 dark:text-gray-500"
+                      />
+                      Thời gian:
+                      {selectedTerm
+                        ? `${formatDateVN(
+                            selectedTerm.beginDate
+                          )} - ${formatDateVN(selectedTerm.endDate)}`
+                        : "-"}
                     </p>
                   </div>
-                </div>
-                {/* Học kỳ chọn */}
-                <div className="mb-3">
-                  <label className="text-sm font-medium text-gray-700">
-                    Học kỳ:
-                  </label>
-                  <select
-                    value={selectedTermId}
-                    onChange={(e) => handleTermChange(classKey, e.target.value)}
-                    className="px-2 py-1 border rounded-lg w-auto mt-1"
-                  >
-                    {cls.termList.map((t) => (
-                      <option key={t.termId} value={t.termId}>
-                        {t.termName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Body */}
-                <div className="space-y-2 text-sm text-gray-600 flex-1">
-                  <p className="flex items-center gap-2">
-                    <Users size={16} className="text-gray-400" />
-                    Sĩ số: <span className="font-medium">0</span>
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <Calendar size={16} className="text-gray-400" />
-                    Thời gian:
-                    {selectedTerm
-                      ? `${formatDateVN(
-                          selectedTerm.beginDate
-                        )} - ${formatDateVN(selectedTerm.endDate)}`
-                      : "-"}
-                  </p>
-                </div>
-                {/* Actions */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedClass({
-                        classId: cls.classId,
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: selectedTerm?.termId,
-                        termName: selectedTerm?.termName,
-                        classSubjectId: selectedTerm?.classSubjectId,
-                      });
-                      setIsModalOpen(true);
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                  >
-                    <Users size={16} /> <span>Nhập điểm</span>
-                  </button>
-                  <button
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                    onClick={() => {
-                      setSelectedClass({
-                        classId: cls.classId,
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: selectedTerm?.termId,
-                        classSubjectId: selectedTerm?.classSubjectId,
-                      });
-                      setIsAttendanceOpen(true);
-                    }}
-                  >
-                    <CheckSquare size={16} /> <span>Điểm danh</span>
-                  </button>
-                  <button
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition"
-                    onClick={() => {
-                      setSelectedClass({
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: selectedTerm?.termId,
-                        classSubjectId: selectedTerm?.classSubjectId,
-                      });
-                      setIsAssignmentListOpen(true);
-                    }}
-                  >
-                    <FileText size={16} /> <span>Bài tập</span>
-                  </button>
-                  {/* <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition" onClick={() => { setCtx({ className: cls.className, subjectName: cls.subjectName, termId: selectedTerm?.termId, classSubjectId: selectedTerm?.classSubjectId, }); setIsCreateOpen(true); }} > <FileText size={16} /> <span>Tạo bài tập/bài thi</span> </button> */}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
+                  {/* Actions */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedClass({
+                          classId: cls.classId,
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: selectedTerm?.termId,
+                          termName: selectedTerm?.termName,
+                          classSubjectId: selectedTerm?.classSubjectId,
+                        });
+                        setIsModalOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                         text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    >
+                      <Users size={16} /> <span>Nhập điểm</span>
+                    </button>
+
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                         text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      onClick={() => {
+                        setSelectedClass({
+                          classId: cls.classId,
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: selectedTerm?.termId,
+                          classSubjectId: selectedTerm?.classSubjectId,
+                        });
+                        setIsAttendanceOpen(true);
+                      }}
+                    >
+                      <CheckSquare size={16} /> <span>Điểm danh</span>
+                    </button>
+
+                    <button
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                         text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      onClick={() => {
+                        setSelectedClass({
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: selectedTerm?.termId,
+                          classSubjectId: selectedTerm?.classSubjectId,
+                        });
+                        setIsAssignmentListOpen(true);
+                      }}
+                    >
+                      <FileText size={16} /> <span>Bài tập</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          <Pagination
+            totalItems={filteredClasses.length} // tổng số item sau khi filter
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={(page) => setCurrentPage(page)}
+          />
+        </>
+      )}
       {/* Modals */}
       <ClassStudentModal
         classId={selectedClass?.classId}
@@ -266,7 +326,6 @@ export default function MyClasses() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
-
       <CreateAssignmentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -276,7 +335,6 @@ export default function MyClasses() {
           console.log("Assignment đã được tạo:", assignment);
         }}
       />
-
       <AttendanceModal
         teacherId={user.userId}
         classSubjectId={selectedClass?.classSubjectId}
@@ -284,7 +342,6 @@ export default function MyClasses() {
         isOpen={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
       />
-
       <AssignmentListModal
         classSubjectId={selectedClass?.classSubjectId}
         isOpen={isAssignmentListOpen}
