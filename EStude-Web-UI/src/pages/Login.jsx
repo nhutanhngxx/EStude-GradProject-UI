@@ -33,6 +33,7 @@ export default function Login() {
         password,
         role: role.toLowerCase(),
       });
+
       if (!success) {
         setError("Đăng nhập thất bại");
         showToast("Đăng nhập thất bại!", "error");
@@ -42,6 +43,8 @@ export default function Login() {
       showToast("Đăng nhập thành công!", "success");
 
       const storedUser = JSON.parse(localStorage.getItem("user"));
+      console.log(storedUser);
+
       if (!storedUser) {
         setError("Không tìm thấy thông tin người dùng");
         showToast("Không tìm thấy thông tin người dùng", "error");
