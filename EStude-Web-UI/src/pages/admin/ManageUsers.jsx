@@ -27,8 +27,8 @@ const Avatar = ({ name }) => {
 };
 
 const Modal = ({ title, children, onClose }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm max-w-5xl w-full p-6">
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm max-w-7xl w-full p-6">
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {title}
@@ -51,6 +51,17 @@ const ManageAccounts = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [users, setUsers] = useState([]);
   const [excelUsers, setExcelUsers] = useState([]);
+  const [editableUsers, setEditableUsers] = useState([
+    {
+      fullName: "",
+      email: "",
+      numberPhone: "",
+      role: "STUDENT",
+      dob: "",
+      isHomeroomTeacher: false,
+      isAdmin: false,
+    },
+  ]);
   const [modalType, setModalType] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
@@ -60,9 +71,8 @@ const ManageAccounts = () => {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [selectedRole, setSelectedRole] = useState("STUDENT");
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setisAdmin] = useState(false);
 
-  // Load dark mode từ localStorage
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     if (saved === "dark") {
@@ -70,19 +80,6 @@ const ManageAccounts = () => {
       document.documentElement.classList.add("dark");
     }
   }, []);
-
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   useEffect(() => {
     const fetchSchools = async () => {
@@ -126,6 +123,17 @@ const ManageAccounts = () => {
     setModalType(null);
     setGeneratedPassword("");
     setExcelUsers([]);
+    setEditableUsers([
+      {
+        fullName: "",
+        email: "",
+        numberPhone: "",
+        role: "STUDENT",
+        dob: "",
+        isHomeroomTeacher: false,
+        isAdmin: false,
+      },
+    ]);
   };
 
   const deleteUser = (id) => {
@@ -148,10 +156,12 @@ const ManageAccounts = () => {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
-    const role = e.target.role.value;
-    const dob = new Date(e.target.dob.value);
+
+    const dobInput = e.target.dob?.value;
+    const dob = dobInput ? new Date(dobInput) : null;
 
     const formatDobToPassword = (date) => {
+      if (!date) return "12345678";
       const dd = String(date.getDate()).padStart(2, "0");
       const mm = String(date.getMonth() + 1).padStart(2, "0");
       const yyyy = date.getFullYear();
@@ -162,28 +172,28 @@ const ManageAccounts = () => {
 
     const newUser = {
       schoolId: selectedSchool || undefined,
-      fullName: e.target.fullName.value,
+      fullName: e.target.fullName.value.trim().toUpperCase(),
       email: e.target.email.value,
       numberPhone: e.target.numberPhone.value,
-      password: password,
-      dob: dob,
+      password,
+      dob,
     };
 
     try {
       let result;
-      if (role === "STUDENT") {
+      if (selectedRole === "STUDENT") {
         result = await adminService.addStudent({
           ...newUser,
           studentCode: "STU" + Date.now(),
         });
-      } else if (role === "TEACHER") {
+      } else if (selectedRole === "TEACHER") {
         result = await adminService.addTeacher({
           ...newUser,
           teacherCode: "TEA" + Date.now(),
           isAdmin,
           isHomeroomTeacher,
         });
-      } else if (role === "ADMIN") {
+      } else if (selectedRole === "ADMIN") {
         result = await adminService.addAdmin({
           ...newUser,
           adminCode: "ADM" + Date.now(),
@@ -197,19 +207,19 @@ const ManageAccounts = () => {
             userId: result.data?.userId || Date.now(),
             fullName: result.data?.fullName || newUser.fullName,
             email: result.data?.email || newUser.email,
-            role: role,
+            role: selectedRole,
             numberPhone: result.data?.numberPhone || newUser.numberPhone,
-            dob: newUser.dob.toISOString().split("T")[0],
+            dob: newUser.dob?.toISOString().split("T")[0],
             adminCode:
-              role === "ADMIN"
+              selectedRole === "ADMIN"
                 ? result.data?.adminCode || "ADM" + Date.now()
                 : undefined,
             teacherCode:
-              role === "TEACHER"
+              selectedRole === "TEACHER"
                 ? result.data?.teacherCode || "TEA" + Date.now()
                 : undefined,
             studentCode:
-              role === "STUDENT"
+              selectedRole === "STUDENT"
                 ? result.data?.studentCode || "STU" + Date.now()
                 : undefined,
           },
@@ -237,32 +247,78 @@ const ManageAccounts = () => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       const rows = jsonData.slice(1);
-      const newUsers = rows.map((row, index) => ({
-        id: Date.now() + index,
-        fullName: row[0] || "",
-        email: row[1] || "",
-        numberPhone: row[2] || "",
-        role: row[3] || "STUDENT",
-        dob: row[4] ? new Date(row[4]) : null,
-        schoolId: row[5] || null,
-        isHomeroomTeacher: row[6] === "✓" || row[6] === "x",
-        subject: row[7] || "",
-      }));
+
+      const newUsers = rows.map((row, index) => {
+        const fullName = row[0] ? row[0].toString().toUpperCase().trim() : "";
+        return {
+          id: Date.now() + index,
+          fullName,
+          email: row[1] || "",
+          numberPhone: row[2] || "",
+          role: row[3] || "STUDENT",
+          dob: row[4] ? new Date(row[4]).toISOString().split("T")[0] : "",
+          isHomeroomTeacher: row[5] === "✓",
+          isAdmin: row[6] === "✓",
+        };
+      });
+
       setExcelUsers(newUsers);
+      setEditableUsers(newUsers);
     };
     reader.readAsArrayBuffer(file);
   };
 
+  const addUserRow = () => {
+    setEditableUsers([
+      ...editableUsers,
+      {
+        fullName: "",
+        email: "",
+        numberPhone: "",
+        role: "STUDENT",
+        dob: "",
+        isHomeroomTeacher: false,
+        isAdmin: false,
+      },
+    ]);
+  };
+
+  const removeUserRow = (index) => {
+    const updated = [...editableUsers];
+    updated.splice(index, 1);
+    setEditableUsers(updated);
+    setExcelUsers(updated);
+  };
+
+  const updateUserCell = (index, field, value) => {
+    const updated = [...editableUsers];
+    updated[index][field] = value;
+    setEditableUsers(updated);
+    setExcelUsers(updated);
+  };
+
   const handleSubmitExcelUsers = async () => {
     try {
+      if (!selectedSchool) {
+        showToast(t("manageAccounts.schoolRequired"), "warning");
+        return;
+      }
+
       let count = 0;
       for (let u of excelUsers) {
-        const password = u.dob
-          ? `${String(u.dob.getDate()).padStart(2, "0")}${String(
-              u.dob.getMonth() + 1
-            ).padStart(2, "0")}${u.dob.getFullYear()}`
+        const dob = u.dob ? new Date(u.dob) : null;
+        const password = dob
+          ? `${String(dob.getDate()).padStart(2, "0")}${String(
+              dob.getMonth() + 1
+            ).padStart(2, "0")}${dob.getFullYear()}`
           : "12345678";
-        const newUser = { ...u, password };
+
+        const newUser = {
+          ...u,
+          password,
+          schoolId: selectedSchool,
+        };
+
         let result;
         if (u.role === "STUDENT") {
           result = await adminService.addStudent({
@@ -273,7 +329,7 @@ const ManageAccounts = () => {
           result = await adminService.addTeacher({
             ...newUser,
             teacherCode: "TEA" + Date.now(),
-            isAdmin: false,
+            isAdmin: u.isAdmin,
             isHomeroomTeacher: u.isHomeroomTeacher,
           });
         } else if (u.role === "ADMIN") {
@@ -282,11 +338,25 @@ const ManageAccounts = () => {
             adminCode: "ADM" + Date.now(),
           });
         }
+
         if (result) count++;
       }
+
       setUsers([...users, ...excelUsers]);
       setExcelUsers([]);
+      setEditableUsers([
+        {
+          fullName: "",
+          email: "",
+          numberPhone: "",
+          role: "STUDENT",
+          dob: "",
+          isHomeroomTeacher: false,
+          isAdmin: false,
+        },
+      ]);
       closeModal();
+
       if (count > 0) {
         showToast(t("manageAccounts.importSuccess", { count }), "success");
       }
@@ -454,53 +524,157 @@ const ManageAccounts = () => {
           title={t("manageAccounts.addUserModal.title")}
           onClose={closeModal}
         >
-          <div className="space-y-4">
-            <div className="text-sm text-gray-700 dark:text-gray-400 flex gap-2">
-              <p>{t("manageAccounts.downloadTemplate")}</p>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const wb = XLSX.utils.book_new();
-                  const wsData = [
-                    [
-                      t("manageAccounts.placeholders.fullName"),
-                      t("manageAccounts.placeholders.email"),
-                      t("manageAccounts.placeholders.phone"),
-                      t("manageAccounts.placeholders.role"),
-                      t("manageAccounts.placeholders.dob"),
-                      t("manageAccounts.placeholders.school"),
-                      t("manageAccounts.homeroomTeacher"),
-                      t("manageAccounts.subject"),
-                    ],
-                  ];
-                  const ws = XLSX.utils.aoa_to_sheet(wsData);
-                  XLSX.utils.book_append_sheet(wb, ws, "Users");
-                  XLSX.writeFile(wb, "users-template.xlsx");
-                }}
-                className="text-green-700 font-medium dark:text-green-200 hover:underline"
-              >
-                {t("manageAccounts.downloadHere")}
-              </a>
-            </div>
+          <div
+            className={`${
+              excelUsers.length > 0
+                ? "grid grid-cols-1" // Nếu import file Excel -> 1 cột
+                : "grid grid-cols-1 md:grid-cols-2" // Nếu chưa import file -> 2 cột
+            } gap-6`}
+          >
+            {/* CỘT TRÁI */}
+            {excelUsers.length === 0 && (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-700 dark:text-gray-400 flex gap-2">
+                  <p>{t("manageAccounts.downloadTemplate")}</p>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const wb = XLSX.utils.book_new();
+                      const wsData = [
+                        [
+                          t("manageAccounts.placeholders.fullName"),
+                          t("manageAccounts.placeholders.email"),
+                          t("manageAccounts.placeholders.phone"),
+                          t("manageAccounts.placeholders.role"),
+                          t("manageAccounts.placeholders.dob"),
+                          t("manageAccounts.homeroomTeacher"),
+                          t("manageAccounts.academicAffairs"),
+                        ],
+                        [
+                          "Nguyen Van A",
+                          "nguyenvana@example.com",
+                          "0901234567",
+                          "STUDENT",
+                          "2005-01-15",
+                          "",
+                          "",
+                        ],
+                        [
+                          "Tran Thi B",
+                          "tranthib@example.com",
+                          "0912345678",
+                          "TEACHER",
+                          "1985-06-20",
+                          "✓",
+                          "x",
+                        ],
+                        [
+                          "Le Van C",
+                          "levanc@example.com",
+                          "0923456789",
+                          "ADMIN",
+                          "1990-03-10",
+                          "",
+                          "",
+                        ],
+                        [
+                          "// Hướng dẫn: Full Name (tên đầy đủ, ví dụ: Nguyễn Nhựt Anh), Email (email hợp lệ, ví dụ: example@domain.com), Phone (số điện thoại, ví dụ: 0901234567), Role (STUDENT, TEACHER, hoặc ADMIN), DOB (ngày sinh, định dạng YYYY-MM-DD), Homeroom Teacher (✓ hoặc x, chỉ áp dụng cho TEACHER), Academic Affairs (✓ hoặc x, chỉ áp dụng cho TEACHER)",
+                        ],
+                      ];
+                      const ws = XLSX.utils.aoa_to_sheet(wsData);
+                      XLSX.utils.book_append_sheet(wb, ws, "Users");
+                      XLSX.writeFile(wb, "users-template.xlsx");
+                    }}
+                    className="text-green-700 font-medium dark:text-green-200 hover:underline"
+                  >
+                    {t("manageAccounts.downloadHere")}
+                  </a>
+                </div>
 
-            <div>
-              <label className="block mb-1 text-gray-700 dark:text-gray-400">
-                {t("manageAccounts.uploadExcel")}
-              </label>
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                onChange={handleExcelUpload}
-              />
-            </div>
+                <div>
+                  <label className="block mb-1 text-gray-700 dark:text-gray-400">
+                    {t("manageAccounts.uploadExcel")}
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    onChange={handleExcelUpload}
+                  />
+                </div>
 
-            {excelUsers.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
-                <div className="max-h-64 overflow-y-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                {/* Chọn Role */}
+                <select
+                  name="role"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="STUDENT">
+                    {t("manageAccounts.roles.student")}
+                  </option>
+                  <option value="TEACHER">
+                    {t("manageAccounts.roles.teacher")}
+                  </option>
+                  <option value="ADMIN">
+                    {t("manageAccounts.roles.admin")}
+                  </option>
+                </select>
+
+                {/* Nếu là TEACHER hiển thị checkbox */}
+                {selectedRole === "TEACHER" && (
+                  <>
+                    <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={isHomeroomTeacher}
+                        onChange={(e) => setIsHomeroomTeacher(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      {t("manageAccounts.homeroomTeacher")}
+                    </label>
+                    <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={isAdmin}
+                        onChange={(e) => setisAdmin(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      {t("manageAccounts.academicAffairs")}
+                    </label>
+                  </>
+                )}
+
+                {/* Chọn Trường */}
+                <select
+                  name="school"
+                  value={selectedSchool || ""}
+                  onChange={(e) =>
+                    setSelectedSchool(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  required
+                >
+                  <option value="">{t("manageAccounts.selectSchool")}</option>
+                  {schools.map((s) => (
+                    <option key={s.schoolId} value={s.schoolId}>
+                      {s.schoolName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* CỘT PHẢI */}
+            <div className="space-y-4">
+              {excelUsers.length > 0 ? (
+                <div className="overflow-x-auto">
+                  {/* Bảng preview Excel */}
+                  <table className="w-full text-sm border rounded-lg">
+                    <thead className="bg-gray-100 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-left">
                           {t("manageAccounts.placeholders.fullName")}
@@ -518,94 +692,197 @@ const ManageAccounts = () => {
                           {t("manageAccounts.placeholders.dob")}
                         </th>
                         <th className="px-4 py-3 text-left">
-                          {t("manageAccounts.placeholders.school")}
-                        </th>
-                        <th className="px-4 py-3 text-left">
                           {t("manageAccounts.homeroomTeacher")}
                         </th>
                         <th className="px-4 py-3 text-left">
-                          {t("manageAccounts.subject")}
+                          {t("manageAccounts.academicAffairs")}
+                        </th>
+                        <th className="px-4 py-3 text-left">
+                          {t("actions.action")}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {excelUsers.map((u) => (
+                      {editableUsers.map((u, index) => (
                         <tr
-                          key={u.id}
-                          className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                          key={index}
+                          className="border-b border-gray-200 dark:border-gray-700"
                         >
-                          <td className="px-4 py-3">{u.fullName}</td>
-                          <td className="px-4 py-3">{u.email}</td>
-                          <td className="px-4 py-3">{u.numberPhone}</td>
-                          <td className="px-4 py-3">{u.role}</td>
                           <td className="px-4 py-3">
-                            {u.dob
-                              ? new Date(u.dob).toLocaleDateString("vi-VN")
-                              : ""}
+                            <input
+                              type="text"
+                              value={u.fullName}
+                              onChange={(e) =>
+                                updateUserCell(
+                                  index,
+                                  "fullName",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                            />
                           </td>
-                          <td className="px-4 py-3">{u.schoolId}</td>
                           <td className="px-4 py-3">
-                            {u.isHomeroomTeacher ? "✓" : ""}
+                            <input
+                              type="email"
+                              value={u.email}
+                              onChange={(e) =>
+                                updateUserCell(index, "email", e.target.value)
+                              }
+                              className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                            />
                           </td>
-                          <td className="px-4 py-3">{u.subject}</td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="text"
+                              value={u.numberPhone}
+                              onChange={(e) =>
+                                updateUserCell(
+                                  index,
+                                  "numberPhone",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={u.role}
+                              onChange={(e) =>
+                                updateUserCell(index, "role", e.target.value)
+                              }
+                              className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value="STUDENT">
+                                {t("manageAccounts.roles.student")}
+                              </option>
+                              <option value="TEACHER">
+                                {t("manageAccounts.roles.teacher")}
+                              </option>
+                              <option value="ADMIN">
+                                {t("manageAccounts.roles.admin")}
+                              </option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="date"
+                              value={u.dob}
+                              onChange={(e) =>
+                                updateUserCell(index, "dob", e.target.value)
+                              }
+                              className="w-full p-2 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={u.isHomeroomTeacher}
+                              onChange={(e) =>
+                                updateUserCell(
+                                  index,
+                                  "isHomeroomTeacher",
+                                  e.target.checked
+                                )
+                              }
+                              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                              disabled={u.role !== "TEACHER"}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={u.isAdmin}
+                              onChange={(e) =>
+                                updateUserCell(
+                                  index,
+                                  "isAdmin",
+                                  e.target.checked
+                                )
+                              }
+                              className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                              disabled={u.role !== "TEACHER"}
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => removeUserRow(index)}
+                              className="text-red-600 dark:text-red-400 hover:underline"
+                            >
+                              {t("actions.delete")}
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+
+                  <button
+                    type="button"
+                    onClick={addUserRow}
+                    className="mt-2 px-4 py-2 text-green-700 dark:text-green-200 hover:underline"
+                  >
+                    {t("manageAccounts.action.addUser")}
+                  </button>
                 </div>
-              </div>
-            )}
-
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("manageAccounts.orFill")}
-            </p>
-
-            <form className="space-y-4" onSubmit={handleAddUser}>
-              <select
-                name="role"
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              >
-                <option value="STUDENT">
-                  {t("manageAccounts.roles.student")}
-                </option>
-                <option value="TEACHER">
-                  {t("manageAccounts.roles.teacher")}
-                </option>
-                <option value="ADMIN">{t("manageAccounts.roles.admin")}</option>
-              </select>
-              {selectedRole === "TEACHER" && (
-                <>
-                  <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={isHomeroomTeacher}
-                      onChange={(e) => setIsHomeroomTeacher(e.target.checked)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    {t("manageAccounts.homeroomTeacher")}
-                  </label>
-                  <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={isAdmin}
-                      onChange={(e) => setIsAdmin(e.target.checked)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    {t("manageAccounts.schoolStaff")}
-                  </label>
-                </>
+              ) : (
+                <form className="space-y-4" onSubmit={handleAddUser}>
+                  <input
+                    name="fullName"
+                    type="text"
+                    placeholder={t("manageAccounts.placeholders.fullName")}
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder={t("manageAccounts.placeholders.email")}
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                  <input
+                    name="numberPhone"
+                    type="text"
+                    placeholder={t("manageAccounts.placeholders.phone")}
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                  <input
+                    name="dob"
+                    type="date"
+                    placeholder={t("manageAccounts.placeholders.dob")}
+                    className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    required
+                  />
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-indigo-700 transition"
+                    >
+                      {t("common.save")}
+                    </button>
+                  </div>
+                </form>
               )}
+            </div>
+          </div>
+
+          {excelUsers.length > 0 && (
+            <div className="mt-4">
+              <label className="block mb-1 text-gray-700 dark:text-gray-400">
+                {t("manageAccounts.selectSchool")}
+              </label>
               <select
-                name="school"
                 value={selectedSchool || ""}
                 onChange={(e) =>
                   setSelectedSchool(
                     e.target.value ? Number(e.target.value) : null
                   )
                 }
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 
+                 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 required
               >
                 <option value="">{t("manageAccounts.selectSchool")}</option>
@@ -615,69 +892,28 @@ const ManageAccounts = () => {
                   </option>
                 ))}
               </select>
-              <input
-                name="fullName"
-                type="text"
-                placeholder={t("manageAccounts.placeholders.fullName")}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                required
-              />
-              <input
-                name="email"
-                type="email"
-                placeholder={t("manageAccounts.placeholders.email")}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                required
-              />
-              <input
-                name="numberPhone"
-                type="text"
-                placeholder={t("manageAccounts.placeholders.phone")}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-              <input
-                name="dob"
-                type="date"
-                placeholder={t("manageAccounts.placeholders.dob")}
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                required
-              />
-              <div className="flex justify-end gap-2 mt-4">
-                {/* <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                >
-                  {t("common.cancel")}
-                </button> */}
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-indigo-700 transition"
-                >
-                  {t("common.save")}
-                </button>
-              </div>
-            </form>
+            </div>
+          )}
 
-            {excelUsers.length > 0 && (
-              <div className="flex justify-end gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                >
-                  {t("common.cancel")}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSubmitExcelUsers}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-                >
-                  {t("common.save")}
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Nút Save khi upload Excel */}
+          {excelUsers.length > 0 && (
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitExcelUsers}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                {t("common.save")}
+              </button>
+            </div>
+          )}
         </Modal>
       )}
 
