@@ -13,6 +13,16 @@ body,
   @apply h-full;
 }
 
+:root {
+  --chart-text-color: #333;
+  --chart-grid-color: rgba(128, 128, 128, 0.2);
+}
+
+.dark {
+  --chart-text-color: #e5e7eb; /* gray-100 */
+  --chart-grid-color: rgba(255, 255, 255, 0.2);
+}
+
 /* @keyframes slideIn {
   0% {
     opacity: 0;
