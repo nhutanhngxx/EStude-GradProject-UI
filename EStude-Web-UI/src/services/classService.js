@@ -6,6 +6,8 @@ const endpoints = {
   getAllClasses: "/api/classes",
   getClassesBySchoolId: `/api/classes/school/{schoolId}`,
   updateClass: "/api/classes/{classId}",
+  addHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
+  updateHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
 };
 
 const classService = {

@@ -5,6 +5,7 @@ const endpoints = {
   getStudentById: "/api/students/{studentId}",
   getStudentsByClass: `/api/students/by-class/{classId}`,
   getClassByStudent: "/api/students/{studentId}/classes",
+  getStudentsBySchool: "/api/students/by-school/{schoolId}",
 };
 
 const studentService = {
@@ -93,6 +94,29 @@ const studentService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách lớp:", error);
+      return null;
+    }
+  },
+
+  getStudentsBySchool: async (schoolId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getStudentsBySchool.replace(
+          "{schoolId}",
+          schoolId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy danh sách học sinh thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách học sinh:", error);
       return null;
     }
   },
