@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useContext, useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Menu,
@@ -12,31 +12,37 @@ import {
 } from "lucide-react";
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
+import { ThemeContext } from "../../contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 export default function TeacherSidebar() {
   const [open, setOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode } = useContext(ThemeContext);
+  const { t, i18n } = useTranslation();
+  const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem("language");
+    if (savedLang && savedLang !== i18n.language) {
+      i18n.changeLanguage(savedLang);
+      setCurrentLang(savedLang);
+    }
+  }, [i18n]);
+
+  const toggleLanguage = () => {
+    const newLang = currentLang === "vi" ? "en" : "vi";
+    i18n.changeLanguage(newLang);
+    localStorage.setItem("language", newLang);
+    setCurrentLang(newLang);
+  };
+
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.admin === true;
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
   const menuItems = [
-    {
-      key: "overview",
-      name: "Tổng quan",
-      path: "/teacher/dashboard",
-      icon: <Home size={20} />,
-    },
+    { key: "overview", path: "/teacher/dashboard", icon: <Home size={20} /> },
     {
       key: "myClasses",
-      name: "Lớp giảng dạy",
       path: "/teacher/my-classes",
       icon: <GraduationCap size={20} />,
     },
@@ -44,13 +50,11 @@ export default function TeacherSidebar() {
       ? [
           {
             key: "manageClasses",
-            name: "Quản lý lớp học",
             path: "/teacher/classes",
             icon: <Clipboard size={20} />,
           },
           {
             key: "manageSubjects",
-            name: "Quản lý môn học",
             path: "/teacher/subjects",
             icon: <Book size={20} />,
           },
@@ -58,13 +62,11 @@ export default function TeacherSidebar() {
       : []),
     {
       key: "schedules",
-      name: "Lịch giảng dạy",
       path: "/teacher/schedules",
       icon: <FileText size={20} />,
     },
     {
       key: "notifications",
-      name: "Thông báo",
       path: "/teacher/notifications",
       icon: <Bell size={20} />,
     },
@@ -107,7 +109,11 @@ export default function TeacherSidebar() {
                 }
               >
                 {item.icon}
-                {open && <span className="hidden sm:inline">{item.name}</span>}
+                {open && (
+                  <span className="hidden sm:inline">
+                    {t(`sidebar.${item.key}`)}
+                  </span>
+                )}
               </NavLink>
             </li>
           ))}

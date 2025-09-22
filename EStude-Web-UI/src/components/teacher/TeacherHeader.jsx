@@ -1,43 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import SearchBar from "../common/SearchBar";
 import NotificationBell from "../common/NotificationBell";
 import UserMenu from "../common/UserMenu";
 import { Sun, Moon, Globe } from "lucide-react";
-import i18n from "../../i18n";
+import { ThemeContext } from "../../contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 const TeacherHeader = () => {
-  const [darkMode, setDarkMode] = useState(false);
-  const currentLang = i18n.language || "vi";
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+  const { i18n } = useTranslation();
+  const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
+    const savedLang = localStorage.getItem("language");
+    if (savedLang && savedLang !== i18n.language) {
+      i18n.changeLanguage(savedLang);
+      setCurrentLang(savedLang);
     }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
+  }, [i18n]);
 
   const toggleLanguage = () => {
     const newLang = currentLang === "vi" ? "en" : "vi";
     i18n.changeLanguage(newLang);
     localStorage.setItem("language", newLang);
+    setCurrentLang(newLang); // cập nhật state để re-render
   };
 
   return (
-    <header className="flex justify-between items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <SearchBar />
+    <header className="flex justify-end items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Toggle Dark Mode */}
         <button

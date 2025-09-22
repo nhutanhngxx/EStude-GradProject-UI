@@ -28,7 +28,11 @@
     "users": "Manage Users",
     "classes": "Manage Classes",
     "reports": "Analytics & Reports",
-    "notifications": "Send Notifications"
+    "notifications": "Send Notifications",
+    "myClasses": "My Classes",
+    "manageSubjects": "Manage Subjects",
+    "schedules": "Teaching Schedule",
+    "manageClasses": "Manage Classes"
   },
   "dashboard": {
     "overview": "Overview",
@@ -96,7 +100,12 @@
     "phone": "Phone Number",
     "dob": "Date of Birth",
     "actions": "Actions",
+    "action": {
+      "addUser": "Add User"
+    },
     "loginCode": "Login code",
+
+    "addSuccess": "Successfully added user.",
 
     "downloadTemplate": "Download sample Excel file to quickly add multiple schools:",
     "downloadHere": "Download template here",
@@ -136,12 +145,18 @@
     "schoolStaff": "School Staff",
     "selectSchool": "Select School",
 
+    "subject": "Subject",
+
     "placeholders": {
       "fullName": "Full name",
       "email": "Email",
       "phone": "Phone number",
-      "dob": "Date of birth"
+      "dob": "Date of birth",
+      "role": "Role",
+      "school": "School"
     },
+
+    "academicAffairs": "Academic Affairs",
 
     "addUserFailed": "Failed to add user. Please try again.",
     "importSuccess": "Successfully imported {{count}} users."
