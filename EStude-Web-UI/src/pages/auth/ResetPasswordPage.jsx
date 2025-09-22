@@ -11,8 +11,20 @@ export default function ResetPasswordPage() {
   const [otp, setOtp] = useState(otpFromState);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const calculatePasswordStrength = (password) => {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password)) score += 1;
+    if (/[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[!@#$%^&*]/.test(password)) score += 1;
+    return score;
+  };
 
   const handleReset = async (e) => {
     e.preventDefault();
@@ -20,6 +32,16 @@ export default function ResetPasswordPage() {
 
     if (newPassword !== confirmPassword) {
       setError("Mật khẩu mới và mật khẩu nhập lại không khớp.");
+      return;
+    }
+
+    const strongPasswordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/;
+
+    if (!strongPasswordRegex.test(newPassword)) {
+      setError(
+        "Mật khẩu yếu! Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
+      );
       return;
     }
 
@@ -71,14 +93,42 @@ export default function ResetPasswordPage() {
             className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-4 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
             required
           />
+
           <input
             type="password"
             placeholder="Mật khẩu mới"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-4 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            onChange={(e) => {
+              setNewPassword(e.target.value);
+              setPasswordStrength(calculatePasswordStrength(e.target.value));
+            }}
+            className="border border-gray-300 dark:border-gray-600 w-full p-3 rounded-lg mb-2 bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
             required
           />
+
+          {/* ✅ Strength Bar */}
+          <div className="h-2 w-full bg-gray-200 dark:bg-gray-600 rounded mb-1">
+            <div
+              className={`h-2 rounded transition-all duration-300`}
+              style={{
+                width: `${(passwordStrength / 5) * 100}%`,
+                backgroundColor:
+                  passwordStrength < 3
+                    ? "red"
+                    : passwordStrength < 5
+                    ? "orange"
+                    : "green",
+              }}
+            ></div>
+          </div>
+          <p className="text-xs mb-4">
+            {passwordStrength < 3
+              ? "Mật khẩu yếu"
+              : passwordStrength < 5
+              ? "Mật khẩu trung bình"
+              : "Mật khẩu mạnh"}
+          </p>
+
           <input
             type="password"
             placeholder="Nhập lại mật khẩu mới"

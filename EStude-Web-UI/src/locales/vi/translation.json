@@ -155,6 +155,7 @@
     "selectHomeroomTeacher": "-- Chọn giáo viên chủ nhiệm --",
     "cancel": "Hủy bỏ",
     "saveClass": "Lưu",
+    "classInfo": "Thông tin lớp học",
     "filters": {
       "current": "Đang diễn ra",
       "upcoming": "Sắp diễn ra",

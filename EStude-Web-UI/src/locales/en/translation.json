@@ -159,6 +159,7 @@
     "semesterNumber": "Semester Number",
     "cancel": "Cancel",
     "saveClass": "Save Class",
+    "classInfo": "Class Information",
     "filters": {
       "current": "Ongoing",
       "upcoming": "Upcoming",
