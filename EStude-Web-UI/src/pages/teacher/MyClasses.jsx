@@ -121,7 +121,7 @@ export default function MyClasses() {
   );
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Lớp giảng dạy</h1>
@@ -231,19 +231,19 @@ export default function MyClasses() {
 
                   {/* Body */}
                   <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 flex-1">
-                    <p className="flex items-center gap-2">
+                    {/* <p className="flex items-center gap-2">
                       <Users
                         size={16}
                         className="text-gray-400 dark:text-gray-500"
                       />
                       Sĩ số: <span className="font-medium">0</span>
-                    </p>
+                    </p> */}
                     <p className="flex items-center gap-2">
                       <Calendar
                         size={16}
                         className="text-gray-400 dark:text-gray-500"
                       />
-                      Thời gian:
+                      Thời gian:{" "}
                       {selectedTerm
                         ? `${formatDateVN(
                             selectedTerm.beginDate
