@@ -7,6 +7,7 @@ import teacherService from "../../services/teacherService";
 import subjectService from "../../services/subjectService";
 import StudentManagement from "./StudentManagement";
 import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 const Badge = ({ text, color }) => (
   <span
@@ -85,6 +86,7 @@ const ManageClasses = () => {
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
+  const [gradeLevel, setGradeLevel] = useState("GRADE_10");
   const [classSize, setClassSize] = useState(0);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -96,6 +98,9 @@ const ManageClasses = () => {
   const [editableSemesters, setEditableSemesters] = useState([
     { termNumber: 1, beginDate: "", endDate: "" },
   ]);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [classToDelete, setClassToDelete] = useState(null);
 
   // Toolbar states
   const [filterStatus, setFilterStatus] = useState("all");
@@ -234,8 +239,10 @@ const ManageClasses = () => {
       const classPayload = {
         classId: selectedClass?.classId,
         name,
+        gradeLevel,
         classSize,
         schoolId,
+        homeroomTeacherId: selectedTeacher || null,
         terms: editableSemesters
           .filter((sem) => sem.beginDate && sem.endDate)
           .map((sem) => {
@@ -261,6 +268,7 @@ const ManageClasses = () => {
         return;
       }
 
+      // Gán hoặc cập nhật môn học cho lớp
       if (selectedSubjects.length > 0) {
         for (const subj of selectedSubjects) {
           for (const term of classResult.terms) {
@@ -272,13 +280,17 @@ const ManageClasses = () => {
                     s.subjectId === subj.subjectId && s.termId === term.termId
                 )
             );
-            if (!exists) {
-              await classSubjectService.addClassSubject({
-                classId: classResult.classId,
-                subjectId: subj.subjectId,
-                teacherId: subj.teacherId ?? null,
-                termIds: [term.termId],
-              });
+
+            const payload = {
+              classSubjectId: subj.classSubjectId ?? undefined, // nếu có thì update
+              classId: classResult.classId,
+              subjectId: subj.subjectId,
+              teacherId: subj.teacherId ?? null,
+              termIds: [term.termId],
+            };
+
+            if (!exists || subj.classSubjectId) {
+              await classSubjectService.addClassSubject(payload);
             }
           }
         }
@@ -331,7 +343,7 @@ const ManageClasses = () => {
     });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-6 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
@@ -413,7 +425,10 @@ const ManageClasses = () => {
                       <span className="hidden sm:inline">Danh sách lớp</span>
                     </button>
                     <button
-                      onClick={() => openModal("delete", c)}
+                      onClick={() => {
+                        setClassToDelete(c);
+                        setConfirmOpen(true);
+                      }}
                       className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline"
                     >
                       <Trash2 size={16} />
@@ -425,6 +440,7 @@ const ManageClasses = () => {
           </tbody>
         </table>
       </div>
+
       {/* Modal Students */}
       {modalType === "students" && selectedClass && (
         <Modal
@@ -453,6 +469,23 @@ const ManageClasses = () => {
             >
               {/* Cột 1 */}
               <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
+                {/* Khối lớp */}
+                <select
+                  value={gradeLevel}
+                  onChange={(e) => setGradeLevel(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
+             border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+             focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                >
+                  <option value="GRADE_6">Khối 6</option>
+                  <option value="GRADE_7">Khối 7</option>
+                  <option value="GRADE_8">Khối 8</option>
+                  <option value="GRADE_9">Khối 9</option>
+                  <option value="GRADE_10">Khối 10</option>
+                  <option value="GRADE_11">Khối 11</option>
+                  <option value="GRADE_12">Khối 12</option>
+                </select>
+
                 {/* Tên lớp */}
                 <input
                   type="text"
@@ -672,28 +705,27 @@ const ManageClasses = () => {
         </Modal>
       )}
 
-      {/* Modal Delete */}
-      {modalType === "delete" && selectedClass && (
-        <Modal title="Xác nhận xóa" onClose={closeModal}>
-          <p className="text-gray-700 dark:text-gray-200">
-            Bạn có chắc chắn muốn xóa <strong>{selectedClass.name}</strong>?
-          </p>
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={() => handleDelete(selectedClass.classId)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-500 transition"
-            >
-              Xóa
-            </button>
-          </div>
-        </Modal>
-      )}
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Xác nhận xóa"
+        message={
+          classToDelete
+            ? `Bạn có chắc chắn muốn xóa lớp ${classToDelete.name}?`
+            : ""
+        }
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          if (!classToDelete) return;
+          try {
+            await handleDelete(classToDelete.classId);
+            setConfirmOpen(false);
+            setClassToDelete(null);
+          } catch (error) {
+            console.error(error);
+            setConfirmOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -28,6 +28,8 @@ export default function AssignmentListModal({
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [gradeInput, setGradeInput] = useState("");
   const [commentInput, setCommentInput] = useState("");
+  const [selectedAssignmentDetail, setSelectedAssignmentDetail] =
+    useState(null);
 
   useEffect(() => {
     if (selectedSubmission) {
@@ -104,6 +106,13 @@ export default function AssignmentListModal({
     }
   };
 
+  const openAssignmentDetail = (assignment) => {
+    console.log("view detail assignment: ", assignment);
+
+    setSelectedAssignmentDetail(assignment);
+    setViewMode("DETAIL_ASSIGNMENT");
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -112,12 +121,17 @@ export default function AssignmentListModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
-            <BookOpen className="text-blue-600 dark:text-blue-400" size={20} />
+            <BookOpen
+              className="text-green-600 dark:text-green-400"
+              size={20}
+            />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               {viewMode === "ASSIGNMENTS"
                 ? "Danh sách bài tập/bài thi"
                 : viewMode === "SUBMISSIONS"
                 ? `Bài nộp - ${selectedAssignment?.title}`
+                : viewMode === "DETAIL_ASSIGNMENT"
+                ? `Chi tiết bài tập – ${selectedAssignmentDetail?.title}`
                 : `Chi tiết bài nộp – ${selectedSubmission?.studentName}`}
             </h2>
           </div>
@@ -165,7 +179,9 @@ export default function AssignmentListModal({
                             : a.type === "EXAM"
                             ? "BÀI THI"
                             : a.type}{" "}
-                          | Hạn nộp:{" "}
+                        </p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Hạn nộp:{" "}
                           {a.dueDate
                             ? new Date(a.dueDate).toLocaleString("vi-VN", {
                                 day: "2-digit",
@@ -177,12 +193,21 @@ export default function AssignmentListModal({
                             : "-"}
                         </p>
                       </div>
-                      <button
-                        className="text-green-600 dark:text-green-200 hover:underline mt-2 sm:mt-0"
-                        onClick={() => openSubmissionList(a)}
-                      >
-                        Quản lý bài nộp
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                        <button
+                          className="text-green-600 dark:text-green-200 hover:underline"
+                          onClick={() => openSubmissionList(a)}
+                        >
+                          Quản lý bài nộp
+                        </button>
+
+                        <button
+                          className="text-green-900 dark:text-blue-200 hover:underline"
+                          onClick={() => openAssignmentDetail(a)}
+                        >
+                          Xem chi tiết bài tập
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -291,6 +316,97 @@ export default function AssignmentListModal({
                   </table>
                 </div>
               )}
+            </>
+          ) : viewMode === "DETAIL_ASSIGNMENT" && selectedAssignmentDetail ? (
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={() => setViewMode("ASSIGNMENTS")}
+                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                >
+                  <ArrowLeft size={18} /> Quay lại danh sách bài tập
+                </button>
+              </div>
+
+              <div className="space-y-6 overflow-y-auto max-h-[60vh] pr-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    {selectedAssignmentDetail.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Mô tả: {selectedAssignmentDetail.description || "-"}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Hạn nộp:{" "}
+                    {selectedAssignmentDetail.dueDate
+                      ? new Date(
+                          selectedAssignmentDetail.dueDate
+                        ).toLocaleString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "-"}
+                  </p>
+                  {selectedAssignmentDetail.attachmentUrl && (
+                    <a
+                      href={selectedAssignmentDetail.attachmentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      Xem file đính kèm
+                    </a>
+                  )}
+                  <button
+                    className="text-green-600 dark:text-green-200 hover:underline mt-2"
+                    onClick={() => openSubmissionList(selectedAssignmentDetail)}
+                  >
+                    Quản lý bài nộp
+                  </button>
+                </div>
+
+                {/* Hiển thị các câu hỏi */}
+                {selectedAssignmentDetail.questions?.length > 0 && (
+                  <div className="space-y-4">
+                    <h4 className="text-md font-semibold text-gray-900 dark:text-gray-100">
+                      Danh sách câu hỏi
+                    </h4>
+                    {selectedAssignmentDetail.questions.map((q, idx) => (
+                      <div
+                        key={q.questionId}
+                        className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800"
+                      >
+                        <p className="font-medium text-gray-900 dark:text-gray-100">
+                          {idx + 1}. {q.questionText} ({q.points} điểm)
+                        </p>
+
+                        {/* Các lựa chọn với A, B, C, D */}
+                        <ul className="mt-2 space-y-1 text-gray-700 dark:text-gray-300">
+                          {q.options.map((opt, index) => {
+                            const label = String.fromCharCode(65 + index); // 65 = 'A'
+                            return (
+                              <li
+                                key={opt.optionId}
+                                className={`flex gap-2 ${
+                                  opt.isCorrect
+                                    ? "font-semibold text-green-700 dark:text-green-300"
+                                    : ""
+                                }`}
+                              >
+                                <span className="font-medium">{label}.</span>
+                                <span>{opt.optionText}</span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
