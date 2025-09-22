@@ -12,7 +12,7 @@ export default function ConfirmModal({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 max-w-md w-full animate-fadeIn">
+      <div className="bg-white dark:bg-gray-700 rounded-2xl shadow-xl p-6 max-w-md w-full animate-fadeIn">
         {/* Icon + Title */}
         <div className="flex flex-col items-center text-center">
           <div className="w-14 h-14 flex items-center justify-center rounded-full bg-yellow-100 text-yellow-600 mb-3">
