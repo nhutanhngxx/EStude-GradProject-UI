@@ -10,9 +10,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
 import classSubjectService from "../services/classSubjectService";
@@ -22,77 +20,10 @@ import ProgressBar from "../components/common/ProgressBar";
 import StudyOverviewCard from "../components/common/StudyOverviewCard";
 import TodayScheduleCard from "../components/common/TodayScheduleCard";
 import RecentAssignmentsCard from "../components/common/RecentAssignmentsCard";
+import studentStudyService from "../services/studentStudyService";
 
-const mockStudentData = {
-  gpa: 8.7,
-  rank: 5,
-  totalStudents: 42,
-  passedCredits: 85,
-  requiredCredits: 120,
-  subjectsAtRisk: 2,
-  avatar: "https://i.pravatar.cc/150?img=12",
-  class: { classId: 10, name: "12A3", term: "2025-2026", classSize: 42 },
-};
-
-const classSubject = {
-  classSubjectId: 1001,
-  subject: { name: "Toán - Hình học không gian" },
-  teacher: { fullName: "Nguyễn Văn A" },
-  schedule: [
-    {
-      scheduleId: 1,
-      date: "2025-08-24",
-      startPeriod: "07:30",
-      endPeriod: "09:00",
-      room: "P.302",
-      status: "SCHEDULED",
-    },
-    {
-      scheduleId: 2,
-      date: "2025-08-24",
-      startPeriod: "09:15",
-      endPeriod: "10:45",
-      room: "P.204",
-      status: "COMPLETED",
-    },
-  ],
-};
-
-const attendanceRecord = [
-  { id: 1, subject: "Toán", present: 12, late: 1, absent: 0, total: 13 },
-  { id: 2, subject: "Vật lý", present: 11, late: 0, absent: 2, total: 13 },
-  { id: 3, subject: "Hóa học", present: 10, late: 2, absent: 1, total: 13 },
-];
-
-const recentAssignments = [
-  {
-    id: 1,
-    name: "Bài tập 1",
-    subject: "Toán",
-    dueDate: "2025-09-15",
-    status: "pending",
-  },
-  {
-    id: 2,
-    name: "Bài tập 2",
-    subject: "Vật lý",
-    dueDate: "2025-09-14",
-    status: "submitted",
-  },
-  {
-    id: 3,
-    name: "Bài tập 3",
-    subject: "Hóa học",
-    dueDate: "2025-09-13",
-    status: "late",
-  },
-];
-
-const quickActions = [
-  { id: "qa1", label: "Môn học", iconName: "menu-book" },
-  { id: "qa2", label: "Nộp bài", iconName: "file-upload" },
-  { id: "qa3", label: "Lịch học", iconName: "calendar-today" },
-];
+import bannerLight from "../assets/images/banner-light.png";
+import UserHeader from "../components/common/UserHeader";
 
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -104,6 +35,8 @@ export default function HomeStudentScreen({ navigation }) {
     percent: 0,
   });
   const [loadingAttendance, setLoadingAttendance] = useState(true);
+  const [overview, setOverview] = useState(null);
+  const [loadingOverview, setLoadingOverview] = useState(true);
 
   useEffect(() => {
     const fetchAssignments = async () => {
@@ -114,11 +47,9 @@ export default function HomeStudentScreen({ navigation }) {
         );
 
         if (Array.isArray(assignments)) {
-          // Sắp xếp theo dueDate tăng dần
           const sorted = assignments.sort(
             (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
           );
-          // Lấy 3 bài tập gần nhất
           setRecentAssignments(sorted.slice(0, 3));
         } else {
           setRecentAssignments([]);
@@ -181,44 +112,48 @@ export default function HomeStudentScreen({ navigation }) {
     fetchAttendance();
   }, [user]);
 
-  // Avatar: lấy từ user nếu có, nếu không thì lấy mock
-  const avatarUri = user.avatarPath ? user.avatarPath : mockStudentData.avatar;
+  useEffect(() => {
+    const fetchOverview = async () => {
+      setLoadingOverview(true);
+      try {
+        if (user?.userId) {
+          const overviewData = await studentStudyService.getAcademicRecords(
+            user.userId
+          );
+          if (overviewData) {
+            setOverview({
+              gpa: overviewData.averageScore ?? 0,
+              rank: overviewData.rank ?? "-",
+              totalStudents: overviewData.totalStudents ?? "-",
+              passedCredits: overviewData.completedSubjects ?? 0,
+              requiredCredits: overviewData.totalSubjects ?? 0,
+              submissionRate: (overviewData.submissionRate ?? 0) * 100,
+              attendanceRate: (overviewData.attendanceRate ?? 0) * 100,
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Load overview failed:", err);
+      } finally {
+        setLoadingOverview(false);
+      }
+    };
+    fetchOverview();
+  }, [user]);
 
-  // Dữ liệu học tập
-  const gpa = mockStudentData.gpa;
-  const rank = mockStudentData.rank;
-  const totalStudents = mockStudentData.totalStudents;
-  const passedCredits = mockStudentData.passedCredits;
-  const requiredCredits = mockStudentData.requiredCredits;
-  const creditPercent = Math.round((passedCredits / requiredCredits) * 100);
+  const todayPlan = [];
 
-  // Lịch học hôm nay từ schedule mock
-  const todayPlan = classSubject.schedule.map((s) => ({
-    id: s.scheduleId.toString(),
-    time: `${s.startPeriod} - ${s.endPeriod}`,
-    subject: classSubject.subject.name,
-    room: s.room,
-    status: s.status === "COMPLETED" ? "in_progress" : "upcoming",
-  }));
+  const quickActions = [
+    { id: "qa1", label: "Môn học", iconName: "menu-book" },
+    { id: "qa2", label: "Nộp bài", iconName: "file-upload" },
+    { id: "qa3", label: "Lịch học", iconName: "calendar-today" },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView
-        style={styles.container}
-        // contentContainerStyle={{ paddingBottom: 24 }}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>ESTUDE</Text>
-            <Text style={styles.subtitle}>Xin chào, {user.fullName} 👋</Text>
-          </View>
-          {/* <Image
-              source={{ uri: "https://i.pravatar.cc/100?img=12" }}
-              style={styles.avatar}
-            /> */}
-        </View>
+      <ScrollView style={styles.container}>
+        <UserHeader />
 
         {/* Tác vụ nhanh */}
         <View style={styles.card}>
@@ -262,20 +197,31 @@ export default function HomeStudentScreen({ navigation }) {
                 style={styles.quickIcon}
               />
               <Text style={styles.quickLabel}>Tất cả</Text>
-              {/* <Text style={styles.quickHint}>Xem thêm</Text> */}
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Tổng quan học tập */}
-        <StudyOverviewCard
-          gpa={gpa}
-          rank={rank}
-          totalStudents={totalStudents}
-          passedCredits={passedCredits}
-          requiredCredits={requiredCredits}
-          onPressDetail={() => navigation.navigate("DetailStudy")}
-        />
+        {loadingOverview ? (
+          <ActivityIndicator
+            size="large"
+            color="#00cc66"
+            style={{ marginTop: 16 }}
+          />
+        ) : overview ? (
+          <StudyOverviewCard
+            gpa={overview.gpa}
+            rank={overview.rank}
+            totalStudents={overview.totalStudents}
+            passedCredits={overview.passedCredits}
+            requiredCredits={overview.requiredCredits}
+            submissionRate={overview.submissionRate}
+            attendanceRate={overview.attendanceRate}
+            onPressDetail={() => navigation.navigate("DetailStudy")}
+          />
+        ) : (
+          <Text style={styles.cardTitle}>Không có dữ liệu học tập</Text>
+        )}
 
         {loadingAssignments ? (
           <ActivityIndicator
@@ -291,18 +237,17 @@ export default function HomeStudentScreen({ navigation }) {
               name: a.title,
               subject: a.className,
               dueDate: a.dueDate,
-              // status: a.isExam ? "exam" : "pending",
             }))}
             onPressDetail={() => navigation.navigate("NopBai")}
           />
         )}
 
         {/* Lịch học hôm nay */}
-        <TodayScheduleCard
+        {/* <TodayScheduleCard
           title="Lịch học hôm nay"
           scheduleList={todayPlan}
           onPressDetail={() => navigation.navigate("ScheduleList")}
-        />
+        /> */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -317,19 +262,24 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
   subtitle: { fontSize: 15, color: "#555" },
   avatar: { width: 50, height: 50, borderRadius: 25 },
-  greeting: {
-    fontSize: 16,
-    color: "#333",
+  banner: {
+    width: 200,
+    height: 60,
+    resizeMode: "contain",
+    marginBottom: 4,
+    alignSelf: "flex-start",
+    marginLeft: -20,
   },
+
   highlight: {
     fontWeight: "bold",
   },
