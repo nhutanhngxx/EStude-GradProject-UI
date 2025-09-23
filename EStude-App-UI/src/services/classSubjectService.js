@@ -74,41 +74,37 @@ const classSubjectService = {
 
   getClassSubjectsByStudentWithDetails: async ({ studentId }) => {
     try {
-      // 1. Lấy classSubject của học sinh
       const studentSubjects =
         await classSubjectService.getClassSubjectsByStudent({ studentId });
       if (!Array.isArray(studentSubjects) || studentSubjects.length === 0)
         return [];
 
-      // 2. Lấy tất cả classSubject chi tiết
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
       if (!Array.isArray(allClassSubjects)) return [];
 
-      // 3. Map sang dạng flatten giống log đầu tiên
-      const detailedSubjects = studentSubjects
-        .map((s) => {
-          const detail = allClassSubjects.find(
-            (cs) => cs.classSubjectId === s.classSubjectId
-          );
-          if (!detail) return null;
+      const detailedSubjects = studentSubjects.map((s) => {
+        const detail = allClassSubjects.find(
+          (cs) => cs.classSubjectId === s.classSubjectId
+        );
 
-          return {
-            classSubjectId: detail.classSubjectId,
-            beginDate: detail.clazz?.beginDate || null,
-            endDate: detail.clazz?.endDate || null,
-            clazz: {
-              classId: detail.clazz?.classId,
-              name: detail.clazz?.name,
-              term: detail.clazz?.term,
-            },
-            description: `${detail.name} - ${detail.clazz?.name || ""}`,
-            name: detail.subject?.name || detail.name,
-            semester: detail.clazz?.term || "",
-            subjectId: detail.subject?.subjectId || null,
-            teacherName: detail.teacher?.fullName || "",
-          };
-        })
-        .filter(Boolean);
+        return {
+          classSubjectId: s.classSubjectId,
+          beginDate: s.beginDate,
+          endDate: s.endDate,
+          clazz: {
+            classId: s.classId,
+            name: s.className,
+            term: { termId: s.termId, name: s.termName },
+          },
+          description: `${detail?.subject?.name || s.subjectName} - ${
+            s.className
+          }`,
+          name: detail?.subject?.name || s.subjectName,
+          semester: s.termName,
+          subjectId: detail?.subject?.subjectId || s.subjectId,
+          teacherName: detail?.teacher?.fullName || s.teacherName,
+        };
+      });
 
       return detailedSubjects;
     } catch (error) {
