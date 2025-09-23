@@ -15,6 +15,7 @@ import aiService from "../services/aiService";
 import { useToast } from "../contexts/ToastContext";
 import { AuthContext } from "../contexts/AuthContext";
 import AILoadingIntro from "../components/common/AILoadingIntro";
+import AIHeader from "../components/common/AIHeader";
 
 export default function AIDashboardScreen() {
   const { user } = useContext(AuthContext);
@@ -40,7 +41,7 @@ export default function AIDashboardScreen() {
       setSubjectAnalysis(subj?.detailedAnalysis?.data || null);
       setSemesterAnalysis(sem || null);
     } catch (err) {
-      showToast("Không thể tải dữ liệu AI", "error");
+      showToast("Không thể tải dữ liệu AI", { type: "error" });
     } finally {
       setLoadingIntro(false);
     }
@@ -119,22 +120,27 @@ export default function AIDashboardScreen() {
           contentContainerStyle={{ paddingBottom: 32 }}
         >
           {/* Header */}
-          <View style={styles.header}>
+          {/* <View style={styles.header}>
             <View>
               <Text style={styles.brand}>AI ESTUDE</Text>
               <Text style={styles.subtitle}>Phân tích & dự đoán học tập</Text>
             </View>
-            {/* <Image
-              source={{ uri: "https://i.pravatar.cc/100?img=12" }}
-              style={styles.avatar}
-            /> */}
-          </View>
+          </View> */}
 
-          {/* Button dự đoán */}
-          <TouchableOpacity style={styles.predictBtn} onPress={handlePredict}>
-            <Ionicons name="sparkles" size={18} color="#fff" />
-            <Text style={styles.predictBtnText}> DỰ ĐOÁN BẰNG AI</Text>
-          </TouchableOpacity>
+          <AIHeader />
+
+          {subjectAnalysis && (
+            <>
+              {/* Button dự đoán */}
+              <TouchableOpacity
+                style={styles.predictBtn}
+                onPress={handlePredict}
+              >
+                <Ionicons name="sparkles" size={18} color="#fff" />
+                <Text style={styles.predictBtnText}> DỰ ĐOÁN BẰNG AI</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Subject Predictions */}
           {subjectAnalysis?.predictions && (
