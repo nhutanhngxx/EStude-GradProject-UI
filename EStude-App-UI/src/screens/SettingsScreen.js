@@ -26,14 +26,14 @@ export default function SettingsScreen({ navigation }) {
         onPress: async () => {
           try {
             await logout(); // Xóa token & user, gọi API
-            showToast("Đăng xuất thành công", "success");
+            showToast("Đăng xuất thành công", { type: "success" });
             navigation.reset({
               index: 0,
               routes: [{ name: "Login" }],
             });
           } catch (err) {
             console.log("Logout error:", err);
-            showToast("Đăng xuất thất bại", "error");
+            showToast("Đăng xuất thất bại", { type: "error" });
           }
         },
       },
