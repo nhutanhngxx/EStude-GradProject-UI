@@ -43,11 +43,11 @@ export default function AdminSidebar() {
       path: "/admin/classes",
       icon: <GraduationCap size={20} />,
     },
-    {
-      key: "reports",
-      path: "/admin/statistics-reports",
-      icon: <FileBarChart size={20} />,
-    },
+    // {
+    //   key: "reports",
+    //   path: "/admin/statistics-reports",
+    //   icon: <FileBarChart size={20} />,
+    // },
     {
       key: "notifications",
       path: "/admin/notifications",
