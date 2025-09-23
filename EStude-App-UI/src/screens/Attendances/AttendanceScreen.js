@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Platform,
+  Image,
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
 import Dropdown from "../../components/common/Dropdown";
@@ -17,6 +18,8 @@ import classSubjectService from "../../services/classSubjectService";
 import ProgressBar from "../../components/common/ProgressBar";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AttendanceOverview from "../../components/common/AttendanceOverview";
+import bannerLight from "../../assets/images/banner-light.png";
+import UserHeader from "../../components/common/UserHeader";
 
 export default function AttendanceScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -92,6 +95,8 @@ export default function AttendanceScreen({ navigation }) {
         await classSubjectService.getClassSubjectsByStudentWithDetails({
           studentId: user?.userId,
         });
+
+      // console.log("subjectsData:", subjectsData);
 
       if (!subjectsData || !Array.isArray(subjectsData)) {
         setSubjects([]);
@@ -294,17 +299,7 @@ export default function AttendanceScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
       <ScrollView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>ESTUDE</Text>
-            <Text style={styles.subtitle}>Xin chào, {user.fullName} 👋</Text>
-          </View>
-          {/* <Image
-              source={{ uri: "https://i.pravatar.cc/100?img=12" }}
-              style={styles.avatar}
-            /> */}
-        </View>
+        <UserHeader />
 
         {/* Tổng quan */}
         <AttendanceOverview totalAttendance={totalAttendance} />
@@ -314,19 +309,21 @@ export default function AttendanceScreen({ navigation }) {
           <Text style={styles.cardTitle}>Điểm danh gần đây</Text>
 
           <View style={styles.filterRow}>
-            <View style={[styles.dropdownWrapper, { width: "25%" }]}>
-              <Dropdown
-                options={activityOptions}
-                selected={selectedActivity}
-                onSelect={setSelectedActivity}
-              />
-            </View>
-            <View style={[styles.dropdownWrapper, { width: "70%" }]}>
-              <Dropdown
-                options={filters}
-                selected={selectedFilter}
-                onSelect={setSelectedFilter}
-              />
+            <View style={{ flexDirection: "row", flex: 1, gap: 5 }}>
+              <View style={[styles.dropdownWrapper]}>
+                <Dropdown
+                  options={activityOptions}
+                  selected={selectedActivity}
+                  onSelect={setSelectedActivity}
+                />
+              </View>
+              <View style={[styles.dropdownWrapper]}>
+                <Dropdown
+                  options={filters}
+                  selected={selectedFilter}
+                  onSelect={setSelectedFilter}
+                />
+              </View>
             </View>
 
             {/* Lọc theo thời gian */}
@@ -412,9 +409,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
   subtitle: { fontSize: 15, color: "#555" },
   avatar: { width: 50, height: 50, borderRadius: 25 },
+  banner: {
+    width: 200,
+    height: 60,
+    resizeMode: "contain",
+    marginBottom: 4,
+    alignSelf: "flex-start",
+    marginLeft: -20,
+  },
 
   card: {
     backgroundColor: "#fff",

@@ -28,12 +28,12 @@ export default function AttendanceDetailScreen({ route }) {
       );
       if (res) {
         setSession({ ...session, status: "PRESENT" });
-        showToast("Điểm danh thành công", "success");
+        showToast("Điểm danh thành công", { type: "success" });
       } else {
-        showToast("Điểm danh thất bại", "error");
+        showToast("Điểm danh thất bại", { type: "error" });
       }
     } catch (err) {
-      showToast("Có lỗi xảy ra", "error");
+      showToast("Có lỗi xảy ra", { type: "error" });
     } finally {
       setLoading(false);
     }
