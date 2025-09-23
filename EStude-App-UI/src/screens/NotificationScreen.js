@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-// import { SafeAreaView } from "react-native-safe-area-context";
+import { AuthContext } from "../contexts/AuthContext";
+import UserHeader from "../components/common/UserHeader";
 
 const user = {
   name: "Nguyễn Nhựt Anh",
@@ -18,7 +19,15 @@ const user = {
 };
 
 export default function NotificationScreen() {
+  const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Tất cả");
+  const avatarUri = user?.avatarPath
+    ? { uri: user.avatarPath }
+    : {
+        uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          user?.fullName || user?.username || "Unknown"
+        )}&background=random&size=128`,
+      };
 
   const tabs = ["Tất cả", "Bài tập", "Hệ thống", "Giáo viên"];
 
@@ -82,19 +91,7 @@ export default function NotificationScreen() {
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>EStude</Text>
-            <Text style={styles.greeting}>
-              Xin chào, <Text style={styles.highlight}>{user.name}</Text> 👋
-            </Text>
-            <Text style={styles.subGreeting}>
-              Lớp {user.grade} • Học tốt mỗi ngày
-            </Text>
-          </View>
-          {/* <Image source={{ uri: user.avatar }} style={styles.avatar} /> */}
-        </View>
+        <UserHeader />
 
         {/* Main Content */}
         <ScrollView style={styles.main}>
@@ -154,17 +151,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  brand: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#00cc66",
-  },
+  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
+  subtitle: { fontSize: 15, color: "#555" },
+  avatar: { width: 50, height: 50, borderRadius: 25 },
   greeting: {
     fontSize: 16,
     color: "#333",
@@ -176,11 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-  },
+
   main: {
     flex: 1,
     marginTop: 10,

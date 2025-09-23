@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,9 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import SubjectListScreen from "../screens/Subjects/SubjectListScreen";
+import studentStudyService from "../services/studentStudyService";
+
+const encodeURIComponentSafe = (str) => encodeURIComponent(str || "Unknown");
 
 export default function ProfileScreen({ navigation }) {
   const { user } = useContext(AuthContext);
@@ -23,6 +26,7 @@ export default function ProfileScreen({ navigation }) {
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState(user?.email || "");
   const [activeTab, setActiveTab] = useState("Tổng quan");
+  const [academicRecords, setAcademicRecords] = useState(null);
   const tabs = ["Tổng quan", "Các môn học", "Hoạt động"];
 
   const handleSave = () => {
@@ -47,6 +51,26 @@ export default function ProfileScreen({ navigation }) {
     },
   ];
 
+  const avatarSource = user?.avatarPath
+    ? { uri: user.avatarPath }
+    : {
+        uri: `https://ui-avatars.com/api/?name=${encodeURIComponentSafe(
+          user?.fullName || user?.username || "Unknown"
+        )}&background=random&size=128`,
+      };
+
+  useEffect(() => {
+    const fetchAcademicRecords = async () => {
+      if (user?.userId) {
+        const records = await studentStudyService.getAcademicRecords(
+          user.userId
+        );
+        setAcademicRecords(records);
+      }
+    };
+    fetchAcademicRecords();
+  }, [activeTab]);
+
   return (
     <SafeAreaView
       style={{
@@ -64,16 +88,19 @@ export default function ProfileScreen({ navigation }) {
       >
         <View style={styles.profileCard}>
           <Image
-            source={require("../assets/images/icon.png")}
+            source={avatarSource}
             style={styles.avatar}
+            onError={(e) =>
+              console.log("Tải ảnh đại diện thất bại:", e.nativeEvent.error)
+            }
           />
           <View style={{ flex: 1, justifyContent: "space-between", gap: 4 }}>
-            <Text style={styles.name}>{user?.fullName || "N/A"}</Text>
-            <Text style={styles.infoText}>
-              {user?.school?.schoolName || "N/A"}
+            <Text style={styles.name}>{user?.fullName || "-"}</Text>
+            <Text style={[styles.infoText, { fontSize: 12 }]}>
+              {user?.school?.schoolName || "-"}
             </Text>
-            <Text style={styles.infoText}>
-              Mã đăng nhập: {user?.studentCode || "N/A"}
+            <Text style={[styles.infoText, { fontSize: 12 }]}>
+              Mã đăng nhập: {user?.studentCode || "-"}
             </Text>
           </View>
           <TouchableOpacity
@@ -81,23 +108,26 @@ export default function ProfileScreen({ navigation }) {
             onPress={() => navigation.navigate("Settings")}
           >
             <Icon name="settings-outline" size={24} color="#333" />
-            {/* <Text style={styles.settingsText}>Cài đặt</Text> */}
           </TouchableOpacity>
         </View>
 
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>3.85</Text>
+            <Text style={styles.statValue}>
+              {academicRecords?.averageScore?.toFixed(2) || "-"}
+            </Text>
             <Text style={styles.statLabel}>GPA</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>#5</Text>
-            <Text style={styles.statLabel}>Class Rank</Text>
+            <Text style={styles.statValue}>{academicRecords?.rank || "-"}</Text>
+            <Text style={styles.statLabel}>Xếp hạng</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>12</Text>
-            <Text style={styles.statLabel}>Achievements</Text>
+            <Text style={styles.statValue}>
+              {academicRecords?.totalSubjects || "-"}
+            </Text>
+            <Text style={styles.statLabel}>Tổng số môn</Text>
           </View>
         </View>
 
@@ -131,29 +161,6 @@ export default function ProfileScreen({ navigation }) {
             contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
             showsVerticalScrollIndicator={false}
           >
-            {/* Card Thông tin cá nhân */}
-            {/* <View style={styles.cardContainer}>
-              <Text style={styles.cardTitle}>Thông tin cá nhân</Text>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Ngày sinh</Text>
-                <Text style={styles.infoValue}>
-                  {user?.dob
-                    ? new Date(user.dob).toLocaleDateString("en-GB")
-                    : "Chưa có"}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{user?.email || "Chưa có"}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Số điện thoại</Text>
-                <Text style={styles.infoValue}>
-                  {user?.numberPhone || "Chưa có"}
-                </Text>
-              </View>
-            </View> */}
-
             <View style={styles.cardContainer}>
               {/* Header với tiêu đề và nút chỉnh sửa */}
               <View style={styles.cardHeader}>
@@ -194,7 +201,9 @@ export default function ProfileScreen({ navigation }) {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Số điện thoại</Text>
                 <Text style={styles.infoValue}>
-                  {user?.numberPhone || "Chưa có"}
+                  {user?.numberPhone
+                    ? user.numberPhone.replace(/\d(?=\d{2})/g, "*")
+                    : "Chưa có"}
                 </Text>
               </View>
 
@@ -214,34 +223,46 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.cardTitle}>Tóm tắt học tập</Text>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>3.7</Text>
+                  <Text style={styles.summaryValue}>
+                    {academicRecords?.averageScore?.toFixed(2) || "-"}
+                  </Text>
                   <Text style={styles.summaryLabel}>GPA hiện tại</Text>
                 </View>
                 <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>#15</Text>
+                  <Text style={styles.summaryValue}>
+                    {academicRecords?.rank || "-"}
+                  </Text>
                   <Text style={styles.summaryLabel}>Xếp hạng lớp</Text>
                 </View>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Ngày nhập học</Text>
+                <Text style={styles.infoLabel}>Tổng số môn học</Text>
                 <Text style={styles.infoValue}>
-                  {user?.enrollmentDate
-                    ? new Date(user.enrollmentDate).toLocaleDateString("en-GB")
-                    : "Chưa có"}
+                  {academicRecords?.totalSubjects || "-"}
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Dự kiến tốt nghiệp</Text>
-                <Text style={styles.infoValue}>Chưa có</Text>
+                <Text style={styles.infoLabel}>Môn học đã hoàn thành</Text>
+                <Text style={styles.infoValue}>
+                  {academicRecords?.completedSubjects || "-"}
+                </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Sĩ số lớp</Text>
-                <Text style={styles.infoValue}>120 học sinh</Text>
+                <Text style={styles.infoLabel}>Tỷ lệ nộp bài</Text>
+                <Text style={styles.infoValue}>
+                  {academicRecords?.submissionRate != null
+                    ? `${(academicRecords.submissionRate * 100).toFixed(2)}%`
+                    : "-"}
+                </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Tiến trình xếp hạng</Text>
-                <Text style={styles.infoValue}>Top 13% của lớp</Text>
+                <Text style={styles.infoLabel}>Tỷ lệ đi học</Text>
+                <Text style={styles.infoValue}>
+                  {academicRecords?.attendanceRate != null
+                    ? `${(academicRecords.attendanceRate * 100).toFixed(2)}%`
+                    : "-"}
+                </Text>
               </View>
             </View>
           </View>
