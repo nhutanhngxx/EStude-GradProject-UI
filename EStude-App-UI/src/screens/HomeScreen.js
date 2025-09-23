@@ -128,7 +128,7 @@ export default function HomeStudentScreen({ navigation }) {
               passedCredits: overviewData.completedSubjects ?? 0,
               requiredCredits: overviewData.totalSubjects ?? 0,
               submissionRate: (overviewData.submissionRate ?? 0) * 100,
-              attendanceRate: (overviewData.attendanceRate ?? 0) * 100,
+              attendanceRate: overviewData.attendanceRate ?? 0,
             });
           }
         }

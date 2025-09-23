@@ -17,7 +17,7 @@ export default function StudyOverviewCard({
       ? Math.round((passedCredits / requiredCredits) * 100)
       : 0;
   const submissionPercent = Math.round(submissionRate * 100);
-  const attendancePercent = Math.round(attendanceRate * 100);
+  const attendancePercent = Math.round(attendanceRate);
 
   return (
     <View style={styles.card}>

@@ -260,7 +260,7 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.infoLabel}>Tỷ lệ đi học</Text>
                 <Text style={styles.infoValue}>
                   {academicRecords?.attendanceRate != null
-                    ? `${(academicRecords.attendanceRate * 100).toFixed(2)}%`
+                    ? `${academicRecords.attendanceRate.toFixed(2)}%`
                     : "-"}
                 </Text>
               </View>

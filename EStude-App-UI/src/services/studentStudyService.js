@@ -4,6 +4,7 @@ import config from "../configs/config";
 
 const endpoints = {
   academicRecords: "/api/statistics/student/{studentId}",
+  allSubjectGradesOfStudent: "/api/subject-grades/student/{studentId}",
 };
 
 const studentStudyService = {
@@ -55,6 +56,29 @@ const studentStudyService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy học lực:", error);
+      return null;
+    }
+  },
+
+  getAllSubjectGradesOfStudent: async (studentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.allSubjectGradesOfStudent.replace(
+          "{studentId}",
+          studentId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy điểm thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy điểm:", error);
       return null;
     }
   },

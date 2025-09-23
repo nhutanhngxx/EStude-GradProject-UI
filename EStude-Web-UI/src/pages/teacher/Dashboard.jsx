@@ -77,16 +77,13 @@ const TeacherDashboard = () => {
     const fetchClasses = async () => {
       try {
         setLoading(true);
-
         if (!schoolId) return;
-
         const classDetails = await Promise.all(
           classes.map(async (c) => {
             const res = await classService.getClassById(c.classId);
             return res;
           })
         );
-
         setClasses(classDetails);
       } catch (error) {
         console.error("Lỗi khi tải chi tiết lớp:", error);
@@ -109,6 +106,8 @@ const TeacherDashboard = () => {
           studentService.getStudentsBySchool(schoolId),
           classSubjectService.getAllClassSubjects(),
         ]);
+
+        console.log("classRes:", classRes);
 
         if (classRes) setClasses(classRes);
         if (studentRes) setStudents(studentRes);
@@ -630,7 +629,7 @@ const TeacherDashboard = () => {
                           {gradeLevelMap[classItem.gradeLevel] || "N/A"}
                         </td>
                         <td className="px-4 py-2">
-                          {classSizes[classItem.classId] ?? 0}
+                          {classItem.classSize ?? 0}
                         </td>
                         <td className="px-4 py-2">
                           {classItem.terms?.length > 0
