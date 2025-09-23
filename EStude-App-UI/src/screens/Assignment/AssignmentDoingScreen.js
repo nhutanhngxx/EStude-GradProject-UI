@@ -138,7 +138,7 @@ export default function ExamDoingScreen({ navigation, route }) {
       const result = await submissionService.addSubmission(submission);
 
       if (result) {
-        showToast("Bài tập của bạn đã được nộp!", "success");
+        showToast("Bài tập của bạn đã được nộp!", { type: "success" });
         setSubmittedScore(result.score);
         try {
           const analysis = await aiService.getAIAnalysisBySubmission(
