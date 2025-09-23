@@ -12,6 +12,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import subjectService from "../../services/subjectService";
 import classSubjectService from "../../services/classSubjectService";
 import Dropdown from "../../components/common/Dropdown";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const formatDate = (dateString) => {
   const d = new Date(dateString);
@@ -59,6 +60,7 @@ function SubjectListScreen({ navigation }) {
         // 2. Lấy tất cả classSubjects chi tiết
         const allClassSubjects =
           await classSubjectService.getAllClassSubjects();
+
         if (!Array.isArray(allClassSubjects)) {
           setSubjects([]);
           return;
@@ -173,11 +175,14 @@ function SubjectListScreen({ navigation }) {
         ]}
         onPress={() => navigation.navigate("SubjectDetail", { subject: item })}
       >
-        <Text style={styles.title}>{item.name}</Text>
-        <Text style={styles.semester}>Học kỳ: {item.semester}</Text>
-        <Text style={styles.deadline}>
-          Thời gian: {formatDate(item.beginDate)} - {formatDate(item.endDate)}
+        <Text style={styles.title}>
+          {item.name} - Lớp {item.className}
         </Text>
+        <Text style={styles.semester}>{item.semester}</Text>
+        <Text style={styles.deadline}>
+          {formatDate(item.beginDate)} - {formatDate(item.endDate)}
+        </Text>
+        <Text style={{ fontSize: 12, color: "#555" }}>{item.teacherName}</Text>
         <Text
           style={[
             styles.status,
@@ -189,12 +194,6 @@ function SubjectListScreen({ navigation }) {
           ]}
         >
           {status}
-        </Text>
-        <Text style={{ marginTop: 4, fontSize: 12, color: "#555" }}>
-          Giáo viên: {item.teacherName}
-        </Text>
-        <Text style={{ fontSize: 12, color: "#555" }}>
-          Lớp: {item.className}
         </Text>
       </TouchableOpacity>
     );
@@ -223,9 +222,11 @@ function SubjectListScreen({ navigation }) {
               style={styles.toggleButton}
               onPress={() => setIsGrid(!isGrid)}
             >
-              <Text style={styles.toggleButtonText}>
-                {isGrid ? "Danh sách" : "Lưới"}
-              </Text>
+              <MaterialIcons
+                name={isGrid ? "grid-view" : "view-list"}
+                size={28}
+                color="#555"
+              />
             </TouchableOpacity>
           </View>
 
@@ -308,10 +309,10 @@ const styles = StyleSheet.create({
 
   toggleButton: {
     marginLeft: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
     borderRadius: 5,
-    backgroundColor: "#27ae60",
+    // backgroundColor: "#27ae60",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -368,6 +369,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     elevation: 2,
+    gap: 3,
   },
   title: {
     fontSize: 16,
@@ -382,12 +384,10 @@ const styles = StyleSheet.create({
   semester: {
     fontSize: 13,
     color: "#666",
-    marginBottom: 4,
   },
   deadline: {
     fontSize: 12,
     color: "#888",
-    marginBottom: 6,
   },
   activeBorder: {
     borderLeftWidth: 5,

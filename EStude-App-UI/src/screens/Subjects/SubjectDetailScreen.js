@@ -14,6 +14,13 @@ import subjectGradeService from "../../services/subjectGradeService";
 import attendanceService from "../../services/attandanceService";
 import { useToast } from "../../contexts/ToastContext";
 
+const formatDate = (dateString) => {
+  const d = new Date(dateString);
+  return `${d.getDate().toString().padStart(2, "0")}/${
+    d.getMonth() + 1
+  }/${d.getFullYear()}`;
+};
+
 export default function SubjectDetailScreen({ route, navigation }) {
   const { subject, tab } = route.params;
   const { user } = useContext(AuthContext);
@@ -84,21 +91,19 @@ export default function SubjectDetailScreen({ route, navigation }) {
       >
         {/* Header môn học */}
         <View style={styles.headerCard}>
-          <Text style={styles.subjectName}>{subject.name}</Text>
+          <Text style={styles.subjectName}>
+            {subject.name} - Lớp {subject.className}
+          </Text>
 
           {/* Thêm dữ liệu lớp học */}
           <View style={styles.classInfo}>
-            {/* <Text style={styles.description}>{subject.description}</Text> */}
-            {/* <Text style={styles.classText}>Lớp: {subject.clazz?.name}</Text> */}
-            <Text style={styles.classText}>{subject.clazz?.term}</Text>
+            <Text style={styles.classText}>{subject.semester}</Text>
+            <Text style={styles.deadline}>
+              {formatDate(subject.beginDate)} - {formatDate(subject.endDate)}
+            </Text>
             <Text style={styles.classText}>
               {subject.teacherName || "Chưa có"}
             </Text>
-            {/* <Text style={styles.classText}>
-              Thời gian:{" "}
-              {new Date(subject.clazz?.beginDate).toLocaleDateString("vi-VN")} →{" "}
-              {new Date(subject.clazz?.endDate).toLocaleDateString("vi-VN")}
-            </Text> */}
           </View>
         </View>
 
@@ -304,18 +309,18 @@ export default function SubjectDetailScreen({ route, navigation }) {
                                         user.userId
                                       );
                                     setAttendance(updated || []);
-                                    showToast(
-                                      "Bạn đã điểm danh thành công!",
-                                      "success"
-                                    );
+                                    showToast("Bạn đã điểm danh thành công!", {
+                                      type: "success",
+                                    });
                                   } else {
-                                    showToast("Điểm danh thất bại!", "error");
+                                    showToast("Điểm danh thất bại!", {
+                                      type: "error",
+                                    });
                                   }
                                 } catch (error) {
-                                  showToast(
-                                    "Có lỗi xảy ra khi điểm danh!",
-                                    "error"
-                                  );
+                                  showToast("Có lỗi xảy ra khi điểm danh!", {
+                                    type: "error",
+                                  });
                                   console.error(error);
                                 }
                               }}
@@ -490,6 +495,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#555",
     marginTop: 2,
+  },
+  deadline: {
+    fontSize: 12,
+    color: "#888",
   },
 
   tabRow: {
