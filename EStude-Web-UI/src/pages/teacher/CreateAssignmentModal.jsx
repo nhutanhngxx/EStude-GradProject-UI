@@ -138,7 +138,12 @@ export default function CreateAssignmentModal({
         optionC: row[5] || "",
         optionD: row[6] || "",
         correct: row[7] || "",
-        tremor: row[8] || 1,
+        tremor:
+          row[8] !== undefined && row[8] !== ""
+            ? parseFloat(
+                typeof row[8] === "string" ? row[8].replace(",", ".") : row[8]
+              )
+            : null,
         note: row[9] || "",
       }));
 
@@ -740,11 +745,12 @@ export default function CreateAssignmentModal({
                               <input
                                 type="number"
                                 min={0}
+                                step="0.1"
                                 className="w-24 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                                 value={q.points}
                                 onChange={(e) =>
                                   updateQuestion(q.tempId, {
-                                    points: Number(e.target.value),
+                                    points: parseFloat(e.target.value) || 0,
                                   })
                                 }
                               />

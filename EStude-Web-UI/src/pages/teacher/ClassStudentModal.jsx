@@ -282,13 +282,16 @@ export default function ClassStudentModal({
                       {/* Trung bình */}
                       <td className="px-3 py-2">
                         <div
-                          className="w-16 px-1 py-0.5 border rounded text-center
-                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                  border-gray-300 dark:border-gray-600
-                  focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
-                  disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
+                          className="w-16 min-h-[28px] px-1 py-0.5 border rounded text-center
+      bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+      border-gray-300 dark:border-gray-600
+      focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+      disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
                         >
-                          {g.actualAverage ?? ""}
+                          {
+                            g.actualAverage ??
+                              "\u00A0" /* nếu null thì hiển thị khoảng trắng */
+                          }
                         </div>
                       </td>
 
