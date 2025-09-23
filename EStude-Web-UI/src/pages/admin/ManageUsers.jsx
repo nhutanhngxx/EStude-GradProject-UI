@@ -6,6 +6,7 @@ import adminService from "../../services/adminService";
 import schoolService from "../../services/schoolService";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../contexts/ToastContext";
+import Pagination from "../../components/common/Pagination";
 
 const Badge = ({ text, color }) => (
   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color}`}>
@@ -72,6 +73,8 @@ const ManageAccounts = () => {
   const [selectedRole, setSelectedRole] = useState("STUDENT");
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
   const [isAdmin, setisAdmin] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 10 item trên mỗi trang
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -381,6 +384,11 @@ const ManageAccounts = () => {
         u.email.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstItem, indexOfLastItem);
+  const totalItems = filteredUsers.length;
+
   const roleLabels = {
     STUDENT: t("manageAccounts.roles.student"),
     TEACHER: t("manageAccounts.roles.teacher"),
@@ -388,7 +396,7 @@ const ManageAccounts = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="p-6 pb-20 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -458,7 +466,7 @@ const ManageAccounts = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map((u) => (
+            {currentUsers.map((u) => (
               <tr
                 key={u.userId}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -518,6 +526,15 @@ const ManageAccounts = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        siblingCount={1}
+      />
 
       {modalType === "add" && (
         <Modal

@@ -1,12 +1,14 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export default function Pagination({
   totalItems,
   itemsPerPage,
   currentPage,
   onPageChange,
-  siblingCount = 1, // số trang hiển thị trước và sau current page
+  siblingCount = 1,
 }) {
+  const { t } = useTranslation();
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   if (totalPages <= 1) return null;
 
@@ -42,59 +44,61 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="flex flex-wrap gap-2 justify-center mt-4">
-      {/* Prev */}
-      <button
-        onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
-        disabled={currentPage === 1}
-        className="px-3 py-1 rounded-lg border transition
-                   bg-transparent text-gray-700 dark:text-gray-100
-                   border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
-                   disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Trước
-      </button>
+    <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10">
+      <div className="flex flex-wrap gap-2 justify-center mt-0">
+        {/* Prev */}
+        <button
+          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded-lg border transition
+                     bg-transparent text-gray-700 dark:text-gray-100
+                     border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {t("pagination.prev")}
+        </button>
 
-      {/* Page numbers */}
-      {pageNumbers.map((page, idx) => {
-        if (page === "LEFT_DOTS" || page === "RIGHT_DOTS") {
+        {/* Page numbers */}
+        {pageNumbers.map((page, idx) => {
+          if (page === "LEFT_DOTS" || page === "RIGHT_DOTS") {
+            return (
+              <span
+                key={idx}
+                className="px-3 py-1 text-gray-500 dark:text-gray-400"
+              >
+                ...
+              </span>
+            );
+          }
+
           return (
-            <span
+            <button
               key={idx}
-              className="px-3 py-1 text-gray-500 dark:text-gray-400"
+              onClick={() => onPageChange(page)}
+              className={`px-3 py-1 rounded-lg border transition
+                ${
+                  page === currentPage
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-transparent text-gray-700 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
             >
-              ...
-            </span>
+              {page}
+            </button>
           );
-        }
+        })}
 
-        return (
-          <button
-            key={idx}
-            onClick={() => onPageChange(page)}
-            className={`px-3 py-1 rounded-lg border transition
-              ${
-                page === currentPage
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-transparent text-gray-700 dark:text-gray-100 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-          >
-            {page}
-          </button>
-        );
-      })}
-
-      {/* Next */}
-      <button
-        onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
-        disabled={currentPage === totalPages}
-        className="px-3 py-1 rounded-lg border transition
-                   bg-transparent text-gray-700 dark:text-gray-100
-                   border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
-                   disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Sau
-      </button>
+        {/* Next */}
+        <button
+          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded-lg border transition
+                     bg-transparent text-gray-700 dark:text-gray-100
+                     border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {t("pagination.next")}
+        </button>
+      </div>
     </div>
   );
 }

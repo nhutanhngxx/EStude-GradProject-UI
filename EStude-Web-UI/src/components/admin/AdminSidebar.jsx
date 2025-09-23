@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   Menu,
@@ -9,30 +9,31 @@ import {
   Bell,
   School,
 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
+import { ThemeContext } from "../../contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 export default function AdminSidebar() {
   const [open, setOpen] = useState(true);
-  const { t } = useTranslation();
-  const [darkMode, setDarkMode] = useState(false);
-  const { i18n: i18next } = useTranslation(); // lấy i18n instance
-  const currentLang = i18next.language || "vi"; // luôn đọc từ i18n
+  const { t, i18n } = useTranslation();
+  const { darkMode } = useContext(ThemeContext); // Sử dụng darkMode từ ThemeContext
+  const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
     const savedLang = localStorage.getItem("language");
+    if (savedLang && savedLang !== i18n.language) {
+      i18n.changeLanguage(savedLang);
+      setCurrentLang(savedLang);
+    }
+  }, [i18n]);
 
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
-    if (savedLang) {
-      i18next.changeLanguage(savedLang);
-    }
-  }, [i18next]);
+  const toggleLanguage = () => {
+    const newLang = currentLang === "vi" ? "en" : "vi";
+    i18n.changeLanguage(newLang);
+    localStorage.setItem("language", newLang);
+    setCurrentLang(newLang);
+  };
 
   const menuItems = [
     { key: "overview", path: "/admin/dashboard", icon: <Home size={20} /> },
@@ -71,7 +72,7 @@ export default function AdminSidebar() {
         {!open && <Menu size={20} />}
         {open && (
           <img
-            src={darkMode ? bannerDark : bannerLight}
+            src={darkMode ? bannerDark : bannerLight} // Sử dụng darkMode từ ThemeContext
             alt="EStude Banner"
             className="w-[100px] sm:w-[130px]"
           />
@@ -81,18 +82,16 @@ export default function AdminSidebar() {
       {/* Menu items */}
       <nav className="flex-1 mt-2">
         <ul className="flex flex-col gap-5 px-2">
-          {/* Thêm gap giữa các li */}
           {menuItems.map((item, idx) => (
             <li key={idx}>
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `p-3 flex items-center gap-3 text-sm font-medium transition rounded-lg
-    ${
-      isActive
-        ? "bg-green-100 dark:bg-green-700 text-green-800 dark:text-white"
-        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-    }`
+                  `p-3 flex items-center gap-3 text-sm font-medium transition rounded-lg ${
+                    isActive
+                      ? "bg-green-100 dark:bg-green-700 text-green-800 dark:text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`
                 }
               >
                 {item.icon}

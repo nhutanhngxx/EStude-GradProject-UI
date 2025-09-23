@@ -10,6 +10,7 @@ import StudentManagement from "../teacher/StudentManagement";
 import Toolbar from "../../components/common/Toolbar";
 import { useToast } from "../../contexts/ToastContext";
 import { useTranslation } from "react-i18next";
+import Pagination from "../../components/common/Pagination";
 
 // ----------------- Components -----------------
 const Badge = ({
@@ -80,6 +81,8 @@ const ManageClassesAdmin = () => {
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [keyword, setKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // 10 item trên mỗi trang
 
   // ----------------- Data Fetching -----------------
   useEffect(() => {
@@ -256,9 +259,17 @@ const ManageClassesAdmin = () => {
     return matchesKeyword && matchesSchool && matchesStatus;
   });
 
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentClasses = filteredClasses.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalItems = filteredClasses.length;
+
   // ----------------- Render -----------------
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 pb-20 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -307,8 +318,8 @@ const ManageClassesAdmin = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredClasses.length > 0 ? (
-              filteredClasses.map((c) => (
+            {currentClasses.length > 0 ? (
+              currentClasses.map((c) => (
                 <tr
                   key={c.classId}
                   className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -355,6 +366,15 @@ const ManageClassesAdmin = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        siblingCount={1}
+      />
 
       {/* Modals */}
       {modalType === "students" && selectedClass && (

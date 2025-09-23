@@ -45,10 +45,18 @@
     "studentStats": "Student Statistics",
     "recentActivities": "Recent Activities",
     "newStudents": "New Students",
-    "activity1": "Added a new account for teacher Nguyen Van A",
-    "activity2": "Student Le Van B submitted Math homework",
-    "activity3": "Updated Physics grades for class 12A",
-    "activity4": "Sent notification about Semester 1 exam schedule"
+    "totalUsers": "Total Accounts",
+    "totalSchools": "Total Schools",
+    "totalClasses": "Total Classes",
+    "totalStudents": "Total Students",
+    "totalTeachers": "Total Teachers",
+    "newUsers": "New Users",
+    "newUsersThisMonth": "New Users This Month",
+    "newUsersChart": "New Users by Month",
+    "activity1": "Added 5 new student accounts",
+    "activity2": "Updated school info for XYZ",
+    "activity3": "Deleted class 10A1",
+    "activity4": "Created notification for teachers"
   },
 
   "manageSchools": {
@@ -226,5 +234,9 @@
     "selectTeacherForSubject": "-- Select Teacher --",
     "studentManagement": "Student Management - {name}",
     "selectSubjects": "Subjects"
+  },
+  "pagination": {
+    "prev": "Previous",
+    "next": "Next"
   }
 }

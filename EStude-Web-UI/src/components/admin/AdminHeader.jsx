@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import NotificationBell from "../common/NotificationBell";
 import UserMenu from "../common/UserMenu";
 import { Sun, Moon, Globe } from "lucide-react";
@@ -7,36 +7,38 @@ import { useTranslation } from "react-i18next";
 
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
+import { ThemeContext } from "../../contexts/ThemeContext";
 
 const AdminHeader = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+
   const { i18n: i18next } = useTranslation(); // lấy i18n instance
   const currentLang = i18next.language || "vi"; // luôn đọc từ i18n
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
+    // const savedTheme = localStorage.getItem("theme");
     const savedLang = localStorage.getItem("language");
 
-    if (savedTheme === "dark") {
-      setDarkMode(true);
-      document.documentElement.classList.add("dark");
-    }
+    // if (savedTheme === "dark") {
+    //   setDarkMode(true);
+    //   document.documentElement.classList.add("dark");
+    // }
     if (savedLang) {
       i18next.changeLanguage(savedLang);
     }
   }, [i18next]);
 
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
+  // const toggleDarkMode = () => {
+  //   const newMode = !darkMode;
+  //   setDarkMode(newMode);
+  //   if (newMode) {
+  //     document.documentElement.classList.add("dark");
+  //     localStorage.setItem("theme", "dark");
+  //   } else {
+  //     document.documentElement.classList.remove("dark");
+  //     localStorage.setItem("theme", "light");
+  //   }
+  // };
 
   const toggleLanguage = () => {
     const newLang = currentLang === "vi" ? "en" : "vi";

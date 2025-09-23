@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
 import schoolService from "../../services/schoolService";
 import { useToast } from "../../contexts/ToastContext";
+import Pagination from "../../components/common/Pagination";
 
 const Badge = ({ text, color }) => (
   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color}`}>
@@ -43,6 +44,8 @@ const ManageSchools = () => {
   const [modalType, setModalType] = useState(null);
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Load dark mode từ localStorage
   useEffect(() => {
@@ -97,6 +100,14 @@ const ManageSchools = () => {
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSchools = filteredSchools.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalItems = filteredSchools.length;
 
   const handleExcelUpload = (e) => {
     const file = e.target.files[0];
@@ -235,7 +246,7 @@ const ManageSchools = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="p-6 bg-gray-50 dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -285,7 +296,7 @@ const ManageSchools = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredSchools.map((s) => (
+            {currentSchools.map((s) => (
               <tr
                 key={s.id}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -314,6 +325,15 @@ const ManageSchools = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        siblingCount={1}
+      />
 
       {modalType === "add" && (
         <Modal title={t("manageSchools.addTitle")} onClose={closeModal}>
@@ -497,13 +517,6 @@ const ManageSchools = () => {
             </div>
 
             <div className="flex justify-end gap-2 mt-4">
-              {/* <button
-                type="button"
-                onClick={closeModal}
-                className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                {t("actions.cancel")}
-              </button> */}
               <button
                 type="button"
                 onClick={

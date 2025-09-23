@@ -20,6 +20,14 @@ import assignmentService from "../../services/assignmentService";
 import classSubjectService from "../../services/classSubjectService";
 import { useToast } from "../../contexts/ToastContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
+import {
+  Users,
+  BookOpen,
+  Bell,
+  FileBarChart,
+  Clock,
+  GraduationCap,
+} from "lucide-react";
 
 ChartJS.register(
   CategoryScale,
@@ -91,7 +99,6 @@ const TeacherDashboard = () => {
     fetchClasses();
   }, [schoolId, showToast]);
 
-  // Tải dữ liệu chính
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -103,20 +110,12 @@ const TeacherDashboard = () => {
           classSubjectService.getAllClassSubjects(),
         ]);
 
-        // console.log("classRes:", classRes);
-        // console.log("studentRes:", studentRes);
-        // console.log("classSubjectRes:", classSubjectRes);
-
         if (classRes) setClasses(classRes);
         if (studentRes) setStudents(studentRes);
-
-        // console.log("classSubjectRes:", classSubjectRes);
 
         const schoolClassSubjects = classSubjectRes.filter((cs) =>
           cs.subject.schools?.some((sch) => sch.schoolId === schoolId)
         );
-
-        // console.log("schoolClassSubjects:", schoolClassSubjects);
 
         const subjectsMap = new Map();
         schoolClassSubjects.forEach((cs) => {
@@ -144,7 +143,6 @@ const TeacherDashboard = () => {
         );
 
         const assignmentResults = await Promise.all(assignmentPromises);
-        // console.log("assignmentResults:", assignmentResults);
         setAssignments(assignmentResults.flat());
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
@@ -220,34 +218,42 @@ const TeacherDashboard = () => {
     {
       title: "Lớp học quản lý",
       value: classes.length.toString(),
-      bgLight: classes.length > 5 ? "bg-blue-600" : "bg-blue-500",
-      bgDark: classes.length > 5 ? "dark:bg-blue-800" : "dark:bg-blue-700",
+      icon: <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />,
       path: "/teacher/classes",
+      note: classes.length === 0 ? "*Dữ liệu mẫu" : "",
+      bgLight: "bg-blue-100",
+      bgDark: "dark:bg-blue-900",
       showDetails: true,
     },
     {
       title: "Buổi dạy tuần này",
       value: "12",
-      bgLight: "bg-green-500",
-      bgDark: "dark:bg-green-700",
+      icon: <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />,
       path: "/teacher/schedule",
       note: "*Dữ liệu mẫu",
+      bgLight: "bg-green-100",
+      bgDark: "dark:bg-green-900",
     },
     {
       title: "Tổng học sinh",
       value: students.length.toString(),
-      bgLight: students.length > 100 ? "bg-yellow-600" : "bg-yellow-500",
-      bgDark:
-        students.length > 100 ? "dark:bg-yellow-700" : "dark:bg-yellow-600",
+      icon: (
+        <GraduationCap className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+      ),
       path: "/teacher/users",
+      note: students.length === 0 ? "*Dữ liệu mẫu" : "",
+      bgLight: "bg-yellow-100",
+      bgDark: "dark:bg-yellow-900",
       showDetails: true,
     },
     {
       title: "Bài tập đã giao",
       value: assignments.length.toString(),
-      bgLight: assignments.length > 20 ? "bg-red-600" : "bg-red-500",
-      bgDark: assignments.length > 20 ? "dark:bg-red-700" : "dark:bg-red-600",
+      icon: <FileBarChart className="w-6 h-6 text-red-600 dark:text-red-400" />,
       path: "/teacher/assignments",
+      note: assignments.length === 0 ? "*Dữ liệu mẫu" : "",
+      bgLight: "bg-red-100",
+      bgDark: "dark:bg-red-900",
       showDetails: true,
     },
   ];
@@ -350,7 +356,7 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <div className="p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="p-6 bg-gray-50 dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Tiêu đề */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
@@ -380,30 +386,41 @@ const TeacherDashboard = () => {
             <div
               key={idx}
               onClick={() => !card.showDetails && navigate(card.path)}
-              className={`p-4 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition ${
-                darkMode ? card.bgDark.replace("dark:", "") : card.bgLight
-              }`}
+              className={`p-4 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition ${card.bgLight} ${card.bgDark}`}
             >
-              <h2 className="text-lg font-semibold text-white">{card.title}</h2>
-              <p className="text-3xl font-bold text-white">{card.value}</p>
-              {card.note && (
-                <p className="text-xs text-white/80 mt-1">{card.note}</p>
-              )}
-              {card.showDetails && (
-                <button
-                  onClick={() => {
-                    if (card.title === "Bài tập đã giao")
-                      setIsAssignmentModalOpen(true);
-                    if (card.title === "Tổng học sinh")
-                      setIsStudentModalOpen(true);
-                    if (card.title === "Lớp học quản lý")
-                      setIsClassModalOpen(true);
-                  }}
-                  className="mt-2 text-sm text-white underline hover:text-white/80"
-                >
-                  Xem chi tiết
-                </button>
-              )}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {card.title}
+                  </h2>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
+                    {card.value}
+                  </p>
+                  {card.note && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {card.note}
+                    </p>
+                  )}
+                  {card.showDetails && (
+                    <button
+                      onClick={() => {
+                        if (card.title === "Bài tập đã giao")
+                          setIsAssignmentModalOpen(true);
+                        if (card.title === "Tổng học sinh")
+                          setIsStudentModalOpen(true);
+                        if (card.title === "Lớp học quản lý")
+                          setIsClassModalOpen(true);
+                      }}
+                      className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
+                    >
+                      Xem chi tiết
+                    </button>
+                  )}
+                </div>
+                <div className="p-2 bg-white/20 dark:bg-gray-800/20 rounded-lg">
+                  {card.icon}
+                </div>
+              </div>
             </div>
           ))}
         </div>

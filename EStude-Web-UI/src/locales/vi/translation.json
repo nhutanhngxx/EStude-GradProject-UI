@@ -36,20 +36,28 @@
     "manageClasses": "Quản lý lớp học"
   },
   "dashboard": {
-    "overview": "Tổng quan",
-    "welcome": "Chào mừng bạn đến với trang quản trị",
-    "createReport": "Tạo báo cáo",
-    "reportCreated": "Báo cáo đã được tạo (giả lập)",
     "manageAccounts": "Quản lý tài khoản",
     "manageClasses": "Quản lý lớp học",
     "manageNotifications": "Quản lý thông báo",
     "studentStats": "Thống kê học sinh",
-    "recentActivities": "Hoạt động gần đây",
     "newStudents": "Số lượng học sinh mới",
-    "activity1": "Thêm tài khoản mới cho GV Nguyễn Văn A",
-    "activity2": "Học sinh Lê Văn B nộp bài tập Toán",
-    "activity3": "Cập nhật điểm môn Lý cho lớp 12A",
-    "activity4": "Gửi thông báo về lịch thi HK1"
+    "overview": "Tổng quan",
+    "welcome": "Chào mừng đến với bảng điều khiển quản trị!",
+    "totalUsers": "Tổng số tài khoản",
+    "totalSchools": "Tổng số trường học",
+    "totalClasses": "Tổng số lớp học",
+    "totalStudents": "Tổng số học sinh",
+    "totalTeachers": "Tổng số giáo viên",
+    "newUsers": "Người dùng mới",
+    "newUsersThisMonth": "Người dùng mới tháng này",
+    "newUsersChart": "Số người dùng mới theo tháng",
+    "createReport": "Tạo báo cáo",
+    "reportCreated": "Báo cáo đã được tạo!",
+    "recentActivities": "Hoạt động gần đây",
+    "activity1": "Thêm mới 5 tài khoản học sinh",
+    "activity2": "Cập nhật thông tin trường học XYZ",
+    "activity3": "Xóa lớp học 10A1",
+    "activity4": "Tạo thông báo cho giáo viên"
   },
   "manageSchools": {
     "title": "Quản lý Trường học",
@@ -222,5 +230,9 @@
       "confirm": "Bạn có chắc chắn muốn xóa lớp {name}?"
     },
     "studentManagement": "Quản lý học sinh - {name}"
+  },
+  "pagination": {
+    "prev": "Trước",
+    "next": "Tiếp theo"
   }
 }
