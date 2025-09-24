@@ -583,7 +583,7 @@ const ManageClassesAdmin = () => {
                         </option>
                         {teachers.map((t) => (
                           <option key={t.userId} value={t.userId}>
-                            {t.fullName}
+                            {t.fullName} - {t.teacherCode}
                           </option>
                         ))}
                       </select>
