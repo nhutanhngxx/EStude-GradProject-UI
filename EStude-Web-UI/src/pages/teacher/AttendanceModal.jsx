@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import studentService from "../../services/studentService";
+import socketService from "../../services/socketService";
+
 import { useToast } from "../../contexts/ToastContext";
 
 export default function AttendanceModal({
@@ -41,6 +43,24 @@ export default function AttendanceModal({
     fetchSessions();
   }, [classSubjectId, teacherId]);
 
+  useEffect(() => {
+    if (!classSubjectId) return;
+    const handleNewSession = (session) => {
+      setSessions((prev) => {
+        if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
+        return [...prev, session];
+      });
+      showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
+    };
+    socketService.subscribe(
+      `/topic/class/${classSubjectId}/sessions`,
+      handleNewSession
+    );
+    return () => {
+      socketService.unsubscribe(`/topic/class/${classSubjectId}/sessions`);
+    };
+  }, [classId, classSubjectId]);
+
   const handleToggleGPS = () => {
     setUseGPS(!useGPS);
     if (!useGPS) {
@@ -63,6 +83,24 @@ export default function AttendanceModal({
   };
 
   const handleCreateSession = async () => {
+    if (!sessionName) {
+      showToast("Vui lòng nhập tên buổi điểm danh", "warn");
+      return;
+    }
+
+    if (!startTime || !endTime) {
+      showToast("Vui lòng chọn thời gian bắt đầu và kết thúc", "warn");
+      return;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (start >= end) {
+      showToast("Thời gian kết thúc phải sau thời gian bắt đầu", "warn");
+      return;
+    }
+
     try {
       const created = await attendanceService.createAttendanceSession({
         teacherId,
@@ -76,7 +114,7 @@ export default function AttendanceModal({
 
       if (created) {
         showToast("Tạo buổi điểm danh thành công!", "success");
-        setSessions((prev) => [...prev, created]);
+        // setSessions((prev) => [...prev, created]);
         setViewMode("SESSIONS");
         setSessionName("");
         setStartTime("");
@@ -289,7 +327,13 @@ export default function AttendanceModal({
                 )}
                 <button
                   onClick={handleCreateSession}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition"
+                  disabled={new Date(startTime) >= new Date(endTime)}
+                  className={`px-8 py-2 rounded-lg transition 
+                            ${
+                              new Date(startTime) >= new Date(endTime)
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-600 hover:bg-green-700 dark:hover:bg-green-500 text-white"
+                            }`}
                 >
                   Lưu
                 </button>
