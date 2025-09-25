@@ -13,6 +13,7 @@ import assignmentService from "../../services/assignmentService";
 import subjectGradeService from "../../services/subjectGradeService";
 import attendanceService from "../../services/attandanceService";
 import { useToast } from "../../contexts/ToastContext";
+import { useSocket } from "../../contexts/SocketContext";
 
 const formatDate = (dateString) => {
   const d = new Date(dateString);
@@ -24,11 +25,11 @@ const formatDate = (dateString) => {
 export default function SubjectDetailScreen({ route, navigation }) {
   const { subject, tab } = route.params;
   const { user } = useContext(AuthContext);
+  const socket = useSocket();
   const { showToast } = useToast();
 
   // console.log("subject:", subject);
 
-  // const [activeTab, setActiveTab] = useState("Điểm");
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
   const [grade, setGrade] = useState(null);
@@ -37,6 +38,51 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const [notifications, setNotifications] = useState([]);
 
   const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
+
+  useEffect(() => {
+    if (!socket || !subject?.classSubjectId || !user?.userId) return;
+
+    const handleNewSession = async (msg) => {
+      console.log("📩 Received session event:", msg);
+      try {
+        setLoading(true);
+        const res =
+          await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+            subject.classSubjectId,
+            user.userId
+          );
+        setAttendance(res || []);
+        showToast(`Phiên điểm danh mới: ${msg.sessionName || "Không tên"}`, {
+          type: "success",
+        });
+      } catch (e) {
+        console.error("Failed to load attendance:", e);
+        showToast("Lỗi khi cập nhật danh sách điểm danh!", { type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // Kiểm tra trạng thái kết nối
+    // if (!socket.isSocketConnected()) {
+    //   console.warn("⚠️ Socket not connected, subscription will be queued");
+    // }
+
+    const subscription = socket.subscribe(
+      `/topic/class/${subject.classSubjectId}/sessions`,
+      handleNewSession
+    );
+
+    return () => {
+      if (subscription?.unsubscribe) {
+        subscription.unsubscribe();
+        console.log(
+          `🛑 Unsubscribed from /topic/class/${subject.classSubjectId}/sessions`
+        );
+      }
+      socket.unsubscribe(`/topic/class/${subject.classSubjectId}/sessions`);
+    };
+  }, [socket, subject?.classSubjectId, user?.userId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -255,7 +301,9 @@ export default function SubjectDetailScreen({ route, navigation }) {
                     const startTime = new Date(ses.startTime);
                     const endTime = new Date(ses.endTime);
                     const canMark =
-                      now >= startTime && now <= endTime && !ses.status;
+                      now.getTime() >= startTime.getTime() &&
+                      now.getTime() <= endTime.getTime() &&
+                      !ses.status;
 
                     return (
                       <View key={ses.sessionId} style={styles.recordCard}>

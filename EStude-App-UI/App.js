@@ -25,6 +25,7 @@ import AttendanceDetailScreen from "./src/screens/Attendances/AttendanceDetailSc
 import ForgotPasswordScreen from "./src/screens/Auth/ForgotPasswordScreen";
 import AssignmentReviewScreen from "./src/screens/Assignment/AssignmentReviewScreen";
 import DetailStudyScreen from "./src/screens/DetailStudyScreen";
+import { SocketProvider } from "./src/contexts/SocketContext";
 
 const Stack = createNativeStackNavigator();
 
@@ -140,11 +141,13 @@ function AppNavigator() {
 export default function App() {
   return (
     <AuthProvider>
-      <NavigationContainer>
-        <ToastProvider>
-          <AppNavigator />
-        </ToastProvider>
-      </NavigationContainer>
+      <SocketProvider>
+        <NavigationContainer>
+          <ToastProvider>
+            <AppNavigator />
+          </ToastProvider>
+        </NavigationContainer>
+      </SocketProvider>
     </AuthProvider>
   );
 }
