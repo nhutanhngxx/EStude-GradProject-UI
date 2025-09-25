@@ -1,9 +1,10 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import bannerLight from "../assets/banner-light.png";
 import bannerDark from "../assets/banner-dark.png";
 import { useToast } from "../contexts/ToastContext";
+import { ThemeContext } from "../contexts/ThemeContext";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function Login() {
 
   const { login } = useAuth();
   const { showToast } = useToast();
+  const { darkMode } = useContext(ThemeContext);
 
   const roleLabel = {
     TEACHER: "GIÁO VIÊN",
@@ -43,8 +45,6 @@ export default function Login() {
       showToast("Đăng nhập thành công!", "success");
 
       const storedUser = JSON.parse(localStorage.getItem("user"));
-      console.log(storedUser);
-
       if (!storedUser) {
         setError("Không tìm thấy thông tin người dùng");
         showToast("Không tìm thấy thông tin người dùng", "error");
@@ -75,11 +75,7 @@ export default function Login() {
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         {/* Banner */}
         <img
-          src={
-            window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? bannerDark
-              : bannerLight
-          }
+          src={darkMode ? bannerDark : bannerLight}
           alt="EStude Banner"
           className="w-[260px] sm:w-[320px] mb-6"
         />

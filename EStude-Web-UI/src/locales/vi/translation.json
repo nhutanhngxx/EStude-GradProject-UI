@@ -33,7 +33,8 @@
     "myClasses": "Lớp dạy của tôi",
     "manageSubjects": "Quản lý môn học",
     "schedules": "Lịch dạy của tôi",
-    "manageClasses": "Quản lý lớp học"
+    "manageClasses": "Quản lý lớp học",
+    "grades": "Nhập điểm"
   },
   "dashboard": {
     "manageAccounts": "Quản lý tài khoản",

@@ -9,6 +9,7 @@ import {
   Bell,
   Book,
   Clipboard,
+  Edit,
 } from "lucide-react";
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
@@ -60,6 +61,11 @@ export default function TeacherSidebar() {
           },
         ]
       : []),
+    {
+      key: "grades",
+      path: "/teacher/grades",
+      icon: <Edit size={20} />,
+    },
     {
       key: "schedules",
       path: "/teacher/schedules",

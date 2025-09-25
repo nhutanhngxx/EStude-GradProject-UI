@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { X, ListChecks, Save } from "lucide-react";
+import { X, ListChecks, Save, Loader2, FileDown, Search } from "lucide-react";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
 import { useToast } from "../../contexts/ToastContext";
 import aiService from "../../services/aiService";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default function ClassStudentModal({
   classId,
@@ -15,12 +17,23 @@ export default function ClassStudentModal({
   const [students, setStudents] = useState([]);
   const [grades, setGrades] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [commentModal, setCommentModal] = useState({
     isOpen: false,
     studentId: null,
     value: "",
   });
+
+  const formatDateVN = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
 
   useEffect(() => {
     const userStr = localStorage.getItem("user");
@@ -34,64 +47,111 @@ export default function ClassStudentModal({
     }
   }, []);
 
+  const fetchGrades = async (classId, classSubjectId) => {
+    const studentsRes = await studentService.getStudentsByClass(classId);
+    if (!studentsRes) return;
+
+    setStudents(studentsRes);
+
+    const gradesRes = await Promise.all(
+      studentsRes.map((s) =>
+        subjectGradeService.getGradesOfStudentByClassSubject(
+          s.userId,
+          classSubjectId
+        )
+      )
+    );
+
+    const initGrades = {};
+    studentsRes.forEach((s, idx) => {
+      const g = gradesRes[idx];
+      if (g) {
+        initGrades[s.userId] = {
+          regularScores: g.regularScores || ["", "", "", "", ""],
+          midtermScore: g.midtermScore ?? "",
+          finalScore: g.finalScore ?? "",
+          actualAverage: g.actualAverage ?? "",
+          comment: g.comment ?? "",
+          lockedRegular: (g.regularScores || ["", "", "", "", ""]).map(
+            (x) => !!x
+          ),
+          lockedMidterm: g.midtermScore ? true : false,
+          lockedFinal: g.finalScore ? true : false,
+          lockedComment: g.comment ? true : false,
+        };
+      } else {
+        initGrades[s.userId] = {
+          regularScores: ["", "", "", "", ""],
+          midtermScore: "",
+          finalScore: "",
+          actualAverage: "",
+          comment: "",
+          lockedRegular: [false, false, false, false, false],
+          lockedMidterm: false,
+          lockedFinal: false,
+          lockedComment: false,
+        };
+      }
+    });
+
+    setGrades(initGrades);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
+    fetchGrades(classId, classSubjectId);
+  }, [classId, classSubjectId, isOpen]);
 
-    const fetchData = async () => {
-      const studentsRes = await studentService.getStudentsByClass(classId);
-      if (!studentsRes) return;
+  // Hàm chung để lưu điểm 1 học sinh
+  const saveGrade = async (student, { showToastMsg = true } = {}) => {
+    const g = grades[student.userId];
+    if (!g) return;
 
-      setStudents(studentsRes);
-
-      console.log("classId, classSubjectId:", classId, classSubjectId);
-
-      // Lấy điểm của từng học sinh
-      const gradesRes = await Promise.all(
-        studentsRes.map((s) =>
-          subjectGradeService.getGradesOfStudentByClassSubject(
-            s.userId,
-            classSubjectId
-          )
-        )
-      );
-
-      const initGrades = {};
-      studentsRes.forEach((s, idx) => {
-        const g = gradesRes[idx];
-        if (g) {
-          initGrades[s.userId] = {
-            regularScores: g.regularScores || ["", "", "", "", ""],
-            midtermScore: g.midtermScore ?? "",
-            finalScore: g.finalScore ?? "",
-            actualAverage: g.actualAverage ?? "",
-            comment: g.comment ?? "",
-            lockedRegular: (g.regularScores || ["", "", "", "", ""]).map(
-              (x) => !!x // chỉ lock khi có giá trị truthy (số điểm hoặc text), còn null/"" thì không lock
-            ),
-            lockedMidterm: g.midtermScore ? true : false,
-            lockedFinal: g.finalScore ? true : false,
-            lockedComment: g.comment ? true : false,
-          };
-        } else {
-          initGrades[s.userId] = {
-            regularScores: ["", "", "", "", "", ""],
-            midtermScore: "",
-            finalScore: "",
-            actualAverage: "",
-            comment: "",
-            lockedRegular: [false, false, false, false, false],
-            lockedMidterm: false,
-            lockedFinal: false,
-            lockedComment: false,
-          };
-        }
-      });
-
-      setGrades(initGrades);
+    const payload = {
+      studentId: student.userId,
+      classSubjectId,
+      regularScores: g.regularScores.filter((v) => v !== "" && v != null),
+      midtermScore: g.midtermScore === "" ? null : g.midtermScore,
+      finalScore: g.finalScore === "" ? null : g.finalScore,
+      comment: g.comment || null,
     };
 
-    fetchData();
-  }, [classId, classSubjectId, isOpen]);
+    const res = await subjectGradeService.saveGrade(payload);
+
+    if (res && showToastMsg) {
+      showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
+    }
+    return res;
+  };
+
+  // Lưu 1 học sinh (dùng trong nút lưu riêng)
+  const handleSaveOne = async (student) => {
+    try {
+      await saveGrade(student, { showToastMsg: true });
+      await fetchGrades(classId, classSubjectId);
+    } catch (err) {
+      console.error(err);
+      showToast("Lưu điểm thất bại!", "error");
+    }
+  };
+
+  // Lưu tất cả học sinh (dùng trong nút lưu toàn bộ)
+  const handleSaveAll = async () => {
+    setIsSavingAll(true);
+    try {
+      await Promise.all(
+        students.map((s) => saveGrade(s, { showToastMsg: false }))
+      );
+
+      showToast("Đã lưu toàn bộ điểm của lớp", "success");
+      await fetchGrades(classId, classSubjectId);
+    } catch (err) {
+      console.error(err);
+      showToast("Lưu toàn bộ điểm thất bại!", "error");
+    } finally {
+      setIsSavingAll(false);
+    }
+  };
 
   const handleChange = (userId, field, value, index = null) => {
     setGrades((prev) => {
@@ -116,60 +176,68 @@ export default function ClassStudentModal({
     });
   };
 
-  const handleSaveOne = async (student) => {
-    const g = grades[student.userId];
-    if (!g) return;
+  const filteredStudents = students.filter(
+    (s) =>
+      s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (s.studentCode || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    const payload = {
-      studentId: student.userId,
-      classSubjectId,
-      regularScores: g.regularScores.filter((v) => v !== "" && v != null),
-      midtermScore: g.midtermScore === "" ? null : g.midtermScore,
-      finalScore: g.finalScore === "" ? null : g.finalScore,
-      comment: g.comment || null,
-    };
+  const handleExportExcel = () => {
+    const data = students.map((s) => {
+      const g = grades[s.userId] || {};
+      const regular = g.regularScores || [];
 
-    try {
-      const res = await subjectGradeService.saveGrade(payload);
-      // Sau khi lưu thì khóa toàn bộ ô đã có dữ liệu (chỉ nếu không phải admin)
-      setGrades((prev) => {
-        const studentGrade = { ...prev[student.userId] };
-        if (!isAdmin) {
-          studentGrade.lockedRegular = studentGrade.regularScores.map(
-            (v) => v !== ""
-          );
-          studentGrade.lockedMidterm = studentGrade.midtermScore !== "";
-          studentGrade.lockedFinal = studentGrade.finalScore !== "";
-          studentGrade.lockedComment = studentGrade.comment !== "";
-        }
-        studentGrade.actualAverage = res?.actualAverage ?? g.actualAverage;
-        return {
-          ...prev,
-          [student.userId]: studentGrade,
-        };
-      });
+      return {
+        MãHS: s.studentCode,
+        HọTên: s.fullName,
+        TX1: regular[0] || "",
+        TX2: regular[1] || "",
+        TX3: regular[2] || "",
+        TX4: regular[3] || "",
+        TX5: regular[4] || "",
+        GiữaKỳ: g.midtermScore || "",
+        CuốiKỳ: g.finalScore || "",
+        TBM: g.actualAverage || "",
+        NhậnXét: g.comment || "",
+      };
+    });
 
-      if (res) showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
+    const ws = XLSX.utils.json_to_sheet(data);
 
-      await aiService.predictSubjectsForStudent(student.userId);
-      await aiService.predictStudentGPA(student.userId);
-    } catch (err) {
-      console.error(err);
-      alert("Lưu điểm thất bại!");
-    }
+    // Sắp xếp thứ tự cột cố định
+    const headerOrder = [
+      "MãHS",
+      "HọTên",
+      "TX1",
+      "TX2",
+      "TX3",
+      "TX4",
+      "TX5",
+      "GiữaKỳ",
+      "CuốiKỳ",
+      "TBM",
+      "NhậnXét",
+    ];
+    XLSX.utils.sheet_add_aoa(ws, [headerOrder], { origin: "A1" });
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "BangDiem");
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `BangDiem.xlsx`);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed -top-6 left-0 w-screen h-screen bg-black/40 backdrop-blur-sm flex justify-center items-center">
-      <div className="bg-white dark:bg-gray-800 border dark:border-gray-400 w-5/6 max-w-7xl h-3/5 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 border dark:border-gray-400 w-11/12 h-5/6 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
             <ListChecks className="text-blue-600" size={20} />
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              Danh sách học sinh
+              Danh sách học sinh - Lớp
             </h2>
           </div>
           <button
@@ -178,6 +246,58 @@ export default function ClassStudentModal({
           >
             <X size={18} />
           </button>
+        </div>
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center gap-2">
+            {/* Nút Lưu tất cả */}
+            <button
+              onClick={handleSaveAll}
+              disabled={isSavingAll}
+              className={`flex items-center gap-1 px-3 py-1 rounded transition 
+                        ${
+                          isSavingAll
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+            >
+              {isSavingAll ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Đang lưu...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>Lưu tất cả</span>
+                </>
+              )}
+            </button>
+
+            {/* Xuất bảng điểm */}
+            <button
+              onClick={handleExportExcel}
+              className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700 transition"
+            >
+              <FileDown size={16} />
+              <span>Xuất bảng điểm</span>
+            </button>
+          </div>
+
+          {/* Ô tìm kiếm */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Tìm theo tên hoặc mã học sinh..."
+              className="pl-8 pr-3 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            <Search
+              className="absolute left-2 top-1.5 text-gray-400"
+              size={16}
+            />
+          </div>
         </div>
 
         {/* Content */}
@@ -189,9 +309,12 @@ export default function ClassStudentModal({
             >
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
                 <tr>
+                  <th className="px-3 py-2">#</th>
+                  <th className="px-3 py-2">Mã học sinh</th>
                   <th className="px-3 py-2 rounded-tl-lg">Tên học sinh</th>
-                  <th className="px-3 py-2">Điểm thường xuyên</th>
+                  <th className="px-3 py-2 rounded-tl-lg">Ngày sinh</th>
                   <th className="px-3 py-2">Giữa kỳ</th>
+                  <th className="px-3 py-2">Điểm thường xuyên</th>
                   <th className="px-3 py-2">Cuối kỳ</th>
                   <th className="px-3 py-2">Trung bình</th>
                   <th className="px-3 py-2">Nhận xét</th>
@@ -199,41 +322,25 @@ export default function ClassStudentModal({
                 </tr>
               </thead>
               <tbody>
-                {students.map((s) => {
+                {filteredStudents.map((s) => {
                   const g = grades[s.userId] || {};
+                  const index = students.indexOf(s);
                   return (
                     <tr
                       key={s.userId}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
                       <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                        {index + 1}
+                      </td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                        {s.studentCode}
+                      </td>
+                      <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
                         {s.fullName}
                       </td>
-                      <td className="px-3 py-2">
-                        {[0, 1, 2, 3, 4].map((i) => (
-                          <input
-                            key={i}
-                            type="number"
-                            min="0"
-                            max="10"
-                            step="0.1"
-                            value={g.regularScores?.[i] ?? ""}
-                            disabled={!isAdmin && g.lockedRegular?.[i]}
-                            onChange={(e) =>
-                              handleChange(
-                                s.userId,
-                                "regularScores",
-                                e.target.value,
-                                i
-                              )
-                            }
-                            className="w-16 mx-1 px-1 py-0.5 border rounded text-center
-                    bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                    border-gray-300 dark:border-gray-600
-                    focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
-                    disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
-                          />
-                        ))}
+                      <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                        {formatDateVN(s.dob)}
                       </td>
 
                       <td className="px-3 py-2">
@@ -257,6 +364,33 @@ export default function ClassStudentModal({
                   focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
                   disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
                         />
+                      </td>
+
+                      <td className="px-3 py-2">
+                        {[0, 1, 2, 3, 4].map((i) => (
+                          <input
+                            key={i}
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={g.regularScores?.[i] ?? ""}
+                            disabled={!isAdmin && g.lockedRegular?.[i]}
+                            onChange={(e) =>
+                              handleChange(
+                                s.userId,
+                                "regularScores",
+                                e.target.value,
+                                i
+                              )
+                            }
+                            className="w-16 mx-1 px-1 py-0.5 border rounded text-center
+                                  bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                                  border-gray-300 dark:border-gray-600
+                                    focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                                  disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
+                          />
+                        ))}
                       </td>
 
                       {/* Final */}

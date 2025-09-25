@@ -33,6 +33,7 @@ import StudentNotifications from "./pages/student/Notifications";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import "./i18n";
+import TeacherGradeInput from "./pages/teacher/TeacherGradeInput";
 
 function App() {
   return (
@@ -70,6 +71,7 @@ function App() {
             <Route path="attendance" element={<TeacherManageAttendance />} />
             <Route path="ai-tools" element={<TeacherAITool />} />
             <Route path="my-classes" element={<TeacherMyClasses />} />
+            <Route path="grades" element={<TeacherGradeInput />} />
           </Route>
         </Route>
 

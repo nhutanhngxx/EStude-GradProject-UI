@@ -32,7 +32,8 @@
     "myClasses": "My Classes",
     "manageSubjects": "Manage Subjects",
     "schedules": "Teaching Schedule",
-    "manageClasses": "Manage Classes"
+    "manageClasses": "Manage Classes",
+    "grades": "Grade Input"
   },
   "dashboard": {
     "overview": "Overview",

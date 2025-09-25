@@ -1,38 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import bannerLight from "../assets/banner-light.png";
 import bannerDark from "../assets/banner-dark.png";
-import { useEffect, useState } from "react";
+import { useContext } from "react";
+import { ThemeContext } from "../contexts/ThemeContext";
+import { Sun, Moon, Globe } from "lucide-react";
 
 export default function RoleSelection() {
   const navigate = useNavigate();
-  const [isDark, setIsDark] = useState(false);
-
-  // kiểm tra theme từ localStorage hoặc prefers-color-scheme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) {
-      setIsDark(savedTheme === "dark");
-      if (savedTheme === "dark") document.documentElement.classList.add("dark");
-    } else {
-      const darkMode = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-      setIsDark(darkMode);
-      if (darkMode) document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  // đổi theme
-  const toggleTheme = () => {
-    if (isDark) {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    } else {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    }
-    setIsDark(!isDark);
-  };
+  const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const roles = [
     { name: "Giáo viên", value: "teacher" },
@@ -43,14 +18,18 @@ export default function RoleSelection() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-white px-4">
       {/* Toggle dark mode button */}
       <button
-        onClick={toggleTheme}
+        onClick={toggleDarkMode}
         className="absolute top-4 right-4 px-3 py-1 rounded-lg border border-gray-300 dark:border-gray-600"
       >
-        {isDark ? "☀️" : "🌙"}
+        {darkMode ? (
+          <Moon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        ) : (
+          <Sun className="w-5 h-5 text-yellow-400" />
+        )}
       </button>
 
       <img
-        src={isDark ? bannerDark : bannerLight}
+        src={darkMode ? bannerDark : bannerLight}
         alt="EStude Banner"
         className="w-[400px] sm:w-[500px] mb-8"
       />
