@@ -351,7 +351,7 @@ export default function TeacherGradeInput() {
   return (
     <div className="flex min-h-full bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
-      <div className="pt-6 pl-6 min-h-full">
+      <div className="pt-2 pl-2 min-h-full">
         <div className="w-full md:w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Bộ lọc
@@ -468,7 +468,7 @@ export default function TeacherGradeInput() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="flex-1 p-2 overflow-auto">
         {selectedClass ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
             {/* Header */}
@@ -560,7 +560,7 @@ export default function TeacherGradeInput() {
                     <th className="px-3 py-2">Cuối kỳ</th>
                     <th className="px-3 py-2">Trung bình</th>
                     <th className="px-3 py-2">Nhận xét</th>
-                    <th className="px-3 py-2">Hành động</th>
+                    <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -669,13 +669,13 @@ export default function TeacherGradeInput() {
                               className="cursor-pointer w-full rounded text-gray-900 dark:text-gray-100 overflow-hidden whitespace-nowrap text-ellipsis"
                               style={{ maxWidth: "200px" }}
                             >
-                              {g.comment ? g.comment : "Thêm nhận xét"}
+                              {g.comment ? g.comment : "Thêm"}
                             </div>
                           </td>
                           <td className="px-3 py-2">
                             <button
                               onClick={() => handleSaveOne(s)}
-                              className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition"
+                              className="flex items-center gap-1 px-3 py-1 text-green-600 dark:text-green-400 rounded transition"
                             >
                               <Save size={16} />
                             </button>

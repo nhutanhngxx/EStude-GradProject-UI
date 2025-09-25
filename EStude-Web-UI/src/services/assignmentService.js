@@ -26,7 +26,7 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi thêm bài tập:", error);
+      // console.error("Lỗi khi thêm bài tập:", error);
       return null;
     }
   },
@@ -49,7 +49,7 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Lỗi khi lấy thông tin bài tập:", error);
+      // console.error("Lỗi khi lấy thông tin bài tập:", error);
       return null;
     }
   },
@@ -84,18 +84,17 @@ const assignmentService = {
           "{classSubjectId}",
           classSubjectId
         )}`,
-        {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }
+        { method: "GET", headers: { "Content-Type": "application/json" } }
       );
+
       if (!response.ok) {
         throw new Error("Lấy danh sách bài tập thất bại");
       }
+
       const result = await response.json();
       return result;
-    } catch (error) {
-      // console.error("Lỗi khi lấy danh sách bài tập:", error);
+    } catch (err) {
+      // console.error("Lỗi khi lấy danh sách bài tập:", err);
       return null;
     }
   },

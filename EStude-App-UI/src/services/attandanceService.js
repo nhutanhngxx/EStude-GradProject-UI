@@ -1,4 +1,5 @@
 import config from "../configs/config";
+import socketService from "./socketService";
 
 const endpoints = {
   getAttentanceSessionByClassSubjectForStudent:
@@ -119,7 +120,19 @@ const attendanceService = {
         throw new Error("Điểm danh thất bại :(((");
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      // Sau khi điểm danh thành công, publish socket để notify giáo viên
+      if (socketService?.client?.connected) {
+        socketService.publish(`/app/session/${sessionId}/records`, {
+          sessionId,
+          studentId,
+          status: data?.status || "PRESENT",
+          markedAt: new Date().toISOString(),
+        });
+      }
+
+      return data;
     } catch (error) {
       console.error("Lỗi khi điểm danh:", error);
       return null;

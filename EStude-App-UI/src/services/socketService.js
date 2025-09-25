@@ -27,7 +27,7 @@ class SocketService {
       debug: (str) => console.log("[STOMP DEBUG]", str),
       // Header xác thực nếu cần (JWT token từ AuthContext)
       connectHeaders: {
-        // Authorization: `Bearer ${token}`,  // Thêm nếu server yêu cầu
+        // Authorization: `Bearer ${token}`,
       },
     });
 
@@ -56,6 +56,18 @@ class SocketService {
     };
 
     this.client.activate();
+  }
+
+  publish(dest, body, headers = {}) {
+    if (!this.client || !this.client.connected) {
+      console.warn("STOMP chưa kết nối, không thể publish:", dest);
+      return;
+    }
+    this.client.publish({
+      destination: dest,
+      body: JSON.stringify(body),
+      headers,
+    });
   }
 
   // Các hàm _doSubscribe, subscribe, unsubscribe, disconnect giữ nguyên như trước

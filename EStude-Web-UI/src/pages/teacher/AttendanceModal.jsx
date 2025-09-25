@@ -1,17 +1,10 @@
-import { useEffect, useState } from "react";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Check,
-  Clock,
-  X,
-  PlusCircle,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ArrowLeft, CalendarDays, X, PlusCircle } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import studentService from "../../services/studentService";
 import socketService from "../../services/socketService";
-
 import { useToast } from "../../contexts/ToastContext";
+import { useAttendance } from "../../contexts/AttendanceContext";
 
 export default function AttendanceModal({
   classSubjectId,
@@ -21,8 +14,9 @@ export default function AttendanceModal({
   onClose,
 }) {
   const { showToast } = useToast();
+  const { sessions, setSessions } = useAttendance();
   const [viewMode, setViewMode] = useState("SESSIONS");
-  const [sessions, setSessions] = useState([]);
+  const [localSessions, setLocalSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [sessionName, setSessionName] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -30,104 +24,59 @@ export default function AttendanceModal({
   const [useGPS, setUseGPS] = useState(false);
   const [gps, setGps] = useState({ lat: null, lng: null });
 
+  // Load sessions từ API
   useEffect(() => {
-    const fetchSessions = async () => {
-      if (!classSubjectId || !teacherId) return;
-      const result =
-        await attendanceService.getAttentanceSessionByClassSubjectForTeacher(
-          classSubjectId,
-          teacherId
-        );
-      if (result) setSessions(result);
-    };
-    fetchSessions();
-  }, [classSubjectId, teacherId]);
+    if (!isOpen || !classSubjectId || !teacherId) return;
 
-  useEffect(() => {
-    if (!classSubjectId) return;
-    const handleNewSession = (session) => {
-      setSessions((prev) => {
-        if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
-        return [...prev, session];
-      });
-      showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
+    const fetchSessions = async () => {
+      try {
+        const result =
+          await attendanceService.getAttentanceSessionByClassSubjectForTeacher(
+            classSubjectId,
+            teacherId
+          );
+        if (result) setLocalSessions(result);
+      } catch (err) {
+        console.error("Lỗi tải sessions:", err);
+        showToast("Không tải được danh sách buổi điểm danh", "error");
+      }
     };
+
+    fetchSessions();
+  }, [isOpen, classSubjectId, teacherId, showToast]);
+
+  // Đồng bộ localSessions với sessions từ context
+  useEffect(() => {
+    setLocalSessions(
+      sessions.filter((s) => s.classSubjectId === classSubjectId)
+    );
+  }, [sessions, classSubjectId]);
+
+  // Socket: session mới được tạo
+  useEffect(() => {
+    if (!isOpen || !classSubjectId) return;
+
     socketService.subscribe(
       `/topic/class/${classSubjectId}/sessions`,
-      handleNewSession
+      (session) => {
+        setLocalSessions((prev) => {
+          if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
+          return [...prev, session];
+        });
+        setSessions((prev) => {
+          if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
+          return [...prev, session];
+        });
+        showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
+      }
     );
+
     return () => {
       socketService.unsubscribe(`/topic/class/${classSubjectId}/sessions`);
     };
-  }, [classId, classSubjectId]);
+  }, [isOpen, classSubjectId, showToast, setSessions]);
 
-  const handleToggleGPS = () => {
-    setUseGPS(!useGPS);
-    if (!useGPS) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setGps({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        (err) => {
-          console.error("Không lấy được GPS:", err);
-          showToast("Không thể lấy GPS, vui lòng bật định vị", "error");
-          setUseGPS(false);
-        }
-      );
-    } else {
-      setGps({ lat: null, lng: null });
-    }
-  };
-
-  const handleCreateSession = async () => {
-    if (!sessionName) {
-      showToast("Vui lòng nhập tên buổi điểm danh", "warn");
-      return;
-    }
-
-    if (!startTime || !endTime) {
-      showToast("Vui lòng chọn thời gian bắt đầu và kết thúc", "warn");
-      return;
-    }
-
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
-    if (start >= end) {
-      showToast("Thời gian kết thúc phải sau thời gian bắt đầu", "warn");
-      return;
-    }
-
-    try {
-      const created = await attendanceService.createAttendanceSession({
-        teacherId,
-        classSubjectId,
-        sessionName,
-        startTime,
-        endTime,
-        gpsLatitude: useGPS ? gps.lat : null,
-        gpsLongitude: useGPS ? gps.lng : null,
-      });
-
-      if (created) {
-        showToast("Tạo buổi điểm danh thành công!", "success");
-        // setSessions((prev) => [...prev, created]);
-        setViewMode("SESSIONS");
-        setSessionName("");
-        setStartTime("");
-        setEndTime("");
-        setUseGPS(false);
-        setGps({ lat: null, lng: null });
-      }
-    } catch (err) {
-      console.error("Lỗi tạo buổi điểm danh:", err);
-      showToast("Lỗi tạo buổi điểm danh, vui lòng thử lại", "error");
-    }
-  };
-
+  // Xem chi tiết session
   const openSessionDetail = async (session) => {
     try {
       const allStudents = await studentService.getStudentsByClass(classId);
@@ -136,6 +85,7 @@ export default function AttendanceModal({
           session.sessionId,
           teacherId
         );
+
       const merged = allStudents.map((st) => {
         const record = attendanceRecords.find((r) => r.studentId === st.userId);
         return {
@@ -150,10 +100,11 @@ export default function AttendanceModal({
       setViewMode("DETAIL");
     } catch (err) {
       console.error("Lỗi tải chi tiết session:", err);
-      showToast("Lỗi tải chi tiết buổi điểm danh, vui lòng thử lại", "error");
+      showToast("Không tải được chi tiết buổi điểm danh", "error");
     }
   };
 
+  // Giáo viên điểm danh
   const handleMarkAttendance = async (studentId, newStatus) => {
     try {
       const res = await attendanceService.markAttendance(
@@ -162,21 +113,79 @@ export default function AttendanceModal({
         teacherId,
         newStatus
       );
-      if (res || res === null) {
-        setSelectedSession((prev) => {
-          if (!prev) return prev;
-          return {
-            ...prev,
-            students: prev.students.map((s) =>
-              s.studentId === studentId ? { ...s, status: newStatus } : s
-            ),
-          };
-        });
-        showToast("Điểm danh thành công cho học sinh!", "success");
+      if (res) {
+        setSelectedSession((prev) => ({
+          ...prev,
+          students: prev.students.map((s) =>
+            s.studentId === studentId ? { ...s, status: newStatus } : s
+          ),
+        }));
+        showToast("Điểm danh thành công!", "success");
       }
     } catch (err) {
       console.error("Điểm danh lỗi:", err);
-      showToast("Điểm danh thất bại, vui lòng thử lại", "error");
+      showToast("Điểm danh thất bại", "error");
+    }
+  };
+
+  // Tạo session mới
+  const handleCreateSession = async () => {
+    if (!sessionName || !startTime || !endTime) {
+      showToast("Vui lòng điền đầy đủ thông tin", "error");
+      return;
+    }
+    if (new Date(startTime) >= new Date(endTime)) {
+      showToast("Thời gian bắt đầu phải trước thời gian kết thúc", "error");
+      return;
+    }
+
+    try {
+      const newSession = await attendanceService.createAttendanceSession({
+        classSubjectId,
+        sessionName,
+        startTime,
+        endTime,
+        useGPS,
+        gps: useGPS ? gps : null,
+      });
+      setLocalSessions((prev) => [...prev, newSession]);
+      setSessions((prev) => [...prev, newSession]);
+      setSessionName("");
+      setStartTime("");
+      setEndTime("");
+      setUseGPS(false);
+      setGps({ lat: null, lng: null });
+      setViewMode("SESSIONS");
+      showToast("Tạo buổi điểm danh thành công!", "success");
+    } catch (err) {
+      console.error("Lỗi tạo session:", err);
+      showToast("Tạo buổi điểm danh thất bại", "error");
+    }
+  };
+
+  // Bật/tắt GPS
+  const handleToggleGPS = () => {
+    if (!useGPS) {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setGps({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+            setUseGPS(true);
+          },
+          (err) => {
+            console.error("Lỗi lấy vị trí GPS:", err);
+            showToast("Không lấy được vị trí GPS", "error");
+          }
+        );
+      } else {
+        showToast("Trình duyệt không hỗ trợ GPS", "error");
+      }
+    } else {
+      setUseGPS(false);
+      setGps({ lat: null, lng: null });
     }
   };
 
@@ -210,7 +219,7 @@ export default function AttendanceModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {/* --- VIEW SESSIONS --- */}
+          {/* VIEW SESSIONS */}
           {viewMode === "SESSIONS" && (
             <>
               <div className="mb-4">
@@ -221,14 +230,13 @@ export default function AttendanceModal({
                   <PlusCircle size={18} /> Tạo buổi điểm danh
                 </button>
               </div>
-
-              {sessions.length === 0 ? (
+              {localSessions.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400">
                   Chưa có buổi điểm danh nào.
                 </p>
               ) : (
                 <ul className="space-y-2">
-                  {sessions.map((s) => (
+                  {localSessions.map((s) => (
                     <li
                       key={s.sessionId}
                       className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center hover:bg-gray-50 dark:hover:bg-gray-700 transition"
@@ -263,149 +271,138 @@ export default function AttendanceModal({
             </>
           )}
 
-          {/* --- CREATE SESSION --- */}
+          {/* CREATE SESSION */}
           {viewMode === "CREATE" && (
-            <>
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => setViewMode("SESSIONS")}
-                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  <ArrowLeft size={18} /> Quay lại
-                </button>
+            <div className="space-y-4">
+              <button
+                onClick={() => setViewMode("SESSIONS")}
+                className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+              >
+                <ArrowLeft size={18} /> Quay lại
+              </button>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+                  Tên buổi
+                </label>
+                <input
+                  type="text"
+                  value={sessionName}
+                  onChange={(e) => setSessionName(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
               </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
-                    Tên buổi
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                    value={sessionName}
-                    onChange={(e) => setSessionName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
-                    Bắt đầu
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
-                    Kết thúc
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={useGPS}
-                    onChange={handleToggleGPS}
-                    className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
-                  />
-                  <label className="text-gray-900 dark:text-gray-100">
-                    Bật GPS
-                  </label>
-                </div>
-                {useGPS && gps.lat && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Vĩ độ: {gps.lat.toFixed(5)}, Kinh độ: {gps.lng.toFixed(5)}
-                  </p>
-                )}
-                <button
-                  onClick={handleCreateSession}
-                  disabled={new Date(startTime) >= new Date(endTime)}
-                  className={`px-8 py-2 rounded-lg transition 
-                            ${
-                              new Date(startTime) >= new Date(endTime)
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-green-600 hover:bg-green-700 dark:hover:bg-green-500 text-white"
-                            }`}
-                >
-                  Lưu
-                </button>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+                  Bắt đầu
+                </label>
+                <input
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
               </div>
-            </>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-900 dark:text-gray-100">
+                  Kết thúc
+                </label>
+                <input
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={useGPS}
+                  onChange={handleToggleGPS}
+                  className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
+                <label className="text-gray-900 dark:text-gray-100">
+                  Bật GPS
+                </label>
+              </div>
+              {useGPS && gps.lat && (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Vĩ độ: {gps.lat.toFixed(5)}, Kinh độ: {gps.lng.toFixed(5)}
+                </p>
+              )}
+              <button
+                onClick={handleCreateSession}
+                disabled={new Date(startTime) >= new Date(endTime)}
+                className={`px-8 py-2 rounded-lg transition ${
+                  new Date(startTime) >= new Date(endTime)
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700 dark:hover:bg-green-500 text-white"
+                }`}
+              >
+                Lưu
+              </button>
+            </div>
           )}
 
-          {/* --- SESSION DETAIL --- */}
+          {/* SESSION DETAIL */}
           {viewMode === "DETAIL" && selectedSession && (
-            <>
-              <div className="flex items-center gap-2 mb-4">
-                <button
-                  onClick={() => setViewMode("SESSIONS")}
-                  className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-                >
-                  <ArrowLeft size={18} /> Quay lại
-                </button>
-              </div>
-
-              <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
-                <table
-                  className="w-full text-sm text-left table-auto border-separate"
-                  style={{ borderSpacing: 0 }}
-                >
-                  <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                    <tr>
-                      <th className="p-3 rounded-tl-lg">Mã SV</th>
-                      <th className="p-3">Tên sinh viên</th>
-                      <th className="p-3 rounded-tr-lg">Điểm danh</th>
+            <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
+              <button
+                onClick={() => setViewMode("SESSIONS")}
+                className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-2"
+              >
+                <ArrowLeft size={18} /> Quay lại
+              </button>
+              <table
+                className="w-full text-sm text-left table-auto border-separate"
+                style={{ borderSpacing: 0 }}
+              >
+                <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                  <tr>
+                    <th className="p-3 rounded-tl-lg">Mã SV</th>
+                    <th className="p-3">Tên sinh viên</th>
+                    <th className="p-3 rounded-tr-lg">Điểm danh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedSession.students?.map((a) => (
+                    <tr
+                      key={a.studentId}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                        {a.studentCode}
+                      </td>
+                      <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                        {a.fullName}
+                      </td>
+                      <td className="p-3 border border-gray-300 dark:border-gray-600">
+                        <select
+                          value={a.status ?? "NOT_YET"}
+                          onChange={(e) =>
+                            handleMarkAttendance(a.studentId, e.target.value)
+                          }
+                          className={`px-2 py-1 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
+                            ${
+                              a.status === "PRESENT"
+                                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                                : a.status === "LATE"
+                                ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
+                                : a.status === "ABSENT"
+                                ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                            }`}
+                        >
+                          <option value="NOT_YET">Chưa điểm danh</option>
+                          <option value="PRESENT">Có mặt</option>
+                          <option value="LATE">Trễ</option>
+                          <option value="ABSENT">Vắng</option>
+                        </select>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {selectedSession.students?.map((a) => (
-                      <tr
-                        key={a.studentId}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                          {a.studentCode}
-                        </td>
-                        <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                          {a.fullName}
-                        </td>
-                        <td className="p-3 border border-gray-300 dark:border-gray-600">
-                          <select
-                            value={a.status}
-                            onChange={(e) =>
-                              handleMarkAttendance(a.studentId, e.target.value)
-                            }
-                            className={`px-2 py-1 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
-                              ${
-                                a.status === "PRESENT"
-                                  ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
-                                  : a.status === "LATE"
-                                  ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
-                                  : a.status === "ABSENT"
-                                  ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
-                                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                              }`}
-                          >
-                            <option value="NOT_YET">Chưa điểm danh</option>
-                            <option value="PRESENT">Có mặt</option>
-                            <option value="LATE">Trễ</option>
-                            <option value="ABSENT">Vắng</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

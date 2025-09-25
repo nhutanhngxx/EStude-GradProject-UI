@@ -8,6 +8,7 @@ import { ConfirmProvider } from "./contexts/ConfirmContext.jsx";
 import { ThemeProvider } from "./contexts/ThemeContext.jsx";
 import socketService from "./services/socketService.js";
 import config from "./config/config";
+import { AttendanceProvider } from "./contexts/AttendanceContext.jsx";
 
 function AppWithSocket() {
   useEffect(() => {
@@ -15,9 +16,9 @@ function AppWithSocket() {
 
     socketService.connect({
       url: WS_URL,
-      onConnect: () => console.log("✅ Socket connected"),
-      onError: (err) => console.error("❌ Socket error:", err),
-      onDisconnect: () => console.log("🔌 Socket disconnected"),
+      onConnect: () => console.log("ĐÃ KẾT NỐI ĐƯỢC VỚI SOCKET!!!"),
+      onError: (err) => console.error("Socket error:", err),
+      onDisconnect: () => console.log("ĐÃ NGẮT KẾT NỐI VỚI SOCKET!!!"),
     });
 
     return () => {
@@ -29,13 +30,19 @@ function AppWithSocket() {
   return <App />;
 }
 
+const currentTeacherId = JSON.parse(
+  localStorage.getItem("user") || "{}"
+).userId;
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ThemeProvider>
       <AuthProvider>
         <ConfirmProvider>
           <ToastProvider>
-            <AppWithSocket />
+            <AttendanceProvider teacherId={currentTeacherId}>
+              <AppWithSocket />
+            </AttendanceProvider>
           </ToastProvider>
         </ConfirmProvider>
       </AuthProvider>

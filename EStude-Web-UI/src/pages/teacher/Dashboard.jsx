@@ -107,7 +107,7 @@ const TeacherDashboard = () => {
           classSubjectService.getAllClassSubjects(),
         ]);
 
-        console.log("classRes:", classRes);
+        // console.log("classRes:", classRes);
 
         if (classRes) setClasses(classRes);
         if (studentRes) setStudents(studentRes);
