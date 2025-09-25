@@ -7,6 +7,12 @@
     <title>EStude - Hệ thống quản lý học tập</title>
   </head>
   <body>
+    <script>
+      // Polyfill for SockJS compatibility
+      if (typeof global === "undefined") {
+        var global = globalThis;
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
