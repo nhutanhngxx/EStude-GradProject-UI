@@ -28,6 +28,7 @@ import {
   Clock,
   GraduationCap,
 } from "lucide-react";
+import Pagination from "../../components/common/Pagination";
 
 ChartJS.register(
   CategoryScale,
@@ -54,6 +55,12 @@ const TeacherDashboard = () => {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [classSizes, setClassSizes] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [currentAssignmentPage, setCurrentAssignmentPage] = useState(1);
+  const [currentClassPage, setCurrentClassPage] = useState(1);
+  const itemsPerPage = 10;
+  const assignmentsPerPage = 10;
+  const classesPerPage = 10;
 
   const barChartRef = useRef(null);
   const lineChartRef = useRef(null);
@@ -62,6 +69,39 @@ const TeacherDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
   const teacherId = user.userId;
+
+  // Phân trang cho học sinh
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return students.slice(startIndex, endIndex);
+  }, [students, currentPage, itemsPerPage]);
+
+  // Phân trang cho bài tập
+  const handleAssignmentPageChange = (page) => {
+    setCurrentAssignmentPage(page);
+  };
+
+  const paginatedAssignments = useMemo(() => {
+    const startIndex = (currentAssignmentPage - 1) * assignmentsPerPage;
+    const endIndex = startIndex + assignmentsPerPage;
+    return assignments.slice(startIndex, endIndex);
+  }, [assignments, currentAssignmentPage, assignmentsPerPage]);
+
+  // Phân trang cho lớp học
+  const handleClassPageChange = (page) => {
+    setCurrentClassPage(page);
+  };
+
+  const paginatedClasses = useMemo(() => {
+    const startIndex = (currentClassPage - 1) * classesPerPage;
+    const endIndex = startIndex + classesPerPage;
+    return classes.slice(startIndex, endIndex);
+  }, [classes, currentClassPage, classesPerPage]);
 
   const gradeLevelMap = {
     GRADE_6: "Khối 6",
@@ -108,6 +148,8 @@ const TeacherDashboard = () => {
         ]);
 
         // console.log("classRes:", classRes);
+        // console.log("studentRes:", studentRes);
+        // console.log("classSubjectRes:", classSubjectRes);
 
         if (classRes) setClasses(classRes);
         if (studentRes) setStudents(studentRes);
@@ -115,6 +157,8 @@ const TeacherDashboard = () => {
         const schoolClassSubjects = classSubjectRes.filter((cs) =>
           cs.subject.schools?.some((sch) => sch.schoolId === schoolId)
         );
+
+        // console.log("schoolClassSubjects:", schoolClassSubjects);
 
         const subjectsMap = new Map();
         schoolClassSubjects.forEach((cs) => {
@@ -127,21 +171,31 @@ const TeacherDashboard = () => {
 
         setSubjects(Array.from(subjectsMap.values()));
 
+        // Tạo map từ classId sang tên lớp để ánh xạ
+        const classMap = new Map(
+          classRes.map((cls) => [cls.classId, cls.name])
+        );
+
         const assignmentPromises = schoolClassSubjects.map((cs) =>
           assignmentService
             .getAssignmentsByClassSubjectId(cs.classSubjectId)
             .then((assignments) => {
               if (!assignments) return [];
-              return assignments.map((a) => ({
-                ...a,
-                className: cs.class?.name || "N/A",
-                subjectName: cs.subject.name,
-                termName: cs.term.name,
-              }));
+              return assignments
+                .filter((a) => a.teacher?.userId === teacherId) // Lọc bài tập theo userId của giáo viên
+                .map((a) => ({
+                  ...a,
+                  className: classMap.get(cs.classId) || "Không xác định",
+                  subjectName: cs.subject.name,
+                  termName: cs.term.name,
+                }));
             })
         );
 
+        // console.log("assignmentPromises:", assignmentPromises);
+
         const assignmentResults = await Promise.all(assignmentPromises);
+        // console.log("assignmentResults:", assignmentResults);
         setAssignments(assignmentResults.flat());
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
@@ -349,8 +403,8 @@ const TeacherDashboard = () => {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      // hour: "2-digit",
+      // minute: "2-digit",
     });
   };
 
@@ -428,7 +482,7 @@ const TeacherDashboard = () => {
       {/* Modal chi tiết bài tập */}
       {isAssignmentModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-6xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Chi tiết bài tập đã giao</h2>
               <button
@@ -453,20 +507,20 @@ const TeacherDashboard = () => {
             </div>
             {assignments.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
+                <table className="w-full table-fixed text-sm text-left text-gray-900 dark:text-gray-100">
                   <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
                     <tr>
-                      <th className="px-4 py-2">Tiêu đề</th>
-                      <th className="px-4 py-2">Lớp</th>
-                      <th className="px-4 py-2">Môn học</th>
-                      <th className="px-4 py-2">Học kỳ</th>
-                      <th className="px-4 py-2">Ngày tạo</th>
-                      <th className="px-4 py-2">Ngày hết hạn</th>
-                      <th className="px-4 py-2">Trạng thái</th>
+                      <th className="px-4 py-3 w-64">Tiêu đề</th>
+                      <th className="px-4 py-3 w-32">Lớp</th>
+                      <th className="px-4 py-3 w-32">Môn học</th>
+                      <th className="px-4 py-3 w-32">Học kỳ</th>
+                      <th className="px-4 py-3 w-48">Ngày tạo</th>
+                      <th className="px-4 py-3 w-48">Ngày hết hạn</th>
+                      <th className="px-4 py-3 w-24">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {assignments.map((assignment) => (
+                    {paginatedAssignments.map((assignment) => (
                       <tr
                         key={assignment.assignmentId}
                         className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -506,6 +560,17 @@ const TeacherDashboard = () => {
                 Chưa có bài tập nào được giao.
               </p>
             )}
+            {assignments.length > assignmentsPerPage && (
+              <div className="mt-4">
+                <Pagination
+                  totalItems={assignments.length}
+                  itemsPerPage={assignmentsPerPage}
+                  currentPage={currentAssignmentPage}
+                  onPageChange={handleAssignmentPageChange}
+                  siblingCount={1}
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -513,7 +578,7 @@ const TeacherDashboard = () => {
       {/* Modal chi tiết học sinh */}
       {isStudentModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl max-h-[80vh] flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-10/12 h-[70vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
               <h2 className="text-xl font-bold">Chi tiết học sinh quản lý</h2>
               <button
@@ -539,22 +604,22 @@ const TeacherDashboard = () => {
             <div className="p-6 overflow-y-auto flex-1">
               {students.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
+                  <table className="w-full table-fixed text-sm text-left text-gray-900 dark:text-gray-100">
                     <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-2">Tên học sinh</th>
-                        <th className="px-4 py-2">Email</th>
-                        <th className="px-4 py-2">Số điện thoại</th>
-                        <th className="px-4 py-2">Ngày đăng ký</th>
+                        <th className="px-4 py-3 w-48">Tên học sinh</th>
+                        <th className="px-4 py-3 w-72">Email</th>
+                        <th className="px-4 py-3 w-32">Số điện thoại</th>
+                        <th className="px-4 py-3 w-48">Ngày đăng ký</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {students.map((student) => (
+                      {paginatedStudents.map((student) => (
                         <tr
                           key={student.userId}
                           className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
-                          <td className="px-4 py-2">
+                          <td className="px-4 py-2 ">
                             {student.fullName || "N/A"}
                           </td>
                           <td className="px-4 py-2">
@@ -576,6 +641,18 @@ const TeacherDashboard = () => {
                   Chưa có học sinh nào.
                 </p>
               )}
+              {/* Thêm Pagination */}
+              {students.length > itemsPerPage && (
+                <div className="mt-4">
+                  <Pagination
+                    totalItems={students.length}
+                    itemsPerPage={itemsPerPage}
+                    currentPage={currentPage}
+                    onPageChange={handlePageChange}
+                    siblingCount={1}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -584,7 +661,7 @@ const TeacherDashboard = () => {
       {/* Modal chi tiết lớp học */}
       {isClassModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Chi tiết lớp học quản lý</h2>
               <button
@@ -619,7 +696,8 @@ const TeacherDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {classes.map((classItem) => (
+                    {/* {classes.map((classItem) => ( */}
+                    {paginatedClasses.map((classItem) => (
                       <tr
                         key={classItem.classId}
                         className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
@@ -650,6 +728,17 @@ const TeacherDashboard = () => {
               <p className="text-gray-500 dark:text-gray-400 text-center">
                 Chưa có lớp học nào.
               </p>
+            )}
+            {classes.length > classesPerPage && (
+              <div className="mt-4">
+                <Pagination
+                  totalItems={classes.length}
+                  itemsPerPage={classesPerPage}
+                  currentPage={currentClassPage}
+                  onPageChange={handleClassPageChange}
+                  siblingCount={1}
+                />
+              </div>
             )}
           </div>
         </div>

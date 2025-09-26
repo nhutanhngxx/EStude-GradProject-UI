@@ -20,7 +20,7 @@ const Badge = ({ text, color }) => (
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-9/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-10/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -54,6 +54,16 @@ const formatTerm = (termNumber, beginDate) => {
   const academicEnd = academicStart + 1;
 
   return `HK${termNumber} ${academicStart} - ${academicEnd}`;
+};
+
+const gradeMapping = {
+  GRADE_6: "Khối 6",
+  GRADE_7: "Khối 7",
+  GRADE_8: "Khối 8",
+  GRADE_9: "Khối 9",
+  GRADE_10: "Khối 10",
+  GRADE_11: "Khối 11",
+  GRADE_12: "Khối 12",
 };
 
 // ---------------- Toolbar ----------------
@@ -159,6 +169,7 @@ const ManageClasses = () => {
 
         return { ...cls, subjects: subjectsForClass };
       });
+      console.log("classesWithSubjects:", classesWithSubjects);
 
       setClasses(classesWithSubjects);
     } catch (err) {
@@ -214,6 +225,7 @@ const ManageClasses = () => {
           classSubjectId: s.classSubjectId,
           subjectId: s.subjectId,
           teacherId: s.teacherId ?? null,
+          teacherName: s.teacherName || "",
         })) || []
       );
       setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
@@ -235,14 +247,15 @@ const ManageClasses = () => {
 
   const handleSave = async () => {
     if (!name) return showToast("Vui lòng nhập tên lớp!", "warn");
+
     try {
+      // Payload lớp
       const classPayload = {
         classId: selectedClass?.classId,
         name,
         gradeLevel,
         classSize,
         schoolId,
-        homeroomTeacherId: selectedTeacher || null,
         terms: editableSemesters
           .filter((sem) => sem.beginDate && sem.endDate)
           .map((sem) => {
@@ -256,6 +269,7 @@ const ManageClasses = () => {
           }),
       };
 
+      // 1. Thêm hoặc update lớp
       let classResult;
       if (modalType === "add") {
         classResult = await classService.addClass(classPayload);
@@ -268,7 +282,25 @@ const ManageClasses = () => {
         return;
       }
 
-      // Gán hoặc cập nhật môn học cho lớp
+      // 2. Gán / cập nhật giáo viên chủ nhiệm
+      if (selectedTeacher) {
+        if (modalType === "add" || !selectedClass?.homeroomTeacher) {
+          await classService.assignHomeroomTeacher(
+            classResult.classId,
+            selectedTeacher
+          );
+        } else if (
+          modalType === "edit" &&
+          selectedClass?.homeroomTeacher?.userId !== selectedTeacher
+        ) {
+          await classService.updateHomeroomTeacher(
+            classResult.classId,
+            selectedTeacher
+          );
+        }
+      }
+
+      // 3. Gán môn học cho lớp (chỉ thêm mới)
       if (selectedSubjects.length > 0) {
         for (const subj of selectedSubjects) {
           for (const term of classResult.terms) {
@@ -281,21 +313,20 @@ const ManageClasses = () => {
                 )
             );
 
-            const payload = {
-              classSubjectId: subj.classSubjectId ?? undefined, // nếu có thì update
-              classId: classResult.classId,
-              subjectId: subj.subjectId,
-              teacherId: subj.teacherId ?? null,
-              termIds: [term.termId],
-            };
-
-            if (!exists || subj.classSubjectId) {
+            if (!exists) {
+              const payload = {
+                classId: classResult.classId,
+                subjectId: subj.subjectId,
+                teacherId: subj.teacherId ?? null,
+                termIds: [term.termId],
+              };
               await classSubjectService.addClassSubject(payload);
             }
           }
         }
       }
 
+      // Refresh dữ liệu
       await fetchClassesWithSubjects();
       showToast("Lưu lớp thành công!", "success");
       closeModal();
@@ -369,16 +400,25 @@ const ManageClasses = () => {
       />
       {/* Table */}
       <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow mt-4 border border-gray-200 dark:border-gray-600">
-        <table className="min-w-[600px] w-full table-fixed text-sm text-left border-collapse">
+        <table className="min-w-[800px] w-full table-fixed text-sm text-left border-collapse">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Khối
+              </th>
               <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
                 Tên lớp học
               </th>
-              <th className="px-4 py-3 w-[30%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+                Giáo viên chủ nhiệm
+              </th>
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Sĩ số
+              </th>
+              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
                 Môn học
               </th>
-              <th className="px-4 py-3 w-[25%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
                 Tùy chọn
               </th>
             </tr>
@@ -391,8 +431,18 @@ const ManageClasses = () => {
                   key={c.classId}
                   className="border-t border-gray-200 dark:border-gray-700"
                 >
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {gradeMapping[c.gradeLevel] || c.gradeLevel}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {c.name}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.homeroomTeacher?.fullName || "-"}
+                  </td>
+
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.classSize}
                   </td>
                   <td className="px-4 py-3">
                     {c.subjects?.length ? (
@@ -670,7 +720,9 @@ const ManageClasses = () => {
                             className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                             disabled={!selected}
                           >
-                            <option value="">-- Chọn giáo viên --</option>
+                            <option value="">
+                              {selected?.teacherName || "-- Chọn giáo viên --"}
+                            </option>
                             {teachers.map((t) => (
                               <option key={t.userId} value={t.userId}>
                                 {t.fullName} - {t.teacherCode}

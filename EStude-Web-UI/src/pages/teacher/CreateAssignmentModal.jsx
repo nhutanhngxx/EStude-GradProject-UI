@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   X,
   FilePlus2,
@@ -19,6 +19,7 @@ import questionService from "../../services/questionService";
 import { useToast } from "../../contexts/ToastContext";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import socketService from "../../services/socketService";
 
 const genId = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID)
@@ -38,7 +39,6 @@ export default function CreateAssignmentModal({
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
 
-  // meta
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -53,23 +53,45 @@ export default function CreateAssignmentModal({
   const [isAutoGraded, setIsAutoGraded] = useState(false);
   const [isExam, setIsExam] = useState(false);
 
-  // question builder
   const [questions, setQuestions] = useState([]);
   const [excelQuestions, setExcelQuestions] = useState([]);
 
-  // uploads
   const [attachmentFile, setAttachmentFile] = useState(null);
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [importFile, setImportFile] = useState(null);
 
-  // computed
   const totalPoints = useMemo(
     () => questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0),
     [questions]
   );
 
-  // keep maxScore in sync with totalPoints if user hasn't manually changed it
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isOpen || !classContext?.classSubjectId) return;
+
+    const destination = `/topic/class/${classContext.classSubjectId}/assignments`;
+    socketService.subscribe(destination, (assignment) => {
+      // Hiển thị thông báo khi nhận được bài tập mới
+      showToast(
+        `Bài tập mới: ${assignment.title || "Không có tiêu đề"}`,
+        "info"
+      );
+      console.log("New assignment received:", assignment);
+
+      // Cập nhật danh sách bài tập (nếu cần)
+      setQuestions((prev) => {
+        if (prev.find((q) => q.assignmentId === assignment.assignmentId)) {
+          return prev;
+        }
+        return prev;
+      });
+    });
+
+    return () => {
+      socketService.unsubscribe(destination);
+    };
+  }, [isOpen, classContext?.classSubjectId, showToast]);
+
+  useEffect(() => {
     if (!maxScore || maxScore === 0) {
       setMaxScore(totalPoints);
     }

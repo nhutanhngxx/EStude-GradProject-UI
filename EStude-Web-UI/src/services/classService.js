@@ -6,7 +6,7 @@ const endpoints = {
   getAllClasses: "/api/classes",
   getClassesBySchoolId: `/api/classes/school/{schoolId}`,
   updateClass: "/api/classes/{classId}",
-  addHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
+  assignHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
   updateHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
 };
 
@@ -113,6 +113,86 @@ const classService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy danh sách lớp:", error);
+      return null;
+    }
+  },
+
+  assignHomeroomTeacher: async (classId, teacherId) => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Không tìm thấy user trong localStorage");
+
+      const user = JSON.parse(userStr); // phải parse
+      const userId = user.userId;
+
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.assignHomeroomTeacher.replace(
+          "{classId}",
+          classId
+        )}?teacherId=${teacherId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userId,
+          },
+        }
+      );
+
+      console.log("assignHomeroomTeacher request:", {
+        url: `${config.BASE_URL}/api/classes/${classId}/homeroom-teacher?teacherId=${teacherId}`,
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": userId,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Gán giáo viên chủ nhiệm thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi gán giáo viên chủ nhiệm:", error);
+      return null;
+    }
+  },
+
+  updateHomeroomTeacher: async (classId, newTeacherId) => {
+    try {
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Không tìm thấy user trong localStorage");
+
+      const user = JSON.parse(userStr);
+      const userId = user.userId;
+
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.updateHomeroomTeacher.replace(
+          "{classId}",
+          classId
+        )}?newTeacherId=${newTeacherId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-User-Id": userId,
+          },
+        }
+      );
+
+      console.log("updateHomeroomTeacher request:", {
+        url: `${config.BASE_URL}/api/classes/${classId}/homeroom-teacher?newTeacherId=${newTeacherId}`,
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": userId,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Cập nhật giáo viên chủ nhiệm thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi cập nhật giáo viên chủ nhiệm:", error);
       return null;
     }
   },

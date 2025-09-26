@@ -63,14 +63,41 @@ export default function SubjectDetailScreen({ route, navigation }) {
       }
     };
 
+    const handleNewAssignment = async (msg) => {
+      console.log("📩 Received assignment event:", msg);
+      try {
+        setLoading(true);
+        const res = await loadAssignmentsWithStatus(
+          subject.classSubjectId,
+          user.userId
+        );
+        setAssignments(res || []);
+        showToast(`Bài tập mới: ${msg.title || "Không tên"}`, {
+          type: "success",
+        });
+      } catch (e) {
+        console.error("Failed to load assignments:", e);
+        showToast("Lỗi khi cập nhật danh sách bài tập!", { type: "error" });
+      } finally {
+        setLoading(false);
+      }
+    };
+
     // Kiểm tra trạng thái kết nối
     // if (!socket.isSocketConnected()) {
     //   console.warn("⚠️ Socket not connected, subscription will be queued");
     // }
 
+    // Subscription cho buổi điểm danh mới
     const subscription = socket.subscribe(
       `/topic/class/${subject.classSubjectId}/sessions`,
       handleNewSession
+    );
+
+    // Subscription cho bài tập
+    const assignmentSubscription = socket.subscribe(
+      `/topic/class/${subject.classSubjectId}/assignments`,
+      handleNewAssignment
     );
 
     return () => {
@@ -80,7 +107,14 @@ export default function SubjectDetailScreen({ route, navigation }) {
           `🛑 Unsubscribed from /topic/class/${subject.classSubjectId}/sessions`
         );
       }
+      if (assignmentSubscription?.unsubscribe) {
+        assignmentSubscription.unsubscribe();
+        console.log(
+          `🛑 Unsubscribed from /topic/class/${subject.classSubjectId}/assignments`
+        );
+      }
       socket.unsubscribe(`/topic/class/${subject.classSubjectId}/sessions`);
+      socket.unsubscribe(`/topic/class/${subject.classSubjectId}/assignments`);
     };
   }, [socket, subject?.classSubjectId, user?.userId]);
 

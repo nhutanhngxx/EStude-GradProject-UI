@@ -1,4 +1,4 @@
-const ipAddress = "192.168.1.12";
+const ipAddress = "192.168.1.32";
 
 const config = {
   BASE_URL: `http://${ipAddress}:8080`,

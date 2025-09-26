@@ -18,7 +18,8 @@ const classSubjectService = {
         }
       );
       if (!response.ok) {
-        throw new Error("Thêm môn học cho lớp thất bại");
+        const errText = await response.text();
+        throw new Error("Thêm môn học cho lớp thất bại: " + errText);
       }
       return await response.json();
     } catch (error) {

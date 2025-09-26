@@ -24,7 +24,8 @@ export default function AttendanceModal({
   const [useGPS, setUseGPS] = useState(false);
   const [gps, setGps] = useState({ lat: null, lng: null });
 
-  // Load sessions từ API
+  // console.log("TeacherId: ", teacherId);
+
   useEffect(() => {
     if (!isOpen || !classSubjectId || !teacherId) return;
 
@@ -45,14 +46,12 @@ export default function AttendanceModal({
     fetchSessions();
   }, [isOpen, classSubjectId, teacherId, showToast]);
 
-  // Đồng bộ localSessions với sessions từ context
   useEffect(() => {
     setLocalSessions(
       sessions.filter((s) => s.classSubjectId === classSubjectId)
     );
   }, [sessions, classSubjectId]);
 
-  // Socket: session mới được tạo
   useEffect(() => {
     if (!isOpen || !classSubjectId) return;
 
@@ -140,7 +139,8 @@ export default function AttendanceModal({
     }
 
     try {
-      const newSession = await attendanceService.createAttendanceSession({
+      await attendanceService.createAttendanceSession({
+        teacherId,
         classSubjectId,
         sessionName,
         startTime,
@@ -148,14 +148,26 @@ export default function AttendanceModal({
         useGPS,
         gps: useGPS ? gps : null,
       });
-      setLocalSessions((prev) => [...prev, newSession]);
-      setSessions((prev) => [...prev, newSession]);
+
+      const updated =
+        await attendanceService.getAttentanceSessionByClassSubjectForTeacher(
+          classSubjectId,
+          teacherId
+        );
+      setLocalSessions(updated);
+      setSessions((prev) => [
+        ...prev.filter((s) => s.classSubjectId !== classSubjectId),
+        ...updated,
+      ]);
+
+      // Reset form
       setSessionName("");
       setStartTime("");
       setEndTime("");
       setUseGPS(false);
       setGps({ lat: null, lng: null });
       setViewMode("SESSIONS");
+
       showToast("Tạo buổi điểm danh thành công!", "success");
     } catch (err) {
       console.error("Lỗi tạo session:", err);
