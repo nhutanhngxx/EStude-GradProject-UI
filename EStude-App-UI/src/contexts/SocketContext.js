@@ -10,7 +10,7 @@ export function SocketProvider({ children }) {
 
   useEffect(() => {
     if (user) {
-      const url = `${config.BASE_URL}/ws-attendance`;
+      const url = `${config.BASE_URL}/ws`;
       console.log(
         "SocketProvider: connecting to",
         url,

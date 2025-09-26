@@ -12,7 +12,7 @@ import { AttendanceProvider } from "./contexts/AttendanceContext.jsx";
 
 function AppWithSocket() {
   useEffect(() => {
-    const WS_URL = `${config.BASE_URL}/ws-attendance`;
+    const WS_URL = `${config.BASE_URL}/ws`;
 
     socketService.connect({
       url: WS_URL,

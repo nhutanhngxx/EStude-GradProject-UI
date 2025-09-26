@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Search, Save, FileDown, FileUp, X, ListChecks } from "lucide-react";
+import {
+  Search,
+  Save,
+  FileDown,
+  FileUp,
+  X,
+  ListChecks,
+  Loader2,
+} from "lucide-react";
 import teacherService from "../../services/teacherService";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
@@ -491,11 +499,12 @@ export default function TeacherGradeInput() {
                 <button
                   onClick={handleSaveAll}
                   disabled={isSavingAll}
-                  className={`flex items-center gap-1 px-3 py-1 rounded transition ${
-                    isSavingAll
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 text-white"
-                  }`}
+                  className={`flex items-center gap-1 px-3 py-1 rounded border transition
+                    ${
+                      isSavingAll
+                        ? "bg-gray-400 cursor-not-allowed text-white"
+                        : "border-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200"
+                    }`}
                 >
                   {isSavingAll ? (
                     <>
@@ -511,12 +520,18 @@ export default function TeacherGradeInput() {
                 </button>
                 <button
                   onClick={handleExportExcel}
-                  className="flex items-center gap-1 px-3 py-1 rounded bg-green-600 text-white hover:bg-green-700 transition"
+                  className="flex items-center gap-1 px-3 py-1 rounded border border-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200 transition"
                 >
                   <FileDown size={16} />
                   <span>Xuất bảng điểm</span>
                 </button>
-                <label className="flex items-center gap-1 px-3 py-1 rounded bg-purple-600 text-white hover:bg-purple-700 transition cursor-pointer">
+                <label
+                  className={`flex items-center gap-1 px-3 py-1 rounded border border-gray-200 transition ${
+                    isImporting
+                      ? "bg-gray-400 cursor-not-allowed text-white"
+                      : "bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200"
+                  }`}
+                >
                   <FileUp size={16} />
                   <span>{isImporting ? "Đang nhập..." : "Nhập bảng điểm"}</span>
                   <input

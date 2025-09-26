@@ -8,12 +8,7 @@ class SocketService {
     this.subscriptions = {};
   }
 
-  connect({
-    url = `${config.BASE_URL}/ws-attendance`,
-    onConnect,
-    onError,
-    onDisconnect,
-  }) {
+  connect({ url = `${config.BASE_URL}/ws`, onConnect, onError, onDisconnect }) {
     this.client = new Client({
       // Dùng SockJS thay vì brokerURL
       webSocketFactory: () => new SockJS(url),

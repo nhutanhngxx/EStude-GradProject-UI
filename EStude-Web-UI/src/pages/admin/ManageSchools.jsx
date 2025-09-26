@@ -284,15 +284,19 @@ const ManageSchools = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3 text-left">{t("fields.code")}</th>
-              <th className="px-4 py-3 text-left">{t("fields.name")}</th>
-              <th className="px-4 py-3 text-left">{t("fields.address")}</th>
-              <th className="px-4 py-3 text-left">{t("fields.email")}</th>
-              <th className="px-4 py-3 text-left">{t("fields.phone")}</th>
-              <th className="px-4 py-3 text-left">{t("common.actions")}</th>
+              <th className="px-4 py-3 text-left w-14">{t("fields.code")}</th>
+              <th className="px-4 py-3 text-left w-48">{t("fields.name")}</th>
+              <th className="px-4 py-3 text-left w-72">
+                {t("fields.address")}
+              </th>
+              <th className="px-4 py-3 text-left w-48">{t("fields.email")}</th>
+              <th className="px-4 py-3 text-left w-32">{t("fields.phone")}</th>
+              <th className="px-4 py-3 text-left w-24">
+                {t("common.actions")}
+              </th>
             </tr>
           </thead>
           <tbody>

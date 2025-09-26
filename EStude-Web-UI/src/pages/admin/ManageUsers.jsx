@@ -29,7 +29,7 @@ const Avatar = ({ name }) => {
 
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm max-w-7xl w-full p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm w-10/12 p-6">
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {title}
@@ -74,7 +74,7 @@ const ManageAccounts = () => {
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
   const [isAdmin, setisAdmin] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // 10 item trên mỗi trang
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -234,7 +234,7 @@ const ManageAccounts = () => {
         showToast(t("manageAccounts.addUserFailed"), "error");
       }
     } catch (error) {
-      console.error("Lỗi khi thêm người dùng:", error);
+      // console.error("Lỗi khi thêm người dùng:", error);
       showToast(t("manageAccounts.addUserFailed"), "error");
     }
   };
@@ -242,6 +242,7 @@ const ManageAccounts = () => {
   const handleExcelUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (evt) => {
       const data = new Uint8Array(evt.target.result);
@@ -249,8 +250,52 @@ const ManageAccounts = () => {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      const rows = jsonData.slice(1);
 
+      // Bỏ header + loại bỏ các dòng rỗng
+      const rows = jsonData
+        .slice(1)
+        .filter(
+          (row) =>
+            Array.isArray(row) &&
+            row.some(
+              (cell) => cell !== null && cell !== undefined && cell !== ""
+            )
+        );
+
+      // Hàm parse ngày linh hoạt
+      const parseDate = (value) => {
+        if (!value) return "";
+
+        // Trường hợp Excel lưu ngày dạng serial number
+        if (typeof value === "number") {
+          const excelEpoch = new Date(1900, 0, 1);
+          const parsedDate = new Date(
+            excelEpoch.getTime() + (value - 2) * 86400000
+          );
+          return parsedDate.toISOString().split("T")[0]; // yyyy-MM-dd
+        }
+
+        // Trường hợp chuỗi dd/MM/yyyy
+        if (typeof value === "string") {
+          const parts = value.split("/");
+          if (parts.length === 3) {
+            const [day, month, year] = parts.map((p) => parseInt(p, 10));
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+              const parsedDate = new Date(year, month - 1, day);
+              return parsedDate.toISOString().split("T")[0];
+            }
+          }
+
+          // Nếu là ISO string hoặc dạng hợp lệ với Date.parse
+          if (!isNaN(Date.parse(value))) {
+            return new Date(value).toISOString().split("T")[0];
+          }
+        }
+
+        return "";
+      };
+
+      // Map dữ liệu sang user
       const newUsers = rows.map((row, index) => {
         const fullName = row[0] ? row[0].toString().toUpperCase().trim() : "";
         return {
@@ -259,15 +304,16 @@ const ManageAccounts = () => {
           email: row[1] || "",
           numberPhone: row[2] || "",
           role: row[3] || "STUDENT",
-          dob: row[4] ? new Date(row[4]).toISOString().split("T")[0] : "",
-          isHomeroomTeacher: row[5] === "✓",
-          isAdmin: row[6] === "✓",
+          dob: parseDate(row[4]),
+          isHomeroomTeacher: row[5] === "x" || row[5] === "✓",
+          isAdmin: row[6] === "x" || row[6] === "✓",
         };
       });
 
       setExcelUsers(newUsers);
       setEditableUsers(newUsers);
     };
+
     reader.readAsArrayBuffer(file);
   };
 
@@ -395,6 +441,8 @@ const ManageAccounts = () => {
     ADMIN: t("manageAccounts.roles.admin"),
   };
 
+  // console.log("User: ", users);
+
   return (
     <div className="p-6 pb-20 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
@@ -444,23 +492,26 @@ const ManageAccounts = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3 text-left">
+              <th className="px-4 py-3 text-left w-40">Trường</th>
+              <th className="px-4 py-3 text-left w-32">
                 {t("manageAccounts.loginCode")}
               </th>
-              <th className="px-4 py-3 text-left">
+              <th className="px-4 py-3 text-left w-64">
                 {t("manageAccounts.user")}
               </th>
-              <th className="px-4 py-3 text-left">
+              <th className="px-4 py-3 text-left w-32">
                 {t("manageAccounts.role")}
               </th>
-              <th className="px-4 py-3 text-left">
+              <th className="px-4 py-3 text-left w-32">
                 {t("manageAccounts.phone")}
               </th>
-              <th className="px-4 py-3 text-left">{t("manageAccounts.dob")}</th>
-              <th className="px-4 py-3 text-left">
+              <th className="px-4 py-3 text-left w-32">
+                {t("manageAccounts.dob")}
+              </th>
+              <th className="px-4 py-3 text-left w-32">
                 {t("manageAccounts.actions")}
               </th>
             </tr>
@@ -471,6 +522,7 @@ const ManageAccounts = () => {
                 key={u.userId}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
+                <td className="px-4 py-3">{u?.school?.schoolName}</td>
                 <td className="px-4 py-3">
                   {u.role === "ADMIN"
                     ? u.adminCode
@@ -505,7 +557,13 @@ const ManageAccounts = () => {
                 </td>
                 <td className="px-4 py-3">{u.numberPhone}</td>
                 <td className="px-4 py-3">
-                  {u.dob ? new Date(u.dob).toLocaleDateString("vi-VN") : ""}
+                  {u.dob
+                    ? new Intl.DateTimeFormat("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      }).format(new Date(u.dob))
+                    : ""}
                 </td>
                 <td className="px-4 py-3 flex gap-2">
                   <button
@@ -548,9 +606,53 @@ const ManageAccounts = () => {
                 : "grid grid-cols-1 md:grid-cols-2" // Nếu chưa import file -> 2 cột
             } gap-6`}
           >
+            {excelUsers.length > 0 && (
+              <div className="mt-4">
+                <label className="block mb-1 text-gray-700 dark:text-gray-400">
+                  {t("manageAccounts.selectSchool")}
+                </label>
+                <select
+                  value={selectedSchool || ""}
+                  onChange={(e) =>
+                    setSelectedSchool(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 
+                 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  required
+                >
+                  <option value="">{t("manageAccounts.selectSchool")}</option>
+                  {schools.map((s) => (
+                    <option key={s.schoolId} value={s.schoolId}>
+                      {s.schoolName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {/* CỘT TRÁI */}
             {excelUsers.length === 0 && (
               <div className="space-y-4">
+                {/* Chọn Trường */}
+                <select
+                  name="school"
+                  value={selectedSchool || ""}
+                  onChange={(e) =>
+                    setSelectedSchool(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
+                  className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  required
+                >
+                  <option value="">{t("manageAccounts.selectSchool")}</option>
+                  {schools.map((s) => (
+                    <option key={s.schoolId} value={s.schoolId}>
+                      {s.schoolName}
+                    </option>
+                  ))}
+                </select>
                 <div className="text-sm text-gray-700 dark:text-gray-400 flex gap-2">
                   <p>{t("manageAccounts.downloadTemplate")}</p>
                   <a
@@ -569,36 +671,37 @@ const ManageAccounts = () => {
                           t("manageAccounts.academicAffairs"),
                         ],
                         [
-                          "Nguyen Van A",
-                          "nguyenvana@example.com",
+                          "NGUYỄN NHỰT ANH",
+                          "nhutanhngxx.estude@gmail.com",
                           "0901234567",
                           "STUDENT",
-                          "2005-01-15",
+                          "'2008-03-17",
                           "",
                           "",
                         ],
                         [
-                          "Tran Thi B",
-                          "tranthib@example.com",
+                          "ĐINH NGUYÊN CHUNG",
+                          "nguyenchung.estude@gmail.com",
                           "0912345678",
                           "TEACHER",
-                          "1985-06-20",
-                          "✓",
+                          "'1985-06-20",
+                          "x",
                           "x",
                         ],
                         [
-                          "Le Van C",
-                          "levanc@example.com",
+                          "TÔN LONG PHƯỚC",
+                          "tonlongphuoc@iuh.com",
                           "0923456789",
                           "ADMIN",
-                          "1990-03-10",
+                          "'1990-03-10",
                           "",
                           "",
                         ],
                         [
-                          "// Hướng dẫn: Full Name (tên đầy đủ, ví dụ: Nguyễn Nhựt Anh), Email (email hợp lệ, ví dụ: example@domain.com), Phone (số điện thoại, ví dụ: 0901234567), Role (STUDENT, TEACHER, hoặc ADMIN), DOB (ngày sinh, định dạng YYYY-MM-DD), Homeroom Teacher (✓ hoặc x, chỉ áp dụng cho TEACHER), Academic Affairs (✓ hoặc x, chỉ áp dụng cho TEACHER)",
+                          "// Hướng dẫn: Full Name (tên đầy đủ, ví dụ: Nguyễn Nhựt Anh), Email (email hợp lệ, ví dụ: example@domain.com), Phone (số điện thoại, ví dụ: 0901234567), Role (STUDENT, TEACHER, hoặc ADMIN), DOB (ngày sinh, định dạng YYYY-MM-DD, nhập dưới dạng TEXT để tránh Excel đổi sang kiểu Date), Homeroom Teacher (✓ hoặc x, chỉ áp dụng cho TEACHER), Academic Affairs (✓ hoặc x, chỉ áp dụng cho TEACHER)",
                         ],
                       ];
+
                       const ws = XLSX.utils.aoa_to_sheet(wsData);
                       XLSX.utils.book_append_sheet(wb, ws, "Users");
                       XLSX.writeFile(wb, "users-template.xlsx");
@@ -662,59 +765,38 @@ const ManageAccounts = () => {
                     </label>
                   </>
                 )}
-
-                {/* Chọn Trường */}
-                <select
-                  name="school"
-                  value={selectedSchool || ""}
-                  onChange={(e) =>
-                    setSelectedSchool(
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                  className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  required
-                >
-                  <option value="">{t("manageAccounts.selectSchool")}</option>
-                  {schools.map((s) => (
-                    <option key={s.schoolId} value={s.schoolId}>
-                      {s.schoolName}
-                    </option>
-                  ))}
-                </select>
               </div>
             )}
 
             {/* CỘT PHẢI */}
             <div className="space-y-4">
               {excelUsers.length > 0 ? (
-                <div className="overflow-x-auto">
-                  {/* Bảng preview Excel */}
-                  <table className="w-full text-sm border rounded-lg">
+                <div className="overflow-x-auto border rounded-lg max-h-96 overflow-y-auto">
+                  <table className="w-full text-sm border-collapse">
                     <thead className="bg-gray-100 dark:bg-gray-700">
                       <tr>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.placeholders.fullName")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.placeholders.email")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.placeholders.phone")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.placeholders.role")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.placeholders.dob")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.homeroomTeacher")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("manageAccounts.academicAffairs")}
                         </th>
-                        <th className="px-4 py-3 text-left">
+                        <th className="px-4 py-3 text-left sticky top-0 bg-gray-100 dark:bg-gray-700 z-10">
                           {t("actions.action")}
                         </th>
                       </tr>
@@ -885,32 +967,6 @@ const ManageAccounts = () => {
               )}
             </div>
           </div>
-
-          {excelUsers.length > 0 && (
-            <div className="mt-4">
-              <label className="block mb-1 text-gray-700 dark:text-gray-400">
-                {t("manageAccounts.selectSchool")}
-              </label>
-              <select
-                value={selectedSchool || ""}
-                onChange={(e) =>
-                  setSelectedSchool(
-                    e.target.value ? Number(e.target.value) : null
-                  )
-                }
-                className="w-full p-3 rounded-lg border bg-white dark:bg-gray-800 
-                 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                required
-              >
-                <option value="">{t("manageAccounts.selectSchool")}</option>
-                {schools.map((s) => (
-                  <option key={s.schoolId} value={s.schoolId}>
-                    {s.schoolName}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Nút Save khi upload Excel */}
           {excelUsers.length > 0 && (

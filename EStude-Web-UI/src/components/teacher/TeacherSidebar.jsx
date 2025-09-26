@@ -47,6 +47,11 @@ export default function TeacherSidebar() {
       path: "/teacher/my-classes",
       icon: <GraduationCap size={20} />,
     },
+    {
+      key: "grades",
+      path: "/teacher/grades",
+      icon: <Edit size={20} />,
+    },
     ...(isAdmin
       ? [
           {
@@ -61,11 +66,7 @@ export default function TeacherSidebar() {
           },
         ]
       : []),
-    {
-      key: "grades",
-      path: "/teacher/grades",
-      icon: <Edit size={20} />,
-    },
+
     {
       key: "schedules",
       path: "/teacher/schedules",

@@ -11,7 +11,7 @@ class SocketService {
 
   connect({ url, onConnect, onError } = {}) {
     // URL cho SockJS: Sử dụng HTTP/HTTPS, không ws://
-    const SOCKJS_URL = url || `${config.BASE_URL}/ws-attendance`;
+    const SOCKJS_URL = url || `${config.BASE_URL}/ws`;
 
     if (this.client && this.client.active) {
       console.log("SocketService: already active");
