@@ -68,9 +68,12 @@ export default function SubjectDetailScreen({ route, navigation }) {
       try {
         setLoading(true);
         const res = await loadAssignmentsWithStatus(
-          subject.classSubjectId,
-          user.userId
+          user.userId,
+          null, // classId
+          null, // isExam
+          subject.classSubjectId
         );
+
         setAssignments(res || []);
         showToast(`Bài tập mới: ${msg.title || "Không tên"}`, {
           type: "success",
