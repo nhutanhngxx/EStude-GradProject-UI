@@ -1,6 +1,15 @@
-// --- StudentManagement.jsx ---
 import React, { useState, useEffect } from "react";
-import { PlusCircle, Trash2, Eye, CheckSquare, X } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import {
+  PlusCircle,
+  Trash2,
+  Eye,
+  CheckSquare,
+  X,
+  FileUp,
+  FileDown,
+} from "lucide-react";
 import studentService from "../../services/studentService";
 import enrollmentService from "../../services/enrollmentService";
 import { useToast } from "../../contexts/ToastContext";
@@ -169,14 +178,156 @@ const StudentManagement = ({ classId }) => {
       s.fullName.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  const handleDownloadTemplate = () => {
+    // Dữ liệu mẫu
+    const sampleData = [
+      ["Mã HS", "Họ Tên", "Ngày Sinh", "Email"],
+      [
+        "STU17032003",
+        "NGUYỄN NHỰT ANH",
+        "'2003-01-01",
+        "nguyenvana@example.com",
+      ],
+    ];
+
+    // Tạo worksheet
+    const worksheet = XLSX.utils.aoa_to_sheet(sampleData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
+
+    // Xuất file
+    XLSX.writeFile(workbook, "Mau_Import_HocSinh.xlsx");
+  };
+
+  const handleImportExcel = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        const studentMap = new Map(allStudents.map((s) => [s.studentCode, s]));
+        const validStudentIds = [];
+        let errorCount = 0;
+
+        jsonData.forEach((row) => {
+          const code = row["Mã HS"];
+          const student = studentMap.get(code);
+
+          if (
+            student &&
+            !studentsInClass.some((s) => s.userId === student.userId)
+          ) {
+            validStudentIds.push(student.userId);
+          } else {
+            errorCount++;
+          }
+        });
+
+        if (validStudentIds.length > 0) {
+          // Gọi API enroll batch để lưu DB
+          const enrollments = await enrollmentService.enrollStudentsBatch(
+            classId,
+            validStudentIds
+          );
+
+          // Map dữ liệu trả về từ server để update state
+          const newStudents = enrollments.map((en) => ({
+            enrollmentId: en.enrollmentId,
+            userId: en.student.userId,
+            fullName: en.student.fullName,
+            dob: en.student.dob,
+            studentCode: en.student.studentCode,
+            email: en.student.email,
+          }));
+
+          setStudentsInClass((prev) => [...prev, ...newStudents]);
+
+          showToast(
+            `Import thành công ${newStudents.length} học sinh, ${errorCount} lỗi!`,
+            errorCount > 0 ? "warning" : "success"
+          );
+        } else {
+          showToast("Không có học sinh hợp lệ trong file!", "error");
+        }
+      } catch (err) {
+        console.error("Import error:", err);
+        showToast("Import thất bại!", "error");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+    event.target.value = "";
+  };
+
+  const handleExportExcel = () => {
+    const data = studentsInClass.map((s) => ({
+      MãHS: s.studentCode,
+      HọTên: s.fullName,
+      NgàySinh: s.dob ? new Date(s.dob).toLocaleDateString("vi-VN") : "Chưa có",
+      Email: s.email || "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "HocSinh");
+    const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, `DanhSachHocSinh.xlsx`);
+  };
+
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full p-4">
         {/* Danh sách học sinh có thể thêm */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Thêm học sinh
-          </h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Thêm học sinh
+            </h2>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Tải file mẫu */}
+              <button
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+               text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 
+               hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                <FileDown size={18} /> Tải file mẫu
+              </button>
+
+              <label
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+               text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 cursor-pointer 
+               hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                <FileUp size={18} />
+                Import
+                <input
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleImportExcel}
+                  className="hidden"
+                />
+              </label>
+
+              {/* Export */}
+              <button
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
+               text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 
+               hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+              >
+                <FileDown size={18} />
+                Export
+              </button>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
             <button

@@ -524,8 +524,8 @@ const ManageClasses = () => {
                   value={gradeLevel}
                   onChange={(e) => setGradeLevel(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
-             border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
-             focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+                            focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 >
                   <option value="GRADE_6">Khối 6</option>
                   <option value="GRADE_7">Khối 7</option>
@@ -559,14 +559,18 @@ const ManageClasses = () => {
                 <select
                   value={selectedTeacher}
                   onChange={(e) => setSelectedTeacher(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
+             border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+             focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 >
                   <option value="">-- Chọn giáo viên chủ nhiệm --</option>
-                  {teachers.map((t) => (
-                    <option key={t.userId} value={t.userId}>
-                      {t.fullName}
-                    </option>
-                  ))}
+                  {teachers
+                    .filter((t) => t.homeroomTeacher)
+                    .map((t) => (
+                      <option key={t.userId} value={t.userId}>
+                        {t.fullName}
+                      </option>
+                    ))}
                 </select>
 
                 {/* Học kỳ */}

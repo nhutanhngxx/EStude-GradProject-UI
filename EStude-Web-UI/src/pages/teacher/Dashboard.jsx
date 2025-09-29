@@ -18,6 +18,7 @@ import studentService from "../../services/studentService";
 import teacherService from "../../services/teacherService";
 import assignmentService from "../../services/assignmentService";
 import classSubjectService from "../../services/classSubjectService";
+import subjectGradeService from "../../services/subjectGradeService";
 import { useToast } from "../../contexts/ToastContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import {
@@ -29,6 +30,7 @@ import {
   GraduationCap,
   ChartLine,
   ChartColumn,
+  BarChart,
 } from "lucide-react";
 import Pagination from "../../components/common/Pagination";
 
@@ -52,21 +54,23 @@ const TeacherDashboard = () => {
   const [subjects, setSubjects] = useState([]);
   const [students, setStudents] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [gradeStats, setGradeStats] = useState([]);
   const [activityFilter, setActivityFilter] = useState("today");
-  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
-  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [classSizes, setClassSizes] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [currentAssignmentPage, setCurrentAssignmentPage] = useState(1);
   const [currentClassPage, setCurrentClassPage] = useState(1);
   const itemsPerPage = 10;
   const assignmentsPerPage = 10;
   const classesPerPage = 10;
+  const [modalType, setModalType] = useState(null); // null | "assignments" | "students" | "classes" | "grades"
+
+  const openModal = (type) => setModalType(type);
+  const closeModal = () => setModalType(null);
 
   const barChartRef = useRef(null);
   const lineChartRef = useRef(null);
   const subjectChartRef = useRef(null);
+  const gradeChartRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
@@ -116,29 +120,6 @@ const TeacherDashboard = () => {
   };
 
   useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        setLoading(true);
-        if (!schoolId) return;
-        const classDetails = await Promise.all(
-          classes.map(async (c) => {
-            const res = await classService.getClassById(c.classId);
-            return res;
-          })
-        );
-        setClasses(classDetails);
-      } catch (error) {
-        console.error("Lỗi khi tải chi tiết lớp:", error);
-        showToast("Không thể tải dữ liệu lớp!", "error");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchClasses();
-  }, [schoolId, showToast]);
-
-  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -149,18 +130,12 @@ const TeacherDashboard = () => {
           classSubjectService.getAllClassSubjects(),
         ]);
 
-        // console.log("classRes:", classRes);
-        // console.log("studentRes:", studentRes);
-        // console.log("classSubjectRes:", classSubjectRes);
-
         if (classRes) setClasses(classRes);
         if (studentRes) setStudents(studentRes);
 
         const schoolClassSubjects = classSubjectRes.filter((cs) =>
           cs.subject.schools?.some((sch) => sch.schoolId === schoolId)
         );
-
-        // console.log("schoolClassSubjects:", schoolClassSubjects);
 
         const subjectsMap = new Map();
         schoolClassSubjects.forEach((cs) => {
@@ -173,7 +148,79 @@ const TeacherDashboard = () => {
 
         setSubjects(Array.from(subjectsMap.values()));
 
-        // Tạo map từ classId sang tên lớp để ánh xạ
+        // Fetch grade statistics
+        const teacherClasses = await teacherService.getClassSubjectByTeacherId(
+          teacherId
+        );
+        const gradeStatsPromises = teacherClasses.map(async (cls) => {
+          const gradesRes = await Promise.all(
+            (
+              await studentService.getStudentsByClass(cls.classId)
+            ).map((s) =>
+              subjectGradeService.getGradesOfStudentByClassSubject(
+                s.userId,
+                cls.classSubjectId
+              )
+            )
+          );
+          const validAverages = gradesRes
+            .filter(
+              (g) => g?.actualAverage !== undefined && g?.actualAverage !== null
+            )
+            .map((g) => Number(g.actualAverage));
+          const average = validAverages.length
+            ? (
+                validAverages.reduce((sum, avg) => sum + avg, 0) /
+                validAverages.length
+              ).toFixed(1)
+            : "N/A";
+          return {
+            classId: cls.classId,
+            className: cls.className,
+            subjectName: cls.subjectName,
+            termName: cls.termName,
+            averageGrade: average,
+            studentCount: gradesRes.length,
+            validGradeCount: validAverages.length,
+          };
+        });
+
+        const gradeStatsResults = await Promise.all(gradeStatsPromises);
+
+        // Group by class and subject
+        const groupedStats = Object.values(
+          gradeStatsResults.reduce((acc, stat) => {
+            const key = `${stat.classId}-${stat.subjectName}`;
+            if (!acc[key]) {
+              acc[key] = {
+                classId: stat.classId,
+                className: stat.className,
+                subjectName: stat.subjectName,
+                totalGrade: 0,
+                termCount: 0,
+                validGradeCount: 0,
+                studentCount: stat.studentCount || 0,
+              };
+            }
+
+            if (stat.averageGrade !== null && !isNaN(stat.averageGrade)) {
+              acc[key].totalGrade += Number(stat.averageGrade);
+              acc[key].termCount += 1;
+              acc[key].validGradeCount += stat.validGradeCount || 0;
+            }
+            return acc;
+          }, {})
+        );
+
+        // Calculate average grade
+        groupedStats.forEach((g) => {
+          g.averageGrade =
+            g.termCount > 0 ? (g.totalGrade / g.termCount).toFixed(1) : "N/A";
+        });
+
+        setGradeStats(groupedStats);
+
+        // Create class map for assignments
         const classMap = new Map(
           classRes.map((cls) => [cls.classId, cls.name])
         );
@@ -184,7 +231,7 @@ const TeacherDashboard = () => {
             .then((assignments) => {
               if (!assignments) return [];
               return assignments
-                .filter((a) => a.teacher?.userId === teacherId) // Lọc bài tập theo userId của giáo viên
+                .filter((a) => a.teacher?.userId === teacherId)
                 .map((a) => ({
                   ...a,
                   className: classMap.get(cs.classId) || "Không xác định",
@@ -194,10 +241,7 @@ const TeacherDashboard = () => {
             })
         );
 
-        // console.log("assignmentPromises:", assignmentPromises);
-
         const assignmentResults = await Promise.all(assignmentPromises);
-        // console.log("assignmentResults:", assignmentResults);
         setAssignments(assignmentResults.flat());
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
@@ -311,6 +355,28 @@ const TeacherDashboard = () => {
       bgDark: "dark:bg-red-900",
       showDetails: true,
     },
+    {
+      title: "ĐTB môn theo lớp",
+      value: (() => {
+        const validGrades = gradeStats.filter(
+          (stat) => stat.averageGrade !== "N/A" && !isNaN(stat.averageGrade)
+        );
+        if (validGrades.length === 0) return "N/A";
+        const total = validGrades.reduce(
+          (sum, stat) => sum + Number(stat.averageGrade),
+          0
+        );
+        return (total / validGrades.length).toFixed(1);
+      })(),
+      icon: (
+        <BarChart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+      ),
+      path: "",
+      note: gradeStats.length === 0 ? "*Chưa có dữ liệu điểm" : "",
+      bgLight: "bg-purple-100",
+      bgDark: "dark:bg-purple-900",
+      showDetails: true,
+    },
   ];
 
   const newStudentsData = getNewStudentsByMonth();
@@ -352,6 +418,21 @@ const TeacherDashboard = () => {
     ],
   };
 
+  const gradeChartData = {
+    labels: gradeStats.map((stat) => `${stat.className} - ${stat.subjectName}`),
+    datasets: [
+      {
+        label: "Điểm trung bình",
+        data: gradeStats.map((stat) =>
+          stat.averageGrade !== "N/A" ? Number(stat.averageGrade) : 0
+        ),
+        backgroundColor: "#8b5cf6",
+        borderColor: "#7c3aed",
+        borderWidth: 1,
+      },
+    ],
+  };
+
   const chartOptions = useMemo(
     () => ({
       responsive: true,
@@ -361,15 +442,29 @@ const TeacherDashboard = () => {
           position: "top",
           labels: { color: darkMode ? "#ffffff" : "#1f2937" },
         },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const value = context.raw;
+              return value === 0 ? "N/A" : `${context.dataset.label}: ${value}`;
+            },
+          },
+        },
       },
       scales: {
         x: {
-          ticks: { color: darkMode ? "#fff" : "#1f2937" },
+          ticks: {
+            color: darkMode ? "#fff" : "#1f2937",
+            maxRotation: 45,
+            minRotation: 45,
+          },
           grid: { color: darkMode ? "#4b5563" : "#e5e7eb" },
         },
         y: {
           ticks: { color: darkMode ? "#fff" : "#1f2937" },
           grid: { color: darkMode ? "#4b5563" : "#e5e7eb" },
+          min: 0,
+          max: 10,
         },
       },
     }),
@@ -405,8 +500,6 @@ const TeacherDashboard = () => {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-      // hour: "2-digit",
-      // minute: "2-digit",
     });
   };
 
@@ -425,7 +518,7 @@ const TeacherDashboard = () => {
       {/* Cards thống kê */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[...Array(4)].map((_, idx) => (
+          {[...Array(5)].map((_, idx) => (
             <div
               key={idx}
               className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm animate-pulse"
@@ -436,7 +529,7 @@ const TeacherDashboard = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {cards.map((card, idx) => (
             <div
               key={idx}
@@ -460,11 +553,13 @@ const TeacherDashboard = () => {
                     <button
                       onClick={() => {
                         if (card.title === "Bài tập đã giao")
-                          setIsAssignmentModalOpen(true);
+                          openModal("assignments");
                         if (card.title === "Tổng học sinh")
-                          setIsStudentModalOpen(true);
+                          openModal("students");
                         if (card.title === "Lớp học quản lý")
-                          setIsClassModalOpen(true);
+                          openModal("classes");
+                        if (card.title === "ĐTB môn theo lớp")
+                          openModal("grades");
                       }}
                       className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
                     >
@@ -481,14 +576,83 @@ const TeacherDashboard = () => {
         </div>
       )}
 
+      {/* Modal chi tiết điểm trung bình môn theo lớp */}
+      {modalType === "grades" && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                Chi tiết điểm trung bình môn theo lớp
+              </h2>
+              <button
+                onClick={closeModal}
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            {gradeStats.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
+                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-2">Lớp</th>
+                      <th className="px-4 py-2">Môn học</th>
+                      <th className="px-4 py-2">Điểm trung bình</th>
+                      <th className="px-4 py-2">Số học kỳ</th>
+                      <th className="px-4 py-2">Số học sinh có điểm</th>
+                      <th className="px-4 py-2">Tổng số học sinh</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gradeStats.map((stat) => (
+                      <tr
+                        key={`${stat.classId}-${stat.subjectName}`}
+                        className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      >
+                        <td className="px-4 py-2">{stat.className || "N/A"}</td>
+                        <td className="px-4 py-2">
+                          {stat.subjectName || "N/A"}
+                        </td>
+                        <td className="px-4 py-2">{stat.averageGrade}</td>
+                        <td className="px-4 py-2">{stat.termCount}</td>
+                        <td className="px-4 py-2">{stat.validGradeCount}</td>
+                        <td className="px-4 py-2">{stat.studentCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 text-center">
+                Chưa có dữ liệu điểm.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Modal chi tiết bài tập */}
-      {isAssignmentModalOpen && (
+      {modalType === "assignments" && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Chi tiết bài tập đã giao</h2>
               <button
-                onClick={() => setIsAssignmentModalOpen(false)}
+                onClick={closeModal}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 <svg
@@ -578,13 +742,13 @@ const TeacherDashboard = () => {
       )}
 
       {/* Modal chi tiết học sinh */}
-      {isStudentModalOpen && (
+      {modalType === "students" && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-10/12 h-[70vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
               <h2 className="text-xl font-bold">Chi tiết học sinh quản lý</h2>
               <button
-                onClick={() => setIsStudentModalOpen(false)}
+                onClick={closeModal}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 <svg
@@ -621,7 +785,7 @@ const TeacherDashboard = () => {
                           key={student.userId}
                           className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                         >
-                          <td className="px-4 py-2 ">
+                          <td className="px-4 py-2">
                             {student.fullName || "N/A"}
                           </td>
                           <td className="px-4 py-2">
@@ -643,7 +807,6 @@ const TeacherDashboard = () => {
                   Chưa có học sinh nào.
                 </p>
               )}
-              {/* Thêm Pagination */}
               {students.length > itemsPerPage && (
                 <div className="mt-4">
                   <Pagination
@@ -661,13 +824,13 @@ const TeacherDashboard = () => {
       )}
 
       {/* Modal chi tiết lớp học */}
-      {isClassModalOpen && (
+      {modalType === "classes" && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Chi tiết lớp học quản lý</h2>
               <button
-                onClick={() => setIsClassModalOpen(false)}
+                onClick={closeModal}
                 className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 <svg
@@ -698,7 +861,6 @@ const TeacherDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* {classes.map((classItem) => ( */}
                     {paginatedClasses.map((classItem) => (
                       <tr
                         key={classItem.classId}
@@ -747,7 +909,7 @@ const TeacherDashboard = () => {
       )}
 
       {/* Biểu đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartColumn />
@@ -789,51 +951,28 @@ const TeacherDashboard = () => {
             </p>
           )}
         </div>
-      </div>
-
-      {/* Hoạt động gần đây */}
-      {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">🕒 Hoạt động gần đây</h2>
-          <select
-            value={activityFilter}
-            onChange={(e) => setActivityFilter(e.target.value)}
-            className="px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 text-sm"
-          >
-            <option value="today">Hôm nay</option>
-            <option value="week">Tuần này</option>
-            <option value="all">Tất cả</option>
-          </select>
-        </div>
-        {loading ? (
-          <div className="space-y-3">
-            {[...Array(4)].map((_, idx) => (
-              <div
-                key={idx}
-                className="border-b border-gray-300 dark:border-gray-700 pb-2 animate-pulse"
-              >
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-              </div>
-            ))}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart />
+            <h2 className="text-xl font-semibold">
+              Điểm trung bình môn theo lớp
+            </h2>
           </div>
-        ) : filteredActivities.length > 0 ? (
-          <ul className="space-y-3">
-            {filteredActivities.map((act, idx) => (
-              <li
-                key={idx}
-                className="border-b border-gray-300 dark:border-gray-700 pb-2"
-              >
-                <span className="font-bold">{act.time}</span> - {act.action} (
-                {act.date})
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Không có hoạt động nào trong khoảng thời gian này
-          </p>
-        )}
-      </div> */}
+          {loading ? (
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+          ) : gradeStats.length > 0 ? (
+            <Bar
+              ref={gradeChartRef}
+              data={gradeChartData}
+              options={chartOptions}
+            />
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-sm">
+              Chưa có dữ liệu điểm
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

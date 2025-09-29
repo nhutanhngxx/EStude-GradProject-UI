@@ -7,6 +7,7 @@ import {
   FileDown,
   FileUp,
   Search,
+  SaveAll,
 } from "lucide-react";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
@@ -380,7 +381,7 @@ export default function ClassStudentModal({
                 </>
               ) : (
                 <>
-                  <Save size={16} />
+                  <SaveAll size={16} />
                   <span>Lưu tất cả</span>
                 </>
               )}
