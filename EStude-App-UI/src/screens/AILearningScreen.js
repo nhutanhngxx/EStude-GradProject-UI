@@ -191,19 +191,19 @@ export default function AIDashboardScreen() {
                 <View style={styles.statGrid}>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>
-                      {semesterAnalysis.statistics.so_mon_dat}
+                      {semesterAnalysis?.statistics?.so_mon_dat}
                     </Text>
                     <Text style={styles.statLabel}>Môn đạt</Text>
                   </View>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>
-                      {semesterAnalysis.statistics.ty_le_mon_du_8}%
+                      {semesterAnalysis?.statistics?.ty_le_mon_du_8}%
                     </Text>
                     <Text style={styles.statLabel}>≥ 8 điểm</Text>
                   </View>
                   <View style={styles.statBox}>
                     <Text style={styles.statValue}>
-                      {semesterAnalysis.statistics.ty_le_mon_du_6_5}%
+                      {semesterAnalysis?.statistics?.ty_le_mon_du_6_5}%
                     </Text>
                     <Text style={styles.statLabel}>≥ 6.5 điểm</Text>
                   </View>

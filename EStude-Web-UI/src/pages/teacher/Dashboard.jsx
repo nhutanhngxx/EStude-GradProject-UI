@@ -27,6 +27,8 @@ import {
   FileBarChart,
   Clock,
   GraduationCap,
+  ChartLine,
+  ChartColumn,
 } from "lucide-react";
 import Pagination from "../../components/common/Pagination";
 
@@ -409,7 +411,7 @@ const TeacherDashboard = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="p-6 bg-transparent text-gray-900 dark:text-gray-100">
       {/* Tiêu đề */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
@@ -747,9 +749,10 @@ const TeacherDashboard = () => {
       {/* Biểu đồ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">
-            📈 Học sinh mới theo tháng
-          </h2>
+          <div className="flex items-center gap-2 mb-4">
+            <ChartColumn />
+            <h2 className="text-xl font-semibold">Học sinh mới theo tháng</h2>
+          </div>
           {loading ? (
             <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           ) : (
@@ -757,7 +760,10 @@ const TeacherDashboard = () => {
           )}
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">📉 Số bài tập đã giao</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <ChartLine />
+            <h2 className="text-xl font-semibold">Số bài tập đã giao</h2>
+          </div>
           {loading ? (
             <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           ) : (
@@ -765,7 +771,10 @@ const TeacherDashboard = () => {
           )}
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">📊 Số lớp theo môn học</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <ChartColumn />
+            <h2 className="text-xl font-semibold">Số lớp theo môn học</h2>
+          </div>
           {loading ? (
             <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
           ) : subjects.length > 0 ? (

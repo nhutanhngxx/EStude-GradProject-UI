@@ -29,7 +29,7 @@ const Avatar = ({ name }) => {
 
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm w-10/12 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm w-10/12 max-h-[90vh] overflow-y-auto p-6">
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {title}
@@ -239,6 +239,61 @@ const ManageAccounts = () => {
     }
   };
 
+  const pad = (n) => String(n).padStart(2, "0");
+
+  const parseDate = (value) => {
+    if (value === null || value === undefined || value === "") return "";
+
+    // Nếu đã là Date object
+    if (value instanceof Date && !isNaN(value)) {
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(
+        value.getDate()
+      )}`;
+    }
+
+    // Nếu Excel lưu dưới dạng serial number (số)
+    if (typeof value === "number") {
+      // Công thức chuẩn: (serial - 25569) * 86400 * 1000 => milliseconds since 1970-01-01 (UTC)
+      // Dùng getters UTC để tránh lỗi do timezone.
+      const utc = Math.round((value - 25569) * 86400 * 1000);
+      const date = new Date(utc);
+      return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(
+        date.getUTCDate()
+      )}`;
+    }
+
+    // Nếu là chuỗi, thử parse dạng dd/MM/yyyy trước
+    if (typeof value === "string") {
+      const s = value.trim();
+      // dd/MM/yyyy hoặc d/M/yyyy
+      if (s.includes("/")) {
+        const parts = s.split("/");
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+            const date = new Date(y, m - 1, d);
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+              date.getDate()
+            )}`;
+          }
+        }
+      }
+
+      // Nếu string có thể parse bởi Date (ISO hoặc khác)
+      const parsed = new Date(s);
+      if (!isNaN(parsed)) {
+        return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(
+          parsed.getDate()
+        )}`;
+      }
+    }
+
+    // Không parse được → trả rỗng
+    return "";
+  };
+
   const handleExcelUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -262,40 +317,6 @@ const ManageAccounts = () => {
             )
         );
 
-      // Hàm parse ngày linh hoạt
-      const parseDate = (value) => {
-        if (!value) return "";
-
-        // Trường hợp Excel lưu ngày dạng serial number
-        if (typeof value === "number") {
-          const excelEpoch = new Date(1900, 0, 1);
-          const parsedDate = new Date(
-            excelEpoch.getTime() + (value - 2) * 86400000
-          );
-          return parsedDate.toISOString().split("T")[0]; // yyyy-MM-dd
-        }
-
-        // Trường hợp chuỗi dd/MM/yyyy
-        if (typeof value === "string") {
-          const parts = value.split("/");
-          if (parts.length === 3) {
-            const [day, month, year] = parts.map((p) => parseInt(p, 10));
-            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-              const parsedDate = new Date(year, month - 1, day);
-              return parsedDate.toISOString().split("T")[0];
-            }
-          }
-
-          // Nếu là ISO string hoặc dạng hợp lệ với Date.parse
-          if (!isNaN(Date.parse(value))) {
-            return new Date(value).toISOString().split("T")[0];
-          }
-        }
-
-        return "";
-      };
-
-      // Map dữ liệu sang user
       const newUsers = rows.map((row, index) => {
         const fullName = row[0] ? row[0].toString().toUpperCase().trim() : "";
         return {
@@ -304,7 +325,7 @@ const ManageAccounts = () => {
           email: row[1] || "",
           numberPhone: row[2] || "",
           role: row[3] || "STUDENT",
-          dob: parseDate(row[4]),
+          dob: parseDate(row[4]), // yyyy-MM-dd
           isHomeroomTeacher: row[5] === "x" || row[5] === "✓",
           isAdmin: row[6] === "x" || row[6] === "✓",
         };
@@ -673,7 +694,7 @@ const ManageAccounts = () => {
                         [
                           "NGUYỄN NHỰT ANH",
                           "nhutanhngxx.estude@gmail.com",
-                          "0901234567",
+                          "'0901234567",
                           "STUDENT",
                           "'2008-03-17",
                           "",
@@ -682,7 +703,7 @@ const ManageAccounts = () => {
                         [
                           "ĐINH NGUYÊN CHUNG",
                           "nguyenchung.estude@gmail.com",
-                          "0912345678",
+                          "'0912345678",
                           "TEACHER",
                           "'1985-06-20",
                           "x",
@@ -691,14 +712,14 @@ const ManageAccounts = () => {
                         [
                           "TÔN LONG PHƯỚC",
                           "tonlongphuoc@iuh.com",
-                          "0923456789",
+                          "'0923456789",
                           "ADMIN",
                           "'1990-03-10",
                           "",
                           "",
                         ],
                         [
-                          "// Hướng dẫn: Full Name (tên đầy đủ, ví dụ: Nguyễn Nhựt Anh), Email (email hợp lệ, ví dụ: example@domain.com), Phone (số điện thoại, ví dụ: 0901234567), Role (STUDENT, TEACHER, hoặc ADMIN), DOB (ngày sinh, định dạng YYYY-MM-DD, nhập dưới dạng TEXT để tránh Excel đổi sang kiểu Date), Homeroom Teacher (✓ hoặc x, chỉ áp dụng cho TEACHER), Academic Affairs (✓ hoặc x, chỉ áp dụng cho TEACHER)",
+                          "// Hướng dẫn: Full Name (tên đầy đủ, ví dụ: Nguyễn Nhựt Anh), Email (email hợp lệ, ví dụ: example@domain.com), Phone (số điện thoại, ví dụ: '0901234567), Role - Vai trò (STUDENT, TEACHER, hoặc ADMIN), DOB (ngày sinh, định dạng YYYY-MM-DD, nhập dưới dạng TEXT để tránh Excel đổi sang kiểu Date), Homeroom Teacher - Giáo viên chủ nhiệm (✓ hoặc x, chỉ áp dụng cho TEACHER), Academic Affairs - Giáo vụ (✓ hoặc x, chỉ áp dụng cho TEACHER)",
                         ],
                       ];
 
@@ -771,7 +792,7 @@ const ManageAccounts = () => {
             {/* CỘT PHẢI */}
             <div className="space-y-4">
               {excelUsers.length > 0 ? (
-                <div className="overflow-x-auto border rounded-lg max-h-96 overflow-y-auto">
+                <div className="overflow-x-auto border rounded-lg max-h-[60vh] overflow-y-auto">
                   <table className="w-full text-sm border-collapse">
                     <thead className="bg-gray-100 dark:bg-gray-700">
                       <tr>
