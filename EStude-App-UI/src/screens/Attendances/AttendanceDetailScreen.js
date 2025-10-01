@@ -41,59 +41,69 @@ export default function AttendanceDetailScreen({ route }) {
 
   return (
     <View style={styles.safe}>
-      <View style={styles.card}>
-        <Text style={styles.title}>{session.sessionName}</Text>
-        <Text style={styles.subtitle}>{subject.name}</Text>
-
-        <View style={styles.infoBlock}>
-          <Text style={styles.label}>Thời gian</Text>
-          <Text style={styles.value}>
-            Bắt đầu: {startTime.toLocaleString("vi-VN")}
-          </Text>
-          <Text style={styles.value}>
-            Kết thúc: {endTime.toLocaleString("vi-VN")}
-          </Text>
-        </View>
-
-        <View style={styles.infoBlock}>
-          <Text style={styles.label}>Trạng thái</Text>
-          <Text
-            style={[
-              styles.value,
-              session.status === "PRESENT"
-                ? { color: "#27ae60" }
-                : session.status === "ABSENT"
-                ? { color: "#e74c3c" }
-                : session.status === "LATE"
-                ? { color: "#f39c12" }
-                : { color: "#999" },
-            ]}
-          >
-            {session.status === "PRESENT"
-              ? "CÓ MẶT"
-              : session.status === "ABSENT"
-              ? "VẮNG"
-              : session.status === "LATE"
-              ? "TRỄ"
-              : "CHƯA ĐIỂM DANH"}
-          </Text>
-        </View>
-
-        {/* Nút điểm danh nếu chưa điểm danh */}
-        {session.status === "NOT_MARKED" && (
-          <TouchableOpacity
-            style={[styles.button, loading && { opacity: 0.6 }]}
-            onPress={handleMarkAttendance}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>ĐIỂM DANH NGAY</Text>
-            )}
-          </TouchableOpacity>
-        )}
+      <Text style={styles.title}>{session.sessionName}</Text>
+      <View style={styles.infoBlock}>
+        <Text style={styles.label}>Thời gian</Text>
+        <Text style={styles.value}>
+          Bắt đầu:{" "}
+          {startTime.toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
+        <Text style={styles.value}>
+          Kết thúc:{" "}
+          {endTime.toLocaleString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </Text>
       </View>
+
+      <View style={styles.infoBlock}>
+        <Text style={styles.label}>Trạng thái</Text>
+        <Text
+          style={[
+            styles.value,
+            session.status === "PRESENT"
+              ? { color: "#27ae60" }
+              : session.status === "ABSENT"
+              ? { color: "#e74c3c" }
+              : session.status === "LATE"
+              ? { color: "#f39c12" }
+              : { color: "#999" },
+          ]}
+        >
+          {session.status === "PRESENT"
+            ? "CÓ MẶT"
+            : session.status === "ABSENT"
+            ? "VẮNG"
+            : session.status === "LATE"
+            ? "TRỄ"
+            : "CHƯA ĐIỂM DANH"}
+        </Text>
+      </View>
+
+      {/* Nút điểm danh nếu chưa điểm danh */}
+      {session.status === "NOT_MARKED" && (
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.6 }]}
+          onPress={handleMarkAttendance}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>ĐIỂM DANH NGAY</Text>
+          )}
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -118,7 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#2e7d32",
-    marginBottom: 6,
+    marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,

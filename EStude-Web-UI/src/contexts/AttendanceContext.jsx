@@ -48,7 +48,7 @@ export const AttendanceProvider = ({ teacherId, children }) => {
                     if (!update.byTeacher) {
                       showToast(
                         `Học sinh ${
-                          update.studentCode || update.studentId
+                          update.studentName || update.studentId
                         } vừa điểm danh!`,
                         "success"
                       );
@@ -94,7 +94,7 @@ export const AttendanceProvider = ({ teacherId, children }) => {
                 if (!update.byTeacher) {
                   showToast(
                     `Học sinh ${
-                      update.studentCode || update.studentId
+                      update.studentName || update.studentId
                     } vừa điểm danh!`,
                     "success"
                   );

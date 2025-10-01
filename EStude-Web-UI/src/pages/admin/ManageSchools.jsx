@@ -287,7 +287,7 @@ const ManageSchools = () => {
         <table className="w-full table-fixed text-sm">
           <thead className="bg-gray-100 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3 text-left w-14">{t("fields.code")}</th>
+              <th className="px-4 py-3 text-left w-20">{t("fields.code")}</th>
               <th className="px-4 py-3 text-left w-48">{t("fields.name")}</th>
               <th className="px-4 py-3 text-left w-72">
                 {t("fields.address")}

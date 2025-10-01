@@ -5,7 +5,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ScrollView,
 } from "react-native";
 
 const scheduleData = [
@@ -15,7 +14,7 @@ const scheduleData = [
     startTime: "08:00",
     endTime: "09:30",
     date: "2025-08-23",
-    status: "SCHEDULED", // SCHEDULED | COMPLETED | CANCELLED
+    status: "SCHEDULED",
     teacher: { fullName: "Nguyễn Văn A" },
   },
   {
@@ -141,25 +140,17 @@ export default function ScheduleScreen() {
           data={dayData}
           keyExtractor={(item) => item.scheduleId}
           renderItem={renderSessionCard}
+          contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <View
-              style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                marginTop: 50,
-              }}
-            >
-              <Text style={{ fontSize: 16, color: "#888" }}>
-                Không có lịch ngày này
-              </Text>
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>Không có lịch ngày này</Text>
             </View>
           }
         />
       )}
 
       {mode === "week" && (
-        <View style={{ flex: 1 }}>
+        <View style={styles.weekContainer}>
           <View style={styles.weekRow}>
             {weekDays.map((d) => (
               <TouchableOpacity
@@ -187,18 +178,10 @@ export default function ScheduleScreen() {
             data={getDayData(selectedDate)}
             keyExtractor={(item) => item.scheduleId}
             renderItem={renderSessionCard}
+            contentContainerStyle={styles.listContent}
             ListEmptyComponent={
-              <View
-                style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginTop: 50,
-                }}
-              >
-                <Text style={{ fontSize: 16, color: "#888" }}>
-                  Không có lịch ngày này
-                </Text>
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Không có lịch ngày này</Text>
               </View>
             }
           />
@@ -206,7 +189,7 @@ export default function ScheduleScreen() {
       )}
 
       {mode === "month" && (
-        <View style={{ flex: 1 }}>
+        <View style={styles.monthContainer}>
           <View style={styles.monthGrid}>
             {monthDays.map((d) => (
               <TouchableOpacity
@@ -228,6 +211,12 @@ export default function ScheduleScreen() {
             data={scheduleData}
             keyExtractor={(item) => item.scheduleId}
             renderItem={renderSessionCard}
+            contentContainerStyle={styles.listContent}
+            ListEmptyComponent={
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Không có lịch</Text>
+              </View>
+            }
           />
         </View>
       )}
@@ -236,8 +225,11 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", padding: 12 },
-
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+    padding: 12,
+  },
   modeSwitch: {
     flexDirection: "row",
     justifyContent: "center",
@@ -250,10 +242,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#e5e5e5",
     marginHorizontal: 4,
   },
-  modeBtnActive: { backgroundColor: "#22c55e" },
-  modeText: { color: "#333", fontWeight: "500" },
-  modeTextActive: { color: "#fff" },
-
+  modeBtnActive: {
+    backgroundColor: "#22c55e",
+  },
+  modeText: {
+    color: "#333",
+    fontWeight: "500",
+  },
+  modeTextActive: {
+    color: "#fff",
+  },
   sessionCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -263,11 +261,30 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     borderLeftColor: "#22c55e",
   },
-  title: { fontSize: 16, fontWeight: "600", marginBottom: 4, color: "#15803d" },
-  info: { fontSize: 13, color: "#444", marginBottom: 2 },
-  status: { fontSize: 12, fontWeight: "600", color: "#555", marginTop: 4 },
-
-  weekRow: { flexDirection: "row", marginBottom: 8 },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#15803d",
+  },
+  info: {
+    fontSize: 13,
+    color: "#444",
+    marginBottom: 2,
+  },
+  status: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#555",
+    marginTop: 4,
+  },
+  weekContainer: {
+    flex: 1,
+  },
+  weekRow: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
   weekCol: {
     flex: 1,
     marginHorizontal: 2,
@@ -276,13 +293,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#f0fdf4",
   },
-  weekColActive: { backgroundColor: "#22c55e" },
-  weekDate: { fontWeight: "bold", color: "#333" },
-  weekDateActive: { color: "#fff", fontWeight: "700" },
-
+  weekColActive: {
+    backgroundColor: "#22c55e",
+  },
+  weekDate: {
+    fontWeight: "bold",
+    color: "#333",
+  },
+  weekDateActive: {
+    color: "#fff",
+    fontWeight: "700",
+  },
+  monthContainer: {
+    flex: 1,
+  },
   monthGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    marginBottom: 8,
   },
   dayCell: {
     width: "14.28%",
@@ -292,14 +320,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dayCellActive: { backgroundColor: "#bbf7d0" },
-  dayNumber: { fontSize: 12, color: "#333" },
-
+  dayCellActive: {
+    backgroundColor: "#bbf7d0",
+  },
+  dayNumber: {
+    fontSize: 12,
+    color: "#333",
+  },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: "#22c55e",
     marginTop: 2,
+  },
+  emptyBox: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#888",
+  },
+  listContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
   },
 });

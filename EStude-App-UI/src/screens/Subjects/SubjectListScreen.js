@@ -16,9 +16,10 @@ import { MaterialIcons } from "@expo/vector-icons";
 
 const formatDate = (dateString) => {
   const d = new Date(dateString);
-  return `${d.getDate().toString().padStart(2, "0")}/${
-    d.getMonth() + 1
-  }/${d.getFullYear()}`;
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const removeVietnameseTones = (str) => {
@@ -176,13 +177,17 @@ function SubjectListScreen({ navigation }) {
         onPress={() => navigation.navigate("SubjectDetail", { subject: item })}
       >
         <Text style={styles.title}>
-          {item.name} - Lớp {item.className}
-        </Text>
-        <Text style={styles.semester}>{item.semester}</Text>
-        <Text style={styles.deadline}>
-          {formatDate(item.beginDate)} - {formatDate(item.endDate)}
+          {item.name.toUpperCase()}
+          {/* - Lớp {item.className} */}
         </Text>
         <Text style={{ fontSize: 12, color: "#555" }}>{item.teacherName}</Text>
+        <Text style={styles.semester}>{item.semester}</Text>
+        {/* <Text style={styles.deadline}>
+          Bắt đầu: {formatDate(item.beginDate)}
+          {"\n"}
+          Kết thúc: {formatDate(item.endDate)}
+        </Text> */}
+
         <Text
           style={[
             styles.status,

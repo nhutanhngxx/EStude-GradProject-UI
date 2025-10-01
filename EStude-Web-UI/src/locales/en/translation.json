@@ -239,5 +239,16 @@
   "pagination": {
     "prev": "Previous",
     "next": "Next"
+  },
+  "teachingSchedule": {
+    "title": "Teaching Schedule",
+    "viewBy": "View by",
+    "addLesson": "Add Lesson",
+    "lessonDetails": "Lesson Details",
+    "class": "Class",
+    "subject": "Subject",
+    "room": "Room",
+    "notes": "Notes",
+    "startTime": "Start Time"
   }
 }

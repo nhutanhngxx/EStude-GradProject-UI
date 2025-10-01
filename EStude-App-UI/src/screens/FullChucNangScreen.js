@@ -8,30 +8,51 @@ import {
   StatusBar,
   SafeAreaView,
 } from "react-native";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome } from "@expo/vector-icons";
 
 const features = [
-  { id: "1", iconName: "grading", label: "Xem điểm", hint: "Kết quả học tập" },
+  {
+    id: "1",
+    iconName: "graduation-cap",
+    label: "Xem điểm",
+    hint: "Kết quả học tập",
+    color: "#4CAF50",
+  }, // xanh lá
   {
     id: "2",
-    iconName: "check-circle-outline",
+    iconName: "check-circle",
     label: "Điểm danh",
     hint: "Điểm danh buổi học",
-  },
-  { id: "3", iconName: "file-upload", label: "Bài tập", hint: "Bài hôm nay" },
+    color: "#2196F3",
+  }, // xanh dương
+  {
+    id: "3",
+    iconName: "upload",
+    label: "Bài tập",
+    hint: "Bài hôm nay",
+    color: "#FF9800",
+  }, // cam
   {
     id: "4",
-    iconName: "calendar-today",
+    iconName: "calendar",
     label: "Lịch học",
-    hint: "Lịch học & lịch thi",
-  },
+    hint: "Lịch theo tuần",
+    color: "#9C27B0",
+  }, // tím
   {
     id: "5",
-    iconName: "insights",
+    iconName: "bar-chart",
     label: "Thống kê",
     hint: "Điểm danh chi tiết",
-  },
-  { id: "6", iconName: "newspaper", label: "Tin tức", hint: "Thông báo mới" },
+    color: "#F44336",
+  }, // đỏ
+  {
+    id: "6",
+    iconName: "newspaper-o",
+    label: "Tin tức",
+    hint: "Thông báo mới",
+    color: "#00BCD4",
+  }, // xanh ngọc
 ];
 
 export default function FullChucNangScreen({ navigation }) {
@@ -41,12 +62,13 @@ export default function FullChucNangScreen({ navigation }) {
       onPress={() => console.log(`Đi tới ${item.label}`)}
       activeOpacity={0.7}
     >
-      <MaterialIcons
+      <FontAwesome
         name={item.iconName}
         size={32}
-        color="#777777"
+        color={item.color}
         style={styles.icon}
       />
+
       <Text style={styles.label}>{item.label}</Text>
       <Text style={styles.hint}>{item.hint}</Text>
     </TouchableOpacity>

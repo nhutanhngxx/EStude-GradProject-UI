@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
 import classSubjectService from "../services/classSubjectService";
@@ -144,9 +144,9 @@ export default function HomeStudentScreen({ navigation }) {
   const todayPlan = [];
 
   const quickActions = [
-    { id: "qa1", label: "Môn học", iconName: "menu-book" },
-    { id: "qa2", label: "Nộp bài", iconName: "file-upload" },
-    { id: "qa3", label: "Lịch học", iconName: "calendar-today" },
+    { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" }, // xanh lá
+    { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" }, // cam
+    { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" }, // xanh dương
   ];
 
   return (
@@ -177,10 +177,10 @@ export default function HomeStudentScreen({ navigation }) {
                   }
                 }}
               >
-                <MaterialIcons
+                <FontAwesome
                   name={action.iconName}
                   size={28}
-                  color="#777777"
+                  color={action.color}
                   style={styles.quickIcon}
                 />
                 <Text style={styles.quickLabel}>{action.label}</Text>

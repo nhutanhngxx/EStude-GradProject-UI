@@ -235,5 +235,9 @@
   "pagination": {
     "prev": "Trước",
     "next": "Tiếp theo"
+  },
+  "teachingSchedule": {
+    "title": "Lịch giảng dạy",
+    "viewBy": "Xem theo"
   }
 }

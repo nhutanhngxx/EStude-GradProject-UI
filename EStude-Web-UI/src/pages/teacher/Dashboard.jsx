@@ -517,7 +517,7 @@ const TeacherDashboard = () => {
 
       {/* Cards thống kê */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {[...Array(5)].map((_, idx) => (
             <div
               key={idx}
@@ -909,7 +909,7 @@ const TeacherDashboard = () => {
       )}
 
       {/* Biểu đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartColumn />
@@ -932,7 +932,7 @@ const TeacherDashboard = () => {
             <Line ref={lineChartRef} data={lineData} options={chartOptions} />
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartColumn />
             <h2 className="text-xl font-semibold">Số lớp theo môn học</h2>
@@ -950,7 +950,7 @@ const TeacherDashboard = () => {
               Chưa có dữ liệu môn học
             </p>
           )}
-        </div>
+        </div> */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <BarChart />

@@ -17,9 +17,10 @@ import { useSocket } from "../../contexts/SocketContext";
 
 const formatDate = (dateString) => {
   const d = new Date(dateString);
-  return `${d.getDate().toString().padStart(2, "0")}/${
-    d.getMonth() + 1
-  }/${d.getFullYear()}`;
+  const day = d.getDate().toString().padStart(2, "0");
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 export default function SubjectDetailScreen({ route, navigation }) {
@@ -27,8 +28,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const { user } = useContext(AuthContext);
   const socket = useSocket();
   const { showToast } = useToast();
-
-  // console.log("subject:", subject);
 
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
@@ -38,6 +37,14 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const [notifications, setNotifications] = useState([]);
 
   const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
+
+  useEffect(() => {
+    if (subject?.name) {
+      navigation.setOptions({
+        title: `${subject.name.toUpperCase()}`,
+      });
+    }
+  }, [subject, navigation]);
 
   useEffect(() => {
     if (!socket || !subject?.classSubjectId || !user?.userId) return;
@@ -69,8 +76,8 @@ export default function SubjectDetailScreen({ route, navigation }) {
         setLoading(true);
         const res = await loadAssignmentsWithStatus(
           user.userId,
-          null, // classId
-          null, // isExam
+          null,
+          null,
           subject.classSubjectId
         );
 
@@ -86,18 +93,11 @@ export default function SubjectDetailScreen({ route, navigation }) {
       }
     };
 
-    // Kiểm tra trạng thái kết nối
-    // if (!socket.isSocketConnected()) {
-    //   console.warn("⚠️ Socket not connected, subscription will be queued");
-    // }
-
-    // Subscription cho buổi điểm danh mới
     const subscription = socket.subscribe(
       `/topic/class/${subject.classSubjectId}/sessions`,
       handleNewSession
     );
 
-    // Subscription cho bài tập
     const assignmentSubscription = socket.subscribe(
       `/topic/class/${subject.classSubjectId}/assignments`,
       handleNewAssignment
@@ -140,7 +140,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
               null,
               subject.classSubjectId
             );
-            setAssignments(res);
             const assignmentsForThisClass = res.filter(
               (a) => a.classSubject?.classSubjectId === subject.classSubjectId
             );
@@ -170,22 +169,20 @@ export default function SubjectDetailScreen({ route, navigation }) {
     <View style={styles.safe}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
       >
         {/* Header môn học */}
         <View style={styles.headerCard}>
-          <Text style={styles.subjectName}>
-            {subject.name} - Lớp {subject.className}
-          </Text>
-
-          {/* Thêm dữ liệu lớp học */}
           <View style={styles.classInfo}>
-            <Text style={styles.classText}>{subject.semester}</Text>
-            <Text style={styles.deadline}>
-              {formatDate(subject.beginDate)} - {formatDate(subject.endDate)}
-            </Text>
             <Text style={styles.classText}>
               {subject.teacherName || "Chưa có"}
+            </Text>
+            <Text style={styles.classText}>{subject.semester}</Text>
+            <Text style={styles.deadline}>
+              Thời gian bắt đầu: {formatDate(subject.beginDate)}
+            </Text>
+            <Text style={styles.deadline}>
+              Thời gian kết thúc: {formatDate(subject.endDate)}
             </Text>
           </View>
         </View>
@@ -338,9 +335,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                     const startTime = new Date(ses.startTime);
                     const endTime = new Date(ses.endTime);
                     const canMark =
-                      now.getTime() >= startTime.getTime() &&
-                      now.getTime() <= endTime.getTime() &&
-                      !ses.status;
+                      now.getTime() >= startTime.getTime() && !ses.status;
 
                     return (
                       <View key={ses.sessionId} style={styles.recordCard}>
@@ -350,15 +345,18 @@ export default function SubjectDetailScreen({ route, navigation }) {
                             {ses.sessionName}
                           </Text>
                           <Text style={styles.sessionTime}>
-                            {/* Thời gian:{" "} */}
+                            Bắt đầu:{" "}
                             {startTime.toLocaleString("vi-VN", {
                               day: "2-digit",
                               month: "2-digit",
                               year: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            })}{" "}
-                            →{" "}
+                            })}
+                          </Text>
+
+                          <Text style={styles.sessionTime}>
+                            Kết thúc:{" "}
                             {endTime.toLocaleString("vi-VN", {
                               day: "2-digit",
                               month: "2-digit",
@@ -440,9 +438,9 @@ export default function SubjectDetailScreen({ route, navigation }) {
                           <TouchableOpacity
                             onPress={() =>
                               navigation.navigate("AttendanceDetail", {
-                                session: ses, // truyền toàn bộ object phiên
-                                subject: subject, // truyền thêm subject để hiển thị tên môn
-                                userId: user.userId, // truyền userId nếu cần gọi API chi tiết
+                                session: ses,
+                                subject: subject,
+                                userId: user.userId,
                               })
                             }
                           >
@@ -489,91 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 16,
   },
-  subjectName: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  description: { fontSize: 13, color: "#555", marginTop: 2 },
-
-  tabRow: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: "center" },
-  activeTab: { backgroundColor: "#27ae60" },
-  tabText: { fontSize: 14, color: "#333" },
-  activeTabText: { color: "#fff", fontWeight: "bold" },
-
-  cardContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "#333",
-  },
-
-  assignmentItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  assignmentTitle: { fontSize: 15, fontWeight: "500", color: "#333" },
-  assignmentDeadline: { fontSize: 13, color: "#666", marginTop: 2 },
-  assignmentStatus: { fontSize: 13, fontWeight: "bold" },
-  done: { color: "#27ae60" },
-  pending: { color: "#e74c3c" },
-
-  recordCard: { padding: 12, borderBottomWidth: 1, borderBottomColor: "#eee" },
-  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
-
-  verticalTable: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 10,
-    overflow: "hidden",
-    marginTop: 8,
-  },
-
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-
-  rowEven: { backgroundColor: "#fafafa" },
-  rowOdd: { backgroundColor: "#fff" },
-
-  rowLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-  },
-
-  rowValue: {
-    flex: 1,
-    fontSize: 14,
-    textAlign: "right",
-    color: "#2e7d32",
-    fontWeight: "600",
-  },
   classInfo: {
-    marginTop: 10,
     gap: 5,
   },
   classText: {
@@ -585,7 +499,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#888",
   },
-
   tabRow: {
     flexDirection: "row",
     backgroundColor: "#fff",
@@ -606,21 +519,44 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 8,
     borderBottomRightRadius: 8,
   },
-
-  attendanceButton: {
-    marginTop: 8,
-    backgroundColor: "#2e7d32",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignSelf: "flex-start",
+  activeTab: { backgroundColor: "#27ae60" },
+  tabText: { fontSize: 14, color: "#333" },
+  activeTabText: { color: "#fff", fontWeight: "bold" },
+  tabContent: {
+    flex: 1,
+    minHeight: "79%", // Chiếm toàn bộ chiều cao còn lại
   },
-  attendanceButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
+  cardContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    flex: 1,
   },
-
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#333",
+  },
+  assignmentItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  assignmentTitle: { fontSize: 15, fontWeight: "500", color: "#333" },
+  assignmentDeadline: { fontSize: 13, color: "#666", marginTop: 2 },
+  assignmentStatus: { fontSize: 13, fontWeight: "bold" },
+  done: { color: "#27ae60" },
+  pending: { color: "#e74c3c" },
   recordCard: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -635,29 +571,55 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-
+  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
+  verticalTable: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 10,
+    overflow: "hidden",
+    marginTop: 8,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  rowEven: { backgroundColor: "#fafafa" },
+  rowOdd: { backgroundColor: "#fff" },
+  rowLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
+  },
+  rowValue: {
+    flex: 1,
+    fontSize: 14,
+    textAlign: "right",
+    color: "#2e7d32",
+    fontWeight: "600",
+  },
   recordInfo: {
     flex: 1,
     marginRight: 12,
     gap: 5,
   },
-
   sessionName: {
     fontWeight: "600",
     color: "#2e7d32",
     fontSize: 16,
   },
-
   sessionTime: {
-    fontSize: 13,
+    fontSize: 12,
     color: "#555",
     marginTop: 2,
   },
-
   recordActions: {
     alignItems: "flex-end",
   },
-
   attendanceButton: {
     backgroundColor: "#2e7d32",
     paddingVertical: 6,
@@ -665,19 +627,16 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginBottom: 4,
   },
-
   attendanceButtonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 13,
   },
-
   statusText: {
     fontWeight: "700",
     fontSize: 14,
     marginBottom: 4,
   },
-
   detailLink: {
     color: "#2e7d32",
     fontSize: 13,

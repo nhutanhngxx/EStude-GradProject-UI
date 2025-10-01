@@ -31,6 +31,7 @@ export default function DetailStudyScreen() {
       try {
         const gradesData =
           await studentStudyService.getAllSubjectGradesOfStudent(user.userId);
+
         const flattenedSubjects =
           gradesData?.flatMap((term) =>
             term.subjects.map((subject) => ({
@@ -51,6 +52,7 @@ export default function DetailStudyScreen() {
               grade: subject,
             }))
           ) || [];
+
         setSubjects(flattenedSubjects);
 
         const overviewData = await studentStudyService.getAcademicRecords(
@@ -277,7 +279,7 @@ export default function DetailStudyScreen() {
               const summary = calculateSummary(termSubjects);
               return (
                 <View key={term} style={styles.semesterSection}>
-                  <Text style={styles.semesterLabel}>Học kỳ: {term}</Text>
+                  <Text style={styles.semesterLabel}>{term}</Text>
                   <View style={styles.tableContainer}>
                     {/* Table Header */}
                     <View style={styles.tableHeader}>
@@ -285,7 +287,14 @@ export default function DetailStudyScreen() {
                         <Text style={styles.tableHeaderText}>Tên môn học</Text>
                       </View>
                       <View style={{ flex: 1, paddingHorizontal: 8 }}>
-                        <Text style={styles.tableHeaderText}>Điểm TB</Text>
+                        <Text
+                          style={[
+                            styles.tableHeaderText,
+                            { textAlign: "right" },
+                          ]}
+                        >
+                          Điểm TB
+                        </Text>
                       </View>
                     </View>
                     {/* Table Rows */}
@@ -294,166 +303,108 @@ export default function DetailStudyScreen() {
                       const isExpanded = expanded[key];
                       return (
                         <View key={idx}>
+                          {/* Row môn học */}
                           <TouchableOpacity
                             style={styles.tableRow}
                             onPress={() => toggleExpand(key)}
                           >
                             <View style={{ flex: 3, paddingHorizontal: 8 }}>
-                              <Text style={styles.tableCellText}>
-                                {s.name} ({s.clazz?.name})
-                              </Text>
+                              <Text style={styles.tableCellText}>{s.name}</Text>
                             </View>
                             <View style={{ flex: 1, paddingHorizontal: 8 }}>
-                              <Text style={styles.tableCellText}>
+                              <Text
+                                style={[
+                                  styles.tableCellText,
+                                  { textAlign: "right" },
+                                ]}
+                              >
                                 {s.grade?.actualAverage ?? "-"}
                               </Text>
                             </View>
                           </TouchableOpacity>
+
+                          {/* Chi tiết điểm */}
                           {isExpanded && (
                             <View style={styles.detailView}>
-                              <View style={styles.rightCol}>
-                                {/* Điểm giữa kỳ */}
-                                <View style={styles.row}>
-                                  <Text style={styles.label}>Giữa kỳ</Text>
-                                  <View style={styles.cell}>
+                              <View style={styles.detailRow}>
+                                {/* Cột chứa Giữa kỳ, Cuối kỳ, Tổng kết, Xếp loại */}
+                                <View style={styles.detailColumn}>
+                                  <View style={[styles.row, styles.rowEven]}>
+                                    <Text style={styles.label}>
+                                      Giữa kỳ (30%)
+                                    </Text>
                                     <Text style={styles.value}>
                                       {s.grade?.midtermScore ?? "-"}
                                     </Text>
                                   </View>
-                                </View>
-
-                                {/* Điểm thường xuyên - 5 cột */}
-                                <View style={styles.row}>
-                                  <Text style={styles.label}>Thường xuyên</Text>
-                                  <View style={[styles.cell, { flex: 1 }]}>
-                                    <View style={styles.scoresGrid}>
-                                      {(() => {
-                                        const scores =
-                                          s.grade?.regularScores ?? [];
-                                        const display = [...scores];
-                                        while (display.length < 5)
-                                          display.push("-");
-                                        return display
-                                          .slice(0, 5)
-                                          .map((sc, idx) => (
-                                            <View
-                                              key={idx}
-                                              style={styles.scoreBox}
-                                            >
-                                              <Text style={styles.scoreText}>
-                                                {sc}
-                                              </Text>
-                                            </View>
-                                          ));
-                                      })()}
-                                    </View>
-                                  </View>
-                                </View>
-
-                                {/* Thực hành (nếu có) */}
-                                {s.grade?.practiceScores?.length > 0 && (
-                                  <View style={styles.row}>
-                                    <Text style={styles.label}>Thực hành</Text>
-                                    <View style={[styles.cell, { flex: 1 }]}>
+                                  <View style={[styles.row, styles.rowEven]}>
+                                    <Text style={styles.label}>
+                                      Thường kỳ (20%)
+                                    </Text>
+                                    <View>
                                       <View style={styles.scoresGrid}>
-                                        {s.grade.practiceScores.map(
-                                          (sc, idx) => (
-                                            <View
-                                              key={idx}
-                                              style={styles.scoreBox}
-                                            >
-                                              <Text style={styles.scoreText}>
-                                                {sc}
-                                              </Text>
-                                            </View>
-                                          )
-                                        )}
+                                        {(() => {
+                                          const scores =
+                                            s.grade?.regularScores ?? [];
+                                          const display = [...scores];
+                                          while (display.length < 5)
+                                            display.push("-");
+                                          return display
+                                            .slice(0, 5)
+                                            .map((sc, i) => (
+                                              <View
+                                                key={i}
+                                                style={styles.scoreBox}
+                                              >
+                                                <Text style={styles.scoreText}>
+                                                  {sc}
+                                                </Text>
+                                              </View>
+                                            ));
+                                        })()}
                                       </View>
                                     </View>
                                   </View>
-                                )}
 
-                                {/* Cuối kỳ */}
-                                <View style={styles.row}>
-                                  <Text style={styles.label}>Cuối kỳ</Text>
-                                  <View style={styles.cell}>
+                                  <View style={[styles.row, styles.rowEven]}>
+                                    <Text style={styles.label}>
+                                      Cuối kỳ (50%)
+                                    </Text>
                                     <Text style={styles.value}>
                                       {s.grade?.finalScore ?? "-"}
                                     </Text>
                                   </View>
-                                </View>
-
-                                {/* TBQT */}
-                                {/* <View style={styles.row}>
-                                  <Text style={styles.label}>TBQT</Text>
-                                  <View style={styles.cell}>
-                                    <Text style={styles.value}>
-                                      {s.grade?.avgScore ?? "-"}
-                                    </Text>
-                                  </View>
-                                </View> */}
-
-                                {/* Điểm tổng kết */}
-                                <View style={styles.row}>
-                                  <Text style={styles.label}>
-                                    Điểm tổng kết
-                                  </Text>
-                                  <View style={styles.cell}>
+                                  <View style={[styles.row, styles.rowEven]}>
+                                    <Text style={styles.label}>Tổng kết</Text>
                                     <Text style={styles.value}>
                                       {s.grade?.totalScore ?? "-"}
                                     </Text>
                                   </View>
-                                </View>
-
-                                {/* Thang điểm 4 */}
-                                {/* <View style={styles.row}>
-                                  <Text style={styles.label}>Thang điểm 4</Text>
-                                  <View style={styles.cell}>
-                                    <Text style={styles.value}>
-                                      {s.grade?.scale4 ?? "-"}
-                                    </Text>
-                                  </View>
-                                </View> */}
-
-                                {/* Điểm chữ */}
-                                {/* <View style={styles.row}>
-                                  <Text style={styles.label}>Điểm chữ</Text>
-                                  <View style={styles.cell}>
-                                    <Text style={styles.value}>
-                                      {s.grade?.letter ?? "-"}
-                                    </Text>
-                                  </View>
-                                </View> */}
-
-                                {/* Xếp loại */}
-                                <View style={styles.row}>
-                                  <Text style={styles.label}>Xếp loại</Text>
-                                  <View style={styles.cell}>
+                                  <View style={[styles.row, styles.rowEven]}>
+                                    <Text style={styles.label}>Xếp loại</Text>
                                     <Text style={styles.value}>
                                       {s.grade?.rank ?? "-"}
                                     </Text>
                                   </View>
                                 </View>
 
-                                {/* Ghi chú */}
-                                {/* <View style={styles.row}>
-                                  <Text style={styles.label}>Ghi chú</Text>
-                                  <View style={styles.cell}>
-                                    <Text style={styles.value}>
-                                      {s.grade?.comment ?? "-"}
+                                {/* Cột chứa điểm Thực hành (nếu có) */}
+                                {s.grade?.practiceScores?.length > 0 && (
+                                  <View style={styles.regularScoresContainer}>
+                                    <Text style={styles.regularLabel}>
+                                      Thực hành
                                     </Text>
+                                    <View style={styles.scoresGrid}>
+                                      {s.grade.practiceScores.map((sc, i) => (
+                                        <View key={i} style={styles.scoreBox}>
+                                          <Text style={styles.scoreText}>
+                                            {sc}
+                                          </Text>
+                                        </View>
+                                      ))}
+                                    </View>
                                   </View>
-                                </View> */}
-
-                                {/* Đạt */}
-                                {/* <View style={styles.row}>
-                                  <Text style={styles.label}>Đạt</Text>
-                                  <View style={styles.cell}>
-                                    <Text style={styles.value}>
-                                      {s.grade?.isPassed ? "Đạt" : "Chưa đạt"}
-                                    </Text>
-                                  </View>
-                                </View> */}
+                                )}
                               </View>
                             </View>
                           )}
@@ -461,12 +412,30 @@ export default function DetailStudyScreen() {
                       );
                     })}
                   </View>
-                  {/* Summary */}
                   <View style={styles.summaryContainer}>
-                    <Text>Điểm trung bình cộng: {summary.average}</Text>
-                    <Text>Xếp loại học lực: {summary.rank}</Text>
-                    <Text>Trạng thái học vụ: {summary.status}</Text>
-                    <Text>Xếp loại hạnh kiểm: {summary.conduct}</Text>
+                    <View style={[styles.summaryRow]}>
+                      <Text style={styles.summaryLabel}>
+                        Điểm trung bình cộng
+                      </Text>
+                      <Text style={styles.summaryValue}>{summary.average}</Text>
+                    </View>
+
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Xếp loại học lực</Text>
+                      <Text style={styles.summaryValue}>{summary.rank}</Text>
+                    </View>
+
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Trạng thái học vụ</Text>
+                      <Text style={styles.summaryValue}>{summary.status}</Text>
+                    </View>
+
+                    <View style={[styles.summaryRow, styles.summaryRowLast]}>
+                      <Text style={styles.summaryLabel}>
+                        Xếp loại hạnh kiểm
+                      </Text>
+                      <Text style={styles.summaryValue}>{summary.conduct}</Text>
+                    </View>
                   </View>
                 </View>
               );
@@ -503,7 +472,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#27ae60",
   },
   tabText: {
-    fontSize: 14,
+    // fontSize: 14,
     color: "#333",
   },
   activeTabText: {
@@ -518,10 +487,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 5,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
   filterSortRow: {
@@ -534,7 +500,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   dropdownLabel: {
-    fontSize: 12,
+    // fontSize: 12,
     color: "#555",
     marginBottom: 2,
   },
@@ -543,7 +509,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   subjectName: {
-    fontSize: 16,
+    // fontSize: 16,
     fontWeight: "600",
     color: "#333",
   },
@@ -553,23 +519,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   detailLabel: {
-    fontSize: 12,
+    // fontSize: 12,
     color: "#555",
   },
   progressText: {
-    fontSize: 12,
+    // fontSize: 12,
     color: "#666",
     marginTop: 4,
-  },
-  cell: {
-    flex: 1,
-    justifyContent: "center",
   },
   semesterSection: {
     marginBottom: 20,
   },
   semesterLabel: {
-    fontSize: 16,
+    // fontSize: 16,
     fontWeight: "bold",
     marginBottom: 8,
     color: "#333",
@@ -577,7 +539,6 @@ const styles = StyleSheet.create({
   tableContainer: {
     backgroundColor: "#fff",
     borderRadius: 8,
-    padding: 0,
     borderWidth: 1,
     borderColor: "#e0e0e0",
   },
@@ -596,84 +557,132 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   tableHeaderText: {
-    fontSize: 12,
+    // fontSize: 15,
     fontWeight: "bold",
     color: "#333",
-    textAlign: "left",
   },
   tableCellText: {
-    fontSize: 12,
+    // fontSize: 15,
+    fontWeight: "bold",
     color: "#555",
-    textAlign: "left",
   },
   detailView: {
-    flexDirection: "row",
     padding: 8,
     backgroundColor: "#f5f5f5",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
-    alignItems: "flex-start",
   },
-  leftCol: {
-    width: 120, // cố định để căn trái; chỉnh theo ý bạn
-    paddingRight: 8,
-    justifyContent: "flex-start",
-  },
-  rightCol: {
-    flex: 1,
-  },
-  detailTitle: {
-    fontWeight: "700",
-    marginBottom: 4,
-    fontSize: 14,
-  },
-
-  subTitle: {
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-
-  // grid 5 cột
-  scoresGrid: {
+  detailRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 8,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 6,
+  },
+  detailColumn: {
+    flex: 1,
+    flexDirection: "column",
+    paddingRight: 8,
+  },
+  regularScoresContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  regularLabel: {
+    // fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginRight: 8,
+    textAlign: "center",
+    alignSelf: "center",
+    width: 80,
+  },
+  scoresGrid: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: 10,
   },
   scoreBox: {
-    width: "20%", // 5 cột
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    alignItems: "center",
+    borderRadius: 6,
+    borderColor: "#ccc",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
-    backgroundColor: "#fff",
-    marginBottom: 6,
+    alignItems: "center",
   },
   scoreText: {
-    fontSize: 14,
-    fontWeight: "600",
+    // fontSize: 13,
+    fontWeight: "500",
+    color: "#555",
   },
-
-  // row cho các mục khác
   row: {
     flexDirection: "row",
-    marginBottom: 4,
+    justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 6,
+  },
+  rowEven: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   label: {
-    width: 120, // căn đều với leftCol để thẳng cột
-    fontWeight: "500",
+    // fontSize: 15,
+    // fontWeight: "600",
+    color: "#333",
+    flex: 1,
   },
   value: {
+    // fontSize: 14,
+    color: "#555",
+    textAlign: "right",
     flex: 1,
   },
   summaryContainer: {
-    marginTop: 12,
-    padding: 8,
     backgroundColor: "#fff",
-    borderRadius: 8,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 16,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
+    borderColor: "#e6e6e6",
+
+    // Đổ bóng nhẹ
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2c3e50",
+    marginBottom: 12,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+
+  summaryRowLast: {
+    borderBottomWidth: 0, // bỏ line ở row cuối
+  },
+
+  summaryLabel: {
+    fontSize: 14,
+    color: "#555",
+    fontWeight: "500",
+  },
+
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#27ae60", // màu nhấn mạnh cho kết quả
   },
 });
