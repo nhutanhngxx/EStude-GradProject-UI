@@ -15,7 +15,7 @@ import { AuthContext } from "../contexts/AuthContext";
 
 export default function DetailStudyScreen() {
   const { user } = useContext(AuthContext);
-  const tabs = ["Tổng quan", "Môn học"];
+  const tabs = ["Tổng quan", "Tổng kết"];
   const [activeTab, setActiveTab] = useState("Tổng quan");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("default");
@@ -256,7 +256,7 @@ export default function DetailStudyScreen() {
                   </View>
                   <View style={styles.subjectDetailRow}>
                     <Text style={styles.detailLabel}>
-                      Điểm TB: {subject.gpa ?? "-"}
+                      Điểm Trung bình: {subject.gpa ?? "-"}
                     </Text>
                     <Text style={styles.detailLabel}>
                       Điểm danh: {subject.completed ?? 0}/{subject.total ?? 0}
@@ -272,7 +272,7 @@ export default function DetailStudyScreen() {
           </View>
         )}
 
-        {activeTab === "Môn học" && (
+        {activeTab === "Tổng kết" && (
           <View>
             {termKeys.map((term) => {
               const termSubjects = groupedSubjects[term].subjects;
@@ -548,11 +548,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     paddingVertical: 8,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    // borderBottomWidth: 1,
+    // borderBottomColor: "#e0e0e0",
     paddingVertical: 8,
     alignItems: "center",
   },

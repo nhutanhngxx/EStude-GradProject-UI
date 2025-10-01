@@ -45,7 +45,7 @@ export default function NopBaiScreen({ navigation }) {
           null,
           activeTab === "Exams"
         );
-        console.log("res:", res);
+        // console.log("res:", res);
         setAssignments(res);
       } catch (err) {
         console.error(err);

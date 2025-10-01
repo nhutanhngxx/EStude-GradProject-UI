@@ -49,9 +49,10 @@ export default function StudyOverviewCard({
 
         <View style={styles.stat}>
           <Text style={styles.statValue}>
-            {passedCredits}/{requiredCredits}
+            {/* {passedCredits}/ */}
+            {requiredCredits}
           </Text>
-          <Text style={styles.statLabel}>Tổng số môn</Text>
+          <Text style={styles.statLabel}>Tổng môn học</Text>
         </View>
       </View>
 
@@ -61,11 +62,11 @@ export default function StudyOverviewCard({
         <ProgressBar value={creditPercent} />
         <Text style={styles.progressText}>{creditPercent}% hoàn thành</Text>
 
-        <Text style={styles.blockTitle}>Tỉ lệ nộp bài</Text>
+        <Text style={styles.blockTitle}>Nộp bài</Text>
         <ProgressBar value={submissionPercent} />
         <Text style={styles.progressText}>{submissionPercent}%</Text>
 
-        <Text style={styles.blockTitle}>Tỉ lệ đi học</Text>
+        <Text style={styles.blockTitle}>Điểm danh</Text>
         <ProgressBar value={attendancePercent} />
         <Text style={styles.progressText}>{attendancePercent}%</Text>
       </View>

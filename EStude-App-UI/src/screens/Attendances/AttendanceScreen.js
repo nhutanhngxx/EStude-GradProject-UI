@@ -78,6 +78,39 @@ export default function AttendanceScreen({ navigation }) {
   const endOfMonth = (d) =>
     new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
 
+  const getTimeRangeText = () => {
+    let start, end;
+    switch (selectedActivity) {
+      case "Ngày":
+        start = startOfDay(customDate);
+        end = endOfDay(customDate);
+        break;
+      case "Tuần":
+        start = startOfWeek(customDate);
+        end = endOfWeek(customDate);
+        break;
+      case "Tháng":
+        start = startOfMonth(customDate);
+        end = endOfMonth(customDate);
+        break;
+      case "Range":
+        start = startOfDay(rangeStart);
+        end = endOfDay(rangeEnd);
+        break;
+      default:
+        return "";
+    }
+    return `Từ ${start.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })} đến ${end.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })}`;
+  };
+
   const parseSessionStart = (s) => {
     if (!s || !s.startTime) return null;
     const dt = new Date(s.startTime);
@@ -325,47 +358,10 @@ export default function AttendanceScreen({ navigation }) {
                 />
               </View>
             </View>
-
-            {/* Lọc theo thời gian */}
-            {/* {selectedActivity !== "Range" ? (
-              <TouchableOpacity
-                style={styles.dateBtn}
-                onPress={() => {
-                  setPickerMode("single");
-                  setShowDatePicker(true);
-                }}
-              >
-                <Text style={styles.dateBtnText}>
-                  {customDate.toLocaleDateString("vi-VN")}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ flexDirection: "row" }}>
-                <TouchableOpacity
-                  style={[styles.dateBtn, { marginRight: 8 }]}
-                  onPress={() => {
-                    setPickerMode("start");
-                    setShowDatePicker(true);
-                  }}
-                >
-                  <Text style={styles.dateBtnText}>
-                    {rangeStart.toLocaleDateString("vi-VN")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.dateBtn}
-                  onPress={() => {
-                    setPickerMode("end");
-                    setShowDatePicker(true);
-                  }}
-                >
-                  <Text style={styles.dateBtnText}>
-                    {rangeEnd.toLocaleDateString("vi-VN")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )} */}
           </View>
+
+          {/* Hiển thị khoảng thời gian */}
+          <Text style={styles.timeRangeText}>{getTimeRangeText()}</Text>
 
           {showDatePicker && (
             <DateTimePicker
@@ -397,11 +393,25 @@ export default function AttendanceScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f5f5" },
-  container: { flex: 1, padding: 16 },
-  greeting: { fontSize: 16, color: "#333" },
-  highlight: { fontWeight: "bold" },
-  subGreeting: { fontSize: 14, color: "#777" },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
+  greeting: {
+    fontSize: 16,
+    color: "#333",
+  },
+  highlight: {
+    fontWeight: "bold",
+  },
+  subGreeting: {
+    fontSize: 14,
+    color: "#777",
+  },
 
   header: {
     flexDirection: "row",
@@ -409,8 +419,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  subtitle: { fontSize: 15, color: "#555" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
+  subtitle: {
+    fontSize: 15,
+    color: "#555",
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   banner: {
     width: 200,
     height: 60,
@@ -427,9 +444,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     shadowColor: "#000",
     shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowRadius: 4,
     elevation: 2,
+    minHeight: "60%",
+    flex: 1,
   },
   cardTitle: {
     fontSize: 16,
@@ -437,18 +459,40 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "#333",
   },
-  title: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 4 },
-  description: { fontSize: 13, color: "#555", marginBottom: 4 },
-  progressText: { fontSize: 12, color: "#666", marginTop: 4 },
+  title: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+  },
 
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  stat: { alignItems: "center" },
-  statLabel: { fontSize: 12, color: "#666" },
-  statValue: { fontSize: 16, fontWeight: "bold", color: "#000" },
+  stat: {
+    alignItems: "center",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "#666",
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000",
+  },
 
   filterRow: {
     flexDirection: "row",
@@ -456,7 +500,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 10,
   },
-  dropdownWrapper: { marginHorizontal: 2 },
+  dropdownWrapper: {
+    marginHorizontal: 2,
+  },
 
   dateBtn: {
     marginLeft: 8,
@@ -464,16 +510,38 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#00cc66",
   },
-  dateBtnText: { color: "#fff", fontSize: 14 },
+  dateBtnText: {
+    color: "#fff",
+    fontSize: 14,
+  },
 
-  borderPresent: { borderLeftWidth: 5, borderLeftColor: "#27ae60" },
-  borderLate: { borderLeftWidth: 5, borderLeftColor: "#f39c12" },
-  borderAbsent: { borderLeftWidth: 5, borderLeftColor: "#e74c3c" },
+  borderPresent: {
+    borderLeftWidth: 5,
+    borderLeftColor: "#27ae60",
+  },
+  borderLate: {
+    borderLeftWidth: 5,
+    borderLeftColor: "#f39c12",
+  },
+  borderAbsent: {
+    borderLeftWidth: 5,
+    borderLeftColor: "#e74c3c",
+  },
 
   loadingInline: {
     alignItems: "center",
     justifyContent: "center",
     marginVertical: 16,
   },
-  emptyText: { textAlign: "center", color: "#999", marginTop: 12 },
+  emptyText: {
+    textAlign: "center",
+    color: "#999",
+    marginTop: 12,
+  },
+  timeRangeText: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 12,
+    textAlign: "center",
+  },
 });

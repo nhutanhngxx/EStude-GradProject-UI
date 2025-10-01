@@ -32,7 +32,7 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
         const res = await assignmentService.getAssignmentById(
           assignment.assignmentId
         );
-        console.log("assignmentDetail:", res.data);
+        // console.log("assignmentDetail:", res.data);
         if (res) {
           setAssignmentDetail(res.data);
         }
