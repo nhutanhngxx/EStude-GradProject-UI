@@ -157,8 +157,11 @@ export default function ProfileScreen({ navigation }) {
         {/* Tab Tổng quan */}
         {activeTab === "Tổng quan" && (
           <View
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+            style={{ flex: 1, paddingHorizontal: 12 }}
+            contentContainerStyle={{
+              padding: 16,
+              // paddingBottom: 40,
+            }}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.cardContainer}>
@@ -243,7 +246,7 @@ export default function ProfileScreen({ navigation }) {
                 </Text>
               </View>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Môn học đã hoàn thành</Text>
+                <Text style={styles.infoLabel}>Đã hoàn thành</Text>
                 <Text style={styles.infoValue}>
                   {academicRecords?.completedSubjects || "-"}
                 </Text>
@@ -422,8 +425,8 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingBottom: 16,
+    // paddingHorizontal: 12,
+    // paddingBottom: 16,
   },
 
   /* ==== Card chung (bao gồm card chỉnh sửa) ==== */

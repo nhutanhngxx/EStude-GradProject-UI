@@ -46,6 +46,8 @@ export default function HomeStudentScreen({ navigation }) {
           user.userId
         );
 
+        // console.log("[Home screen] recent assignments:", assignments);
+
         if (Array.isArray(assignments)) {
           const sorted = assignments.sort(
             (a, b) => new Date(a.dueDate) - new Date(b.dueDate)

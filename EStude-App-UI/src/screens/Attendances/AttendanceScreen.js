@@ -18,7 +18,6 @@ import classSubjectService from "../../services/classSubjectService";
 import ProgressBar from "../../components/common/ProgressBar";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import AttendanceOverview from "../../components/common/AttendanceOverview";
-import bannerLight from "../../assets/images/banner-light.png";
 import UserHeader from "../../components/common/UserHeader";
 
 export default function AttendanceScreen({ navigation }) {
@@ -450,8 +449,8 @@ const styles = StyleSheet.create({
     },
     shadowRadius: 4,
     elevation: 2,
-    minHeight: "60%",
-    flex: 1,
+    // minHeight: "60%",
+    // flex: 1,
   },
   cardTitle: {
     fontSize: 16,
