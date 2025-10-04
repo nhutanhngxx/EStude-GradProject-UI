@@ -1,598 +1,410 @@
-import React, { useState, useContext, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { ThemeContext } from "../../contexts/ThemeContext";
-import { Calendar, dateFnsLocalizer } from "react-big-calendar";
-import format from "date-fns/format";
-import parse from "date-fns/parse";
-import startOfWeek from "date-fns/startOfWeek";
-import getDay from "date-fns/getDay";
-import vi from "date-fns/locale/vi";
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import classService from "../../services/classService";
-import adminService from "../../services/adminService";
-import subjectService from "../../services/subjectService";
+import { useToast } from "../../contexts/ToastContext";
+import scheduleService from "../../services/scheduleService";
 
-const locales = {
-  vi: vi,
+// --- helper functions ---
+const isoDateOnly = (d) => {
+  const dt = new Date(d);
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 };
+const formatVNDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  const ngay = String(d.getDate()).padStart(2, "0");
+  const thang = String(d.getMonth() + 1).padStart(2, "0");
+  const nam = d.getFullYear();
+  return `${ngay}/${thang}/${nam}`;
+};
+const startOfWeekMonday = (date) => {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 (Sun) ... 6
+  const diff = day === 0 ? -6 : 1 - day; // move to Monday
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+};
+const getWeekDates = (date) => {
+  const monday = startOfWeekMonday(date);
+  return [...Array(7)].map((_, i) => {
+    const dd = new Date(monday);
+    dd.setDate(monday.getDate() + i);
+    dd.setHours(0, 0, 0, 0);
+    return dd;
+  });
+};
+const getMonthDates = (date) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return [...Array(daysInMonth)].map(
+    (_, i) => new Date(year, month, i + 1, 0, 0, 0, 0)
+  );
+};
+const sortSchedules = (arr) =>
+  [...arr].sort((a, b) => (a.startPeriod ?? 0) - (b.startPeriod ?? 0));
 
-const localizer = dateFnsLocalizer({
-  format,
-  parse,
-  startOfWeek: () => startOfWeek(new Date(), { weekStartsOn: 1 }),
-  getDay,
-  locales,
-});
-
-const TeachingSchedule = () => {
-  const { t } = useTranslation();
+export default function TeachingScheduleFull() {
   const { darkMode } = useContext(ThemeContext);
-  const [view, setView] = useState("class");
-  const [selectedClass, setSelectedClass] = useState(null);
-  const [selectedTeacher, setSelectedTeacher] = useState(null);
-  const [dateRange, setDateRange] = useState({
-    start: new Date(2025, 8, 29),
-    end: new Date(2025, 9, 5),
-  });
-  const [classes, setClasses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [events, setEvents] = useState([
-    {
-      id: "1",
-      classId: "class1",
-      teacherId: "teacher1",
-      title: "Giảng dạy Toán lớp 10A1",
-      subjectId: "math",
-      subject: "Toán",
-      className: "10A1",
-      teacherName: "Nguyễn Văn A",
-      room: "A101",
-      notes: "Ôn tập chương 1",
-      start: new Date(2025, 8, 30, 8, 0),
-      end: new Date(2025, 8, 30, 9, 30),
-    },
-    {
-      id: "2",
-      classId: "class2",
-      teacherId: "teacher2",
-      title: "Giảng dạy Vật lý lớp 12A1",
-      subjectId: "physics",
-      subject: "Vật lý",
-      className: "12A1",
-      teacherName: "Trần Thị B",
-      room: "B204",
-      notes: "Thí nghiệm quang học",
-      start: new Date(2025, 8, 31, 13, 0),
-      end: new Date(2025, 8, 31, 14, 30),
-    },
-  ]);
-  const [showModal, setShowModal] = useState(false);
-  const [newEvent, setNewEvent] = useState({
-    classId: selectedClass || "",
-    teacherId: "",
-    subjectId: "",
-    room: "",
-    notes: "",
-    start: null,
-    end: null,
-  });
-  const [errors, setErrors] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [useTimePicker, setUseTimePicker] = useState(false);
-  const [errorLoadingTeachers, setErrorLoadingTeachers] = useState(null);
+  const { showToast } = useToast();
+
+  const [viewMode, setViewMode] = useState("week");
+  const [currentDate, setCurrentDate] = useState(() =>
+    startOfWeekMonday(new Date())
+  );
+  const [loading, setLoading] = useState(false);
+  const [schedules, setSchedules] = useState([]);
+  const [error, setError] = useState("");
+
+  const fetchSchedules = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      const teacherId = user?.userId;
+      if (!teacherId) {
+        throw new Error("Không tìm thấy teacherId trong localStorage.user");
+      }
+
+      const data = await scheduleService.getSchedulesByTeacher(teacherId);
+      if (!data) throw new Error("Không có dữ liệu lịch");
+
+      const normalized = (data || []).map((it) => ({
+        ...it,
+        dateOnly: isoDateOnly(it.date).toISOString().slice(0, 10),
+      }));
+      setSchedules(normalized);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || "Lỗi khi tải lịch");
+      showToast?.(err.message || "Lỗi khi tải lịch", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const classesRes = await classService.getAllClasses();
-        setClasses(classesRes || []);
-        const usersRes = await adminService.getAllUsers();
-        const teachersRes = usersRes.filter((u) => u.role === "TEACHER");
-        if (teachersRes.length === 0) {
-          setErrorLoadingTeachers("Không tìm thấy giáo viên nào.");
-        } else {
-          setTeachers(teachersRes);
-        }
-        const subjectsRes = await subjectService.getAllSubjects();
-        setSubjects(subjectsRes || []);
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu:", error);
-        setErrorLoadingTeachers("Lỗi khi tải danh sách giáo viên.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    fetchSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (selectedClass) {
-      setNewEvent((prev) => ({
-        ...prev,
-        classId: selectedClass,
-        className: classes.find((c) => c.classId === selectedClass)?.name || "",
-      }));
-    }
-  }, [selectedClass, classes]);
-
-  const handleSelectSlot = ({ start, end }) => {
-    setNewEvent((prev) => ({ ...prev, start, end }));
-    setUseTimePicker(false);
-    setShowModal(true);
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewEvent((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: "" }));
-    if (name === "startDateTime" && value) {
-      setNewEvent((prev) => ({ ...prev, start: new Date(value) }));
-    }
-    if (name === "endDateTime" && value) {
-      setNewEvent((prev) => ({ ...prev, end: new Date(value) }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!newEvent.classId) newErrors.classId = "Lớp học là bắt buộc";
-    if (!newEvent.teacherId) newErrors.teacherId = "Giáo viên là bắt buộc";
-    if (!newEvent.subjectId) newErrors.subjectId = "Môn học là bắt buộc";
-    if (!newEvent.start || !newEvent.end)
-      newErrors.date = "Thời gian là bắt buộc";
-    if (newEvent.start && newEvent.end && newEvent.start >= newEvent.end) {
-      newErrors.date = "Thời gian kết thúc phải sau thời gian bắt đầu";
-    }
-    const conflict = events.find(
-      (event) =>
-        (event.teacherId === newEvent.teacherId ||
-          event.classId === newEvent.classId ||
-          event.room === newEvent.room) &&
-        event.start < newEvent.end &&
-        event.end > newEvent.start
-    );
-    if (conflict) {
-      newErrors.conflict =
-        "Lịch bị trùng với một buổi học khác (giáo viên, lớp, hoặc phòng).";
-    }
-    return newErrors;
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
-    const selectedSubject = subjects.find(
-      (s) => s.subjectId === newEvent.subjectId
-    );
-    const newEventData = {
-      ...newEvent,
-      id: `event-${events.length + 1}`,
-      title: `Giảng dạy ${selectedSubject?.name || newEvent.subjectId} lớp ${
-        newEvent.className
-      }`,
-      subject: selectedSubject?.name || newEvent.subjectId,
-      className:
-        classes.find((c) => c.classId === newEvent.classId)?.name || "",
-      teacherName:
-        teachers.find((t) => t.userId === newEvent.teacherId)?.fullName || "",
-    };
-    setEvents((prev) => [...prev, newEventData]);
-    setShowModal(false);
-    setNewEvent({
-      classId: selectedClass || "",
-      teacherId: "",
-      subjectId: "",
-      room: "",
-      notes: "",
-      start: null,
-      end: null,
+  // Navigation helpers
+  const goPrev = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      if (viewMode === "day") d.setDate(d.getDate() - 1);
+      else if (viewMode === "week") d.setDate(d.getDate() - 7);
+      else if (viewMode === "month") d.setMonth(d.getMonth() - 1);
+      return new Date(d);
     });
-    setErrors({});
-    setUseTimePicker(false);
   };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setNewEvent({
-      classId: selectedClass || "",
-      teacherId: "",
-      subjectId: "",
-      room: "",
-      notes: "",
-      start: null,
-      end: null,
+  const goNext = () => {
+    setCurrentDate((prev) => {
+      const d = new Date(prev);
+      if (viewMode === "day") d.setDate(d.getDate() + 1);
+      else if (viewMode === "week") d.setDate(d.getDate() + 7);
+      else if (viewMode === "month") d.setMonth(d.getMonth() + 1);
+      return new Date(d);
     });
-    setErrors({});
-    setUseTimePicker(false);
+  };
+  const goToday = () => setCurrentDate(startOfWeekMonday(new Date()));
+
+  const handleWeekPicker = (e) => {
+    const val = e.target.value; // yyyy-Www
+    if (!val) return;
+    const [yearStr, weekStr] = val.split("-W");
+    const year = parseInt(yearStr, 10);
+    const week = parseInt(weekStr, 10);
+    if (isNaN(year) || isNaN(week)) return;
+    const jan4 = new Date(year, 0, 4);
+    const dayOfJan4 = jan4.getDay() || 7;
+    const mondayWeek1 = new Date(jan4);
+    mondayWeek1.setDate(jan4.getDate() - (dayOfJan4 - 1));
+    const target = new Date(mondayWeek1);
+    target.setDate(mondayWeek1.getDate() + (week - 1) * 7);
+    setCurrentDate(target);
   };
 
-  const formatDateTime = (date) => {
-    if (!date) return "";
-    return format(date, "dd/MM/yyyy HH:mm", { locale: vi });
+  const handleDayPicker = (e) => {
+    if (!e.target.value) return;
+    setCurrentDate(new Date(e.target.value));
   };
 
-  const filteredEvents = () => {
-    if (view === "class" && selectedClass) {
-      return events.filter((e) => e.classId === selectedClass);
+  const visibleDates = useMemo(() => {
+    if (viewMode === "day") {
+      return [isoDateOnly(currentDate)];
     }
-    if (view === "teacher" && selectedTeacher) {
-      return events.filter((e) => e.teacherId === selectedTeacher);
+    if (viewMode === "week") {
+      return getWeekDates(currentDate).map(isoDateOnly);
     }
-    return view === "class" ? [] : events;
+    return getMonthDates(currentDate).map(isoDateOnly);
+  }, [viewMode, currentDate]);
+
+  const schedulesByDate = useMemo(() => {
+    const map = {};
+    schedules.forEach((s) => {
+      const key = s.dateOnly;
+      if (!map[key]) map[key] = [];
+      map[key].push(s);
+    });
+    Object.keys(map).forEach((k) => {
+      map[k] = sortSchedules(map[k]);
+    });
+    return map;
+  }, [schedules]);
+
+  const ScheduleCard = ({ sch }) => {
+    const subjectName =
+      sch.classSubject?.subject?.name ||
+      sch.classSubject?.subjectName ||
+      sch.subjectName ||
+      sch.subject ||
+      "";
+    return (
+      <div
+        className={`p-2 rounded-md border ${
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="text-sm font-semibold truncate">{subjectName}</div>
+        <div className="text-xs mt-1">
+          Tiết {sch.startPeriod} {/* -{sch.endPeriod}{" "} */}
+          {sch.room ? `· ${sch.room}` : ""}
+        </div>
+        {/* {sch.details && (
+          <div className="text-xs mt-1 text-gray-600 dark:text-gray-300">
+            {sch.details}
+          </div>
+        )} */}
+      </div>
+    );
+  };
+
+  const DayView = () => {
+    const day = visibleDates[0];
+    const key = day.toISOString().slice(0, 10);
+    const list = schedulesByDate[key] || [];
+    return (
+      <div className="space-y-3">
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {formatVNDate(day)}
+        </div>
+        {loading ? (
+          <div className="text-center py-6">Đang tải...</div>
+        ) : list.length === 0 ? (
+          <div className="text-center py-6 text-gray-500">
+            Không có lịch trong ngày này
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {list.map((sch) => (
+              <ScheduleCard key={sch.scheduleId || sch.date} sch={sch} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const WeekView = () => {
+    const weekDates = visibleDates;
+    const thuVN = [
+      "Thứ Hai",
+      "Thứ Ba",
+      "Thứ Tư",
+      "Thứ Năm",
+      "Thứ Sáu",
+      "Thứ Bảy",
+      "Chủ Nhật",
+    ];
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
+        {weekDates.map((d, idx) => {
+          const key = d.toISOString().slice(0, 10);
+          const list = schedulesByDate[key] || [];
+          return (
+            <div
+              key={key}
+              className={`p-2 border rounded bg-white dark:bg-transparent min-h-[140px]`}
+            >
+              <div className="mb-3 text-center">
+                <div className="text-sm font-medium">{thuVN[idx]}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatVNDate(d)}
+                </div>
+              </div>
+              {loading ? (
+                <div className="text-xs text-center py-4">...</div>
+              ) : list.length === 0 ? (
+                <div className="text-xs text-gray-500 text-center">
+                  Không có lịch
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {list.map((sch) => (
+                    <ScheduleCard key={sch.scheduleId || sch.date} sch={sch} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const MonthView = () => {
+    const monthDates = visibleDates;
+    const thuVN = [
+      "Thứ Hai",
+      "Thứ Ba",
+      "Thứ Tư",
+      "Thứ Năm",
+      "Thứ Sáu",
+      "Thứ Bảy",
+      "Chủ Nhật",
+    ];
+    return (
+      <div>
+        <div className="grid grid-cols-7 gap-2 mb-2">
+          {thuVN.map((w) => (
+            <div key={w} className="text-xs font-medium text-center">
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-2">
+          {(() => {
+            const first = monthDates[0];
+            const weekdayOfFirst = first.getDay() === 0 ? 7 : first.getDay();
+            const pad = weekdayOfFirst - 1;
+            const cells = [];
+            for (let i = 0; i < pad; i++) {
+              cells.push(
+                <div
+                  key={`pad-${i}`}
+                  className="min-h-[100px] border rounded p-2 bg-transparent"
+                />
+              );
+            }
+            monthDates.forEach((d) => {
+              const key = d.toISOString().slice(0, 10);
+              const list = schedulesByDate[key] || [];
+              cells.push(
+                <div
+                  key={key}
+                  className={`min-h-[100px] border rounded p-2 ${
+                    darkMode ? "bg-gray-900" : "bg-white"
+                  }`}
+                >
+                  <div className="text-sm font-semibold">{formatVNDate(d)}</div>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {list.slice(0, 3).map((sch) => (
+                      <div
+                        key={sch.scheduleId || sch.date}
+                        className="text-xs truncate"
+                      >
+                        {sch.startPeriod}-{sch.endPeriod}{" "}
+                        {sch.classSubject?.subject?.name ||
+                          sch.subjectName ||
+                          ""}
+                      </div>
+                    ))}
+                    {list.length > 3 && (
+                      <div className="text-xs text-gray-500">
+                        +{list.length - 3} thêm
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            });
+            return cells;
+          })()}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      {/* Toolbar */}
-      <div className="mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold">
-            {t("teachingSchedule.title") || "Lịch giảng dạy"}
-          </h1>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <select
-              value={view}
-              onChange={(e) => {
-                setView(e.target.value);
-                setSelectedClass(null);
-                setSelectedTeacher(null);
-              }}
-              className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    <div className="p-6 bg-transparent text-gray-900 dark:text-gray-100">
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Lịch giảng dạy</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Xem lịch theo ngày, tuần hoặc tháng.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 border rounded overflow-hidden">
+            <button
+              onClick={goPrev}
+              className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <option value="class">Theo lớp</option>
-              <option value="teacher">Theo giáo viên</option>
+              ←
+            </button>
+            <button
+              onClick={goToday}
+              className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              Hôm nay
+            </button>
+            <button
+              onClick={goNext}
+              className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              →
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              className="p-2 border rounded bg-white dark:bg-gray-800"
+            >
+              <option value="day">Ngày</option>
+              <option value="week">Tuần</option>
+              <option value="month">Tháng</option>
             </select>
-            {view === "class" ? (
-              <select
-                value={selectedClass || ""}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Chọn lớp</option>
-                {classes.map((c) => (
-                  <option key={c.classId} value={c.classId}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select
-                value={selectedTeacher || ""}
-                onChange={(e) => setSelectedTeacher(e.target.value)}
-                className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Chọn giáo viên</option>
-                {teachers.map((t) => (
-                  <option key={t.userId} value={t.userId}>
-                    {t.fullName}
-                  </option>
-                ))}
-              </select>
+
+            {viewMode === "week" && (
+              <input
+                type="week"
+                onChange={handleWeekPicker}
+                className="p-2 border rounded bg-white dark:bg-gray-800"
+              />
             )}
-            <div className="flex gap-2">
+
+            {viewMode === "day" && (
               <input
                 type="date"
-                value={format(dateRange.start, "yyyy-MM-dd")}
-                onChange={(e) =>
-                  setDateRange({
-                    ...dateRange,
-                    start: new Date(e.target.value),
-                  })
-                }
-                className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={currentDate.toISOString().slice(0, 10)}
+                onChange={handleDayPicker}
+                className="p-2 border rounded bg-white dark:bg-gray-800"
               />
-              <input
-                type="date"
-                value={format(dateRange.end, "yyyy-MM-dd")}
-                onChange={(e) =>
-                  setDateRange({ ...dateRange, end: new Date(e.target.value) })
-                }
-                className="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            )}
+
+            <button
+              onClick={() => fetchSchedules()}
+              className="px-3 py-2 rounded bg-blue-600 text-white"
+            >
+              Tải lại
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Error Message for Teacher Loading */}
-      {errorLoadingTeachers && (
-        <p className="text-red-500 text-sm mb-4">{errorLoadingTeachers}</p>
-      )}
-
-      {/* Calendar */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">
-            {selectedClass
-              ? `Lịch lớp ${
-                  classes.find((c) => c.classId === selectedClass)?.name || ""
-                }`
-              : selectedTeacher
-              ? `Lịch giảng dạy của ${
-                  teachers.find((t) => t.userId === selectedTeacher)
-                    ?.fullName || ""
-                }`
-              : view === "class"
-              ? "Vui lòng chọn lớp"
-              : "Tất cả lịch"}
-          </h2>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={view === "class" && !selectedClass}
-          >
-            Thêm buổi học
-          </button>
-        </div>
-        {loading ? (
-          <div className="animate-pulse h-[70vh] bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-        ) : (
-          <Calendar
-            localizer={localizer}
-            events={filteredEvents()}
-            startAccessor="start"
-            endAccessor="end"
-            className="text-gray-900 dark:text-gray-100"
-            selectable
-            onSelectSlot={handleSelectSlot}
-            onSelectEvent={(event) =>
-              alert(
-                `Chi tiết: ${event.title}\nMôn: ${event.subject}\nLớp: ${
-                  event.className
-                }\nGiáo viên: ${event.teacherName}\nPhòng: ${
-                  event.room
-                }\nGhi chú: ${event.notes || "Không có"}`
-              )
-            }
-            messages={{
-              next: "Tiếp",
-              previous: "Trước",
-              today: "Hôm nay",
-              month: "Tháng",
-              week: "Tuần",
-              day: "Ngày",
-            }}
-            defaultView="week"
-            min={new Date(2025, 0, 1, 7, 0)}
-            max={new Date(2025, 0, 1, 18, 0)}
-            formats={{
-              eventTimeRangeFormat: ({ start, end }) =>
-                `${format(start, "HH:mm", { locale: vi })} - ${format(
-                  end,
-                  "HH:mm",
-                  { locale: vi }
-                )}`,
-            }}
-            style={{ height: "70vh" }}
-          />
-        )}
-      </div>
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-11/12 sm:w-3/4 md:w-2/3 max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Thêm buổi học mới</h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Left Column */}
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Lớp học <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="classId"
-                      value={newEvent.classId}
-                      onChange={handleInputChange}
-                      disabled={!!selectedClass}
-                      className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-600"
-                    >
-                      <option value="">Chọn lớp</option>
-                      {classes.map((c) => (
-                        <option key={c.classId} value={c.classId}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.classId && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.classId}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Môn học <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="subjectId"
-                      value={newEvent.subjectId}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Chọn môn học</option>
-                      {subjects.map((s) => (
-                        <option key={s.subjectId} value={s.subjectId}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.subjectId && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.subjectId}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Thời gian bắt đầu <span className="text-red-500">*</span>
-                    </label>
-                    {useTimePicker ? (
-                      <input
-                        type="datetime-local"
-                        name="startDateTime"
-                        value={
-                          newEvent.start
-                            ? format(newEvent.start, "yyyy-MM-dd'T'HH:mm")
-                            : ""
-                        }
-                        onChange={handleInputChange}
-                        className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={formatDateTime(newEvent.start)}
-                        readOnly
-                        className="w-full p-2 border rounded-lg bg-gray-100 dark:bg-gray-600 dark:border-gray-500 text-gray-900 dark:text-gray-100"
-                      />
-                    )}
-                    {errors.date && (
-                      <p className="text-red-500 text-xs mt-1">{errors.date}</p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Thời gian kết thúc <span className="text-red-500">*</span>
-                    </label>
-                    {useTimePicker ? (
-                      <input
-                        type="datetime-local"
-                        name="endDateTime"
-                        value={
-                          newEvent.end
-                            ? format(newEvent.end, "yyyy-MM-dd'T'HH:mm")
-                            : ""
-                        }
-                        onChange={handleInputChange}
-                        className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={formatDateTime(newEvent.end)}
-                        readOnly
-                        className="w-full p-2 border rounded-lg bg-gray-100 dark:bg-gray-600 dark:border-gray-500 text-gray-900 dark:text-gray-100"
-                      />
-                    )}
-                  </div>
-                </div>
-                {/* Right Column */}
-                <div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Giáo viên <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      name="teacherId"
-                      value={newEvent.teacherId}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Chọn giáo viên</option>
-                      {teachers.map((t) => (
-                        <option key={t.userId} value={t.userId}>
-                          {t.fullName}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.teacherId && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.teacherId}
-                      </p>
-                    )}
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Phòng học
-                    </label>
-                    <input
-                      type="text"
-                      name="room"
-                      value={newEvent.room}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ví dụ: Phòng A101"
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Ghi chú
-                    </label>
-                    <textarea
-                      name="notes"
-                      value={newEvent.notes}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Ví dụ: Ôn tập chương 1"
-                      rows="8"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="mb-4">
-                <button
-                  type="button"
-                  onClick={() => setUseTimePicker(!useTimePicker)}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  {useTimePicker
-                    ? "Dùng kéo trên lịch"
-                    : "Chọn thời gian thủ công"}
-                </button>
-              </div>
-              {errors.conflict && (
-                <p className="text-red-500 text-xs mb-4">{errors.conflict}</p>
-              )}
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600"
-                >
-                  Thêm
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <main>
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+        <section className="mb-6">
+          {viewMode === "day" && <DayView />}
+          {viewMode === "week" && <WeekView />}
+          {viewMode === "month" && <MonthView />}
+        </section>
+      </main>
     </div>
   );
-};
-
-export default TeachingSchedule;
+}
