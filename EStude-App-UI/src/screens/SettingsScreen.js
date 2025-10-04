@@ -6,38 +6,40 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
 } from "react-native";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
+import ConfirmModal from "../components/common/ConfirmModal";
 
 export default function SettingsScreen({ navigation }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const { logout } = useContext(AuthContext);
   const { showToast } = useToast();
+  const [isLogoutModalVisible, setLogoutModalVisible] = useState(false); // State để điều khiển modal
 
   const handleLogout = () => {
-    Alert.alert("Xác nhận", "Bạn có chắc chắn muốn đăng xuất?", [
-      { text: "Hủy", style: "cancel" },
-      {
-        text: "Đăng xuất",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await logout(); // Xóa token & user, gọi API
-            showToast("Đăng xuất thành công", { type: "success" });
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "Login" }],
-            });
-          } catch (err) {
-            console.log("Logout error:", err);
-            showToast("Đăng xuất thất bại", { type: "error" });
-          }
-        },
-      },
-    ]);
+    setLogoutModalVisible(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      await logout();
+      showToast("Đăng xuất thành công", { type: "success" });
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (err) {
+      console.log("Logout error:", err);
+      showToast("Đăng xuất thất bại", { type: "error" });
+    } finally {
+      setLogoutModalVisible(false);
+    }
+  };
+
+  const handleCancelLogout = () => {
+    setLogoutModalVisible(false);
   };
 
   return (
@@ -95,6 +97,17 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Sử dụng ConfirmModal cho đăng xuất */}
+      <ConfirmModal
+        visible={isLogoutModalVisible}
+        title="Xác nhận đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất?"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+        onConfirm={handleConfirmLogout}
+        onCancel={handleCancelLogout}
+      />
     </View>
   );
 }
