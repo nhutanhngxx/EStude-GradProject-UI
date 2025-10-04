@@ -286,7 +286,7 @@ export default function ManageSubjects() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold mb-2">Quản lý môn học</h1>
+          <h1 className="text-2xl font-bold mb-2">Quản lý môn học (Giáo vụ)</h1>
           <p className="text-gray-600 dark:text-gray-400 text-sm">
             Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập
             và đánh giá học sinh.

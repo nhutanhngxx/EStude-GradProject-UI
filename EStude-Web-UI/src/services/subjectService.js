@@ -5,6 +5,7 @@ const endpoints = {
   getAllSubjects: "/api/subjects",
   updateSubject: "/api/subjects/{subjectId}",
   deleteSubject: "/api/subjects/{subjectId}",
+  getSubjectByClassId: "/api/subjects/by-class/{classId}",
 };
 
 const subjectService = {
@@ -93,6 +94,29 @@ const subjectService = {
     try {
       const response = await fetch(
         `${config.BASE_URL}${endpoints.getAllSubjects}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy danh sách môn học thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách môn học:", error);
+      return null;
+    }
+  },
+
+  getSubjectByClassId: async (classId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getSubjectByClassId.replace(
+          "{classId}",
+          classId
+        )}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
