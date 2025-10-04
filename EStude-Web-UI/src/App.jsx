@@ -18,6 +18,7 @@ import TeacherDashboard from "./pages/teacher/Dashboard";
 import TeacherManageClasses from "./pages/teacher/ManageClasses";
 import TeacherReports from "./pages/teacher/Reports";
 import TeacherNotifications from "./pages/teacher/Notifications";
+import TeacherManageSchedules from "./pages/teacher/ManageSchedules";
 import TeacherSchedule from "./pages/teacher/TeachingSchedule";
 import TeacherManageSubjects from "./pages/teacher/ManageSubjects";
 import TeacherManageAttendance from "./pages/teacher/ManageAttendance";
@@ -66,6 +67,10 @@ function App() {
             <Route path="classes" element={<TeacherManageClasses />} />
             <Route path="statistics-reports" element={<TeacherReports />} />
             <Route path="notifications" element={<TeacherNotifications />} />
+            <Route
+              path="manage-schedules"
+              element={<TeacherManageSchedules />}
+            />
             <Route path="schedules" element={<TeacherSchedule />} />
             <Route path="subjects" element={<TeacherManageSubjects />} />
             <Route path="attendance" element={<TeacherManageAttendance />} />

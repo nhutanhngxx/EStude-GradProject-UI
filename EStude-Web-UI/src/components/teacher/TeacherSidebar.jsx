@@ -64,6 +64,11 @@ export default function TeacherSidebar() {
             path: "/teacher/subjects",
             icon: <Book size={20} />,
           },
+          {
+            key: "manageSchedules",
+            path: "/teacher/manage-schedules",
+            icon: <FileText size={20} />,
+          },
         ]
       : []),
 
@@ -72,6 +77,7 @@ export default function TeacherSidebar() {
       path: "/teacher/schedules",
       icon: <FileText size={20} />,
     },
+
     {
       key: "notifications",
       path: "/teacher/notifications",
