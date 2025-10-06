@@ -1,26 +1,24 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
-  StatusBar,
   SafeAreaView,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
 import UserHeader from "../components/common/UserHeader";
-
-const user = {
-  name: "Nguyễn Nhựt Anh",
-  avatar: "https://i.pravatar.cc/150?img=12",
-  grade: "12A3",
-};
+import notificationService from "../services/notificationService";
 
 export default function NotificationScreen() {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("Tất cả");
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Generate avatar URI based on user data
   const avatarUri = user?.avatarPath
     ? { uri: user.avatarPath }
     : {
@@ -31,53 +29,70 @@ export default function NotificationScreen() {
 
   const tabs = ["Tất cả", "Bài tập", "Hệ thống", "Giáo viên"];
 
-  const notifications = [
-    {
-      type: "Bài tập",
-      title: "Nhắc nhở nộp bài tập Toán - Giải tích",
-      content: "Hạn chót: 18/07/2025. Vui lòng nộp bài trước 23:59.",
-      time: "02:00 PM, 12/07/2025",
-      color: "#ffcc00",
-    },
-    {
-      type: "Bài tập",
-      title: "Bài tập Lịch sử - Thế chiến II",
-      content:
-        "Đã nhận được bài nộp của bạn. Điểm sẽ được cập nhật trong 2 ngày.",
-      time: "01:30 PM, 12/07/2025",
-      color: "#ffcc00",
-    },
-    {
-      type: "Hệ thống",
-      title: "Cập nhật ứng dụng eStudie",
-      content:
-        "Phiên bản mới 2.1.0 đã sẵn sàng. Tải xuống để trải nghiệm tính năng mới.",
-      time: "12:00 PM, 12/07/2025",
-      color: "#3399ff",
-    },
-    {
-      type: "Hệ thống",
-      title: "Thông báo bảo trì hệ thống",
-      content: "Hệ thống sẽ bảo trì từ 02:00 AM - 04:00 AM ngày 13/07/2025.",
-      time: "11:45 AM, 12/07/2025",
-      color: "#3399ff",
-    },
-    {
-      type: "Giáo viên",
-      title: "Thông báo từ GV. Nguyễn Văn A",
-      content: "Lớp Vật lý sẽ có buổi học bổ sung vào 08:00 AM, 15/07/2025.",
-      time: "02:15 PM, 12/07/2025",
-      color: "#ff6666",
-    },
-    {
-      type: "Giáo viên",
-      title: "Phản hồi bài tập",
-      content:
-        "Bài tập Toán của bạn cần chỉnh sửa phần tính toán. Vui lòng xem lại.",
-      time: "02:10 PM, 12/07/2025",
-      color: "#ff6666",
-    },
-  ];
+  // Function to map API response to component notification format
+  const mapApiToNotifications = (apiNotifications) => {
+    return apiNotifications.map((item) => {
+      let type, color;
+      switch (item.type) {
+        case "ASSIGNMENT_REMINDER":
+          type = "Bài tập";
+          color = "#ffcc00";
+          break;
+        case "SYSTEM":
+          type = "Hệ thống";
+          color = "#3399ff";
+          break;
+        case "TEACHER":
+          type = "Giáo viên";
+          color = "#ff6666";
+          break;
+        default:
+          type = "Hệ thống";
+          color = "#3399ff";
+      }
+
+      return {
+        type,
+        title: item.sender?.fullName
+          ? `Thông báo từ ${item.sender.fullName}`
+          : "Thông báo hệ thống",
+        content: item.message,
+        time: new Date(item.sentAt).toLocaleString("vi-VN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }),
+        color,
+      };
+    });
+  };
+
+  const fetchNotifications = async () => {
+    if (!token) {
+      setError("Không có token để truy cập API");
+      return;
+    }
+
+    setLoading(true);
+    const result = await notificationService.studentGetReceivedNotifications(
+      token
+    );
+
+    setLoading(false);
+
+    if (result && Array.isArray(result)) {
+      setNotifications(mapApiToNotifications(result));
+    } else {
+      setError("Không thể tải danh sách thông báo");
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [token]);
 
   const filteredNotifications =
     activeTab === "Tất cả"
@@ -86,7 +101,6 @@ export default function NotificationScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* <StatusBar barStyle="dark-content" /> */}
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -115,6 +129,27 @@ export default function NotificationScreen() {
             ))}
           </View>
 
+          {/* Loading State */}
+          {loading && (
+            <View style={styles.loading}>
+              <Text>Đang tải thông báo...</Text>
+            </View>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <View style={styles.error}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {/* Empty State */}
+          {!loading && !error && filteredNotifications.length === 0 && (
+            <View style={styles.empty}>
+              <Text>Không có thông báo nào</Text>
+            </View>
+          )}
+
           {/* Notification Items */}
           {filteredNotifications.map((item, index) => (
             <View
@@ -132,7 +167,7 @@ export default function NotificationScreen() {
             <TouchableOpacity>
               <Text style={styles.loadMoreText}>Đã nhận đủ bộ lọc này</Text>
             </TouchableOpacity>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => fetchNotifications()}>
               <Text style={styles.loadMoreText}>Cập nhật</Text>
             </TouchableOpacity>
           </View>
@@ -151,38 +186,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
-  subtitle: { fontSize: 15, color: "#555" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
-  greeting: {
-    fontSize: 16,
-    color: "#333",
-  },
-  highlight: {
-    fontWeight: "bold",
-  },
-  subGreeting: {
-    fontSize: 14,
-    color: "#777",
-  },
-
   main: {
     flex: 1,
     marginTop: 10,
   },
-
   tabs: {
     flexDirection: "row",
     flexWrap: "wrap",
     marginBottom: 10,
-    // paddingHorizontal: 15,
   },
   tab: {
     paddingVertical: 6,
@@ -203,11 +214,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-
   notificationItem: {
     backgroundColor: "#fff",
     padding: 15,
-    // marginHorizontal: 15,
     marginBottom: 12,
     borderRadius: 10,
     shadowColor: "#000",
@@ -231,7 +240,6 @@ const styles = StyleSheet.create({
     color: "#777",
     textAlign: "right",
   },
-
   loadMore: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -241,5 +249,21 @@ const styles = StyleSheet.create({
   loadMoreText: {
     color: "#2e7d32",
     fontWeight: "bold",
+  },
+  loading: {
+    alignItems: "center",
+    padding: 20,
+  },
+  error: {
+    alignItems: "center",
+    padding: 20,
+  },
+  errorText: {
+    color: "#ff3333",
+    fontSize: 14,
+  },
+  empty: {
+    alignItems: "center",
+    padding: 20,
   },
 });

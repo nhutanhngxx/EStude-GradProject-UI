@@ -1,21 +1,34 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Bell, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import notificationService from "../../services/notificationService";
 
 const NotificationBell = () => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const menuRef = useRef(null);
 
-  const notifications = [
-    { id: 1, text: t("notifications.newAssignment"), time: "5 phút trước" },
-    { id: 2, text: t("notifications.classStart"), time: "1 giờ trước" },
-    { id: 3, text: t("notifications.gradeUpdated"), time: t("time.yesterday") },
-    { id: 4, text: t("notifications.newTeacherNotice"), time: "2 ngày trước" },
-    { id: 5, text: t("notifications.examResult"), time: "3 ngày trước" },
-  ];
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const result = await notificationService.getReceivedNotifications();
+        if (result) {
+          setNotifications(result);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải thông báo:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchNotifications();
+  }, []);
+
+  // 📦 Đóng menu khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -35,7 +48,7 @@ const NotificationBell = () => {
           className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition"
         >
           <Bell className="w-5 h-5 text-gray-700 dark:text-gray-200" />
-          {notifications.length > 0 && (
+          {notifications.some((n) => !n.read) && (
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
           )}
         </button>
@@ -52,17 +65,26 @@ const NotificationBell = () => {
           <div className="px-4 py-2 border-b dark:border-gray-700 font-semibold text-gray-800 dark:text-gray-200">
             {t("notifications.title")}
           </div>
-          {notifications.length > 0 ? (
+
+          {loading ? (
+            <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+              {t("notifications.loading")}
+            </div>
+          ) : notifications.length > 0 ? (
             <ul className="max-h-64 overflow-y-auto">
               {notifications.map((n) => (
                 <li
-                  key={n.id}
-                  className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                  key={n.notificationRecipientId}
+                  className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${
+                    !n.read ? "bg-blue-50 dark:bg-gray-700/40" : ""
+                  }`}
                 >
                   <p className="text-sm text-gray-800 dark:text-gray-200">
-                    {n.text}
+                    {n.message}
                   </p>
-                  <span className="text-xs text-gray-500">{n.time}</span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(n.sentAt).toLocaleString("vi-VN")}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -71,6 +93,7 @@ const NotificationBell = () => {
               {t("notifications.empty")}
             </div>
           )}
+
           <div className="px-4 py-2 border-t dark:border-gray-700 text-center">
             <button
               onClick={() => {
@@ -85,7 +108,7 @@ const NotificationBell = () => {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal toàn bộ thông báo */}
       <div
         className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200
           ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
@@ -116,11 +139,15 @@ const NotificationBell = () => {
               <ul>
                 {notifications.map((n) => (
                   <li
-                    key={n.id}
+                    key={n.notificationRecipientId}
                     className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
                   >
-                    <p className="text-gray-800 dark:text-gray-200">{n.text}</p>
-                    <span className="text-xs text-gray-500">{n.time}</span>
+                    <p className="text-gray-800 dark:text-gray-200">
+                      {n.message}
+                    </p>
+                    <span className="text-xs text-gray-500">
+                      {new Date(n.sentAt).toLocaleString("vi-VN")}
+                    </span>
                   </li>
                 ))}
               </ul>
