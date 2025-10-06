@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");
-    setUser(null);
     window.location.href = "/";
+    setUser(null);
   };
 
   const forgotPassword = async (email) => {
