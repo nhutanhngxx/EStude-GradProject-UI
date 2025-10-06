@@ -4,7 +4,10 @@ const endpoints = {
   addStudent: "/api/admin/create-student",
   addTeacher: "/api/admin/create-teacher",
   getAllUsers: "/api/users",
+  getLogs: "/api/logentries",
 };
+
+const accessToken = localStorage.getItem("accessToken");
 
 const formatDateTime = (date) => {
   if (!date) return "";
@@ -103,6 +106,23 @@ const adminService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi lấy danh sách người dùng:", error);
+      return null;
+    }
+  },
+
+  getLogs: async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      const response = await fetch(`${config.BASE_URL}${endpoints.getLogs}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Lấy danh sách logs thất bại");
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách logs:", error);
       return null;
     }
   },

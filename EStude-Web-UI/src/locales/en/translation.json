@@ -58,7 +58,9 @@
     "activity1": "Added 5 new student accounts",
     "activity2": "Updated school info for XYZ",
     "activity3": "Deleted class 10A1",
-    "activity4": "Created notification for teachers"
+    "activity4": "Created notification for teachers",
+    "viewDetails": "View Details",
+    "viewMore": "View More"
   },
 
   "manageSchools": {
@@ -251,5 +253,68 @@
     "room": "Room",
     "notes": "Notes",
     "startTime": "Start Time"
+  },
+
+  "notifications": {
+    "title": "Notifications",
+    "newAssignment": "You have a new assignment.",
+    "classStart": "A class has just started.",
+    "gradeUpdated": "Your grade has been updated.",
+    "newTeacherNotice": "You have a new notice from your teacher.",
+    "examResult": "Your exam results are available.",
+    "empty": "No notifications yet.",
+    "viewAll": "View All",
+    "all": "All Notifications",
+    "loading": "Loading notifications...",
+    "markAsRead": "Mark as read",
+    "markAllAsRead": "Mark all as read"
+  },
+
+  "time": {
+    "yesterday": "Yesterday",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago"
+  },
+
+  "roleLabels": {
+    "admin": "Administrator",
+    "teacher": "Teacher",
+    "student": "Student",
+    "parent": "Parent"
+  },
+
+  "header": {
+    "notifications": "Notifications",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+
+  "reports": {
+    "title": "Reports",
+    "subtitle": "System usage and performance analytics",
+    "daily": "Daily Report",
+    "monthly": "Monthly Report",
+    "yearly": "Yearly Report",
+    "generate": "Generate Report",
+    "download": "Download Report",
+    "noData": "No report data available"
+  },
+
+  "messages": {
+    "success": "Action completed successfully!",
+    "error": "An error occurred. Please try again.",
+    "loading": "Loading data...",
+    "noData": "No data available"
+  },
+
+  "ui": {
+    "loading": "Loading...",
+    "noResults": "No results found",
+    "confirm": "Confirm",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No"
   }
 }

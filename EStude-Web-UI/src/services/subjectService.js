@@ -8,6 +8,8 @@ const endpoints = {
   getSubjectByClassId: "/api/subjects/by-class/{classId}",
 };
 
+const accessToken = localStorage.getItem("accessToken");
+
 const subjectService = {
   addSubject: async (subject) => {
     try {
@@ -21,7 +23,10 @@ const subjectService = {
         `${config.BASE_URL}${endpoints.addSubject}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify(payload),
         }
       );
@@ -53,7 +58,10 @@ const subjectService = {
         )}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify(payload),
         }
       );
@@ -77,7 +85,10 @@ const subjectService = {
         )}`,
         {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
       );
       if (!response.ok) {

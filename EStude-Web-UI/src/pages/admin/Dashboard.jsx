@@ -55,9 +55,12 @@ const Dashboard = () => {
   const [students, setStudents] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [newUsers, setNewUsers] = useState([]);
-  const [modalType, setModalType] = useState(null); // null | "users" | "schools" | "classes" | "students" | "teachers" | "newUsers"
+  const [logs, setLogs] = useState([]);
+  const [modalType, setModalType] = useState(null); // null | "users" | "schools" | "classes" | "students" | "teachers" | "newUsers" | "logs"
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [searchLogText, setSearchLogText] = useState("");
+  const [filterLogType, setFilterLogType] = useState("all");
 
   const openModal = (type) => {
     setModalType(type);
@@ -77,6 +80,16 @@ const Dashboard = () => {
     else if (modalType === "students") data = students;
     else if (modalType === "teachers") data = teachers;
     else if (modalType === "newUsers") data = newUsers;
+    else if (modalType === "logs") {
+      data = logs.filter((log) => {
+        const matchesSearch =
+          log.content.toLowerCase().includes(searchLogText.toLowerCase()) ||
+          log.user.fullName.toLowerCase().includes(searchLogText.toLowerCase());
+        const matchesType =
+          filterLogType === "all" || log.actionType === filterLogType;
+        return matchesSearch && matchesType;
+      });
+    }
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -89,6 +102,9 @@ const Dashboard = () => {
     students,
     teachers,
     newUsers,
+    logs,
+    searchLogText,
+    filterLogType,
     currentPage,
     itemsPerPage,
   ]);
@@ -100,17 +116,38 @@ const Dashboard = () => {
     else if (modalType === "students") return students.length;
     else if (modalType === "teachers") return teachers.length;
     else if (modalType === "newUsers") return newUsers.length;
+    else if (modalType === "logs") {
+      return logs.filter((log) => {
+        const matchesSearch =
+          log.content.toLowerCase().includes(searchLogText.toLowerCase()) ||
+          log.user.fullName.toLowerCase().includes(searchLogText.toLowerCase());
+        const matchesType =
+          filterLogType === "all" || log.actionType === filterLogType;
+        return matchesSearch && matchesType;
+      }).length;
+    }
     return 0;
-  }, [modalType, users, schools, classes, students, teachers, newUsers]);
+  }, [
+    modalType,
+    users,
+    schools,
+    classes,
+    students,
+    teachers,
+    newUsers,
+    logs,
+    searchLogText,
+    filterLogType,
+  ]);
 
   const gradeLevelMap = {
-    GRADE_6: "Khối 6",
-    GRADE_7: "Khối 7",
-    GRADE_8: "Khối 8",
-    GRADE_9: "Khối 9",
-    GRADE_10: "Khối 10",
-    GRADE_11: "Khối 11",
-    GRADE_12: "Khối 12",
+    GRADE_6: t("gradeLevel.GRADE_6"),
+    GRADE_7: t("gradeLevel.GRADE_7"),
+    GRADE_8: t("gradeLevel.GRADE_8"),
+    GRADE_9: t("gradeLevel.GRADE_9"),
+    GRADE_10: t("gradeLevel.GRADE_10"),
+    GRADE_11: t("gradeLevel.GRADE_11"),
+    GRADE_12: t("gradeLevel.GRADE_12"),
   };
 
   useEffect(() => {
@@ -140,7 +177,6 @@ const Dashboard = () => {
           const totalTeachers = teachersList.length;
           const newUsersThisMonth = newUsersList.length;
 
-          // Calculate new users by month for the chart
           const now = new Date();
           const months = Array(6)
             .fill()
@@ -177,6 +213,15 @@ const Dashboard = () => {
           setClasses(classesRes || []);
           const totalClasses = classesRes ? classesRes.length : 0;
 
+          const logsRes = await adminService.getLogs();
+          setLogs(
+            logsRes
+              ? logsRes.sort(
+                  (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+                )
+              : []
+          );
+
           setStats({
             totalUsers,
             totalSchools,
@@ -188,13 +233,13 @@ const Dashboard = () => {
           setNewUsersData({ labels: months.map((m) => m.label), data });
         }
       } catch (error) {
-        console.error("Lỗi khi tải thống kê:", error);
+        console.error(t("dashboard.fetchStatsError"), error);
       } finally {
         setLoading(false);
       }
     };
     fetchStats();
-  }, []);
+  }, [t]);
 
   const chartData = {
     labels: newUsersData.labels,
@@ -216,7 +261,9 @@ const Dashboard = () => {
         callbacks: {
           label: (context) => {
             const value = context.raw;
-            return value === 0 ? "N/A" : `${context.dataset.label}: ${value}`;
+            return value === 0
+              ? t("common.na")
+              : `${context.dataset.label}: ${value}`;
           },
         },
       },
@@ -240,7 +287,7 @@ const Dashboard = () => {
       value: stats.totalUsers.toString() || "150",
       icon: <Users className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />,
       path: "/admin/users",
-      note: stats.totalUsers === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.totalUsers === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-blue-100",
       bgDark: "dark:bg-blue-900",
       showDetails: true,
@@ -251,7 +298,7 @@ const Dashboard = () => {
       value: stats.totalSchools.toString() || "10",
       icon: <Building className="w-6 h-6 text-green-600 dark:text-green-400" />,
       path: "/admin/schools",
-      note: stats.totalSchools === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.totalSchools === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-green-100",
       bgDark: "dark:bg-green-900",
       showDetails: true,
@@ -264,7 +311,7 @@ const Dashboard = () => {
         <BookOpen className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
       ),
       path: "/admin/classes",
-      note: stats.totalClasses === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.totalClasses === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-yellow-100",
       bgDark: "dark:bg-yellow-900",
       showDetails: true,
@@ -277,7 +324,7 @@ const Dashboard = () => {
         <GraduationCap className="w-6 h-6 text-red-600 dark:text-red-400" />
       ),
       path: "/admin/students",
-      note: stats.totalStudents === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.totalStudents === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-red-100",
       bgDark: "dark:bg-red-900",
       showDetails: true,
@@ -288,7 +335,7 @@ const Dashboard = () => {
       value: stats.totalTeachers.toString() || "30",
       icon: <Bell className="w-6 h-6 text-purple-600 dark:text-purple-400" />,
       path: "/admin/teachers",
-      note: stats.totalTeachers === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.totalTeachers === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-purple-100",
       bgDark: "dark:bg-purple-900",
       showDetails: true,
@@ -299,7 +346,7 @@ const Dashboard = () => {
       value: stats.newUsersThisMonth.toString() || "15",
       icon: <Clock className="w-6 h-6 text-teal-600 dark:text-teal-400" />,
       path: "/admin/new-users",
-      note: stats.newUsersThisMonth === 0 ? "*Dữ liệu mẫu" : "",
+      note: stats.newUsersThisMonth === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-teal-100",
       bgDark: "dark:bg-teal-900",
       showDetails: true,
@@ -307,19 +354,12 @@ const Dashboard = () => {
     },
   ];
 
-  const activities = [
-    { time: "09:00", action: t("dashboard.activity1"), date: "2025-09-23" },
-    { time: "10:15", action: t("dashboard.activity2"), date: "2025-09-23" },
-    { time: "11:00", action: t("dashboard.activity3"), date: "2025-09-22" },
-    { time: "14:20", action: t("dashboard.activity4"), date: "2025-09-21" },
-  ];
-
   const createReport = () => {
     alert(t("dashboard.reportCreated"));
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
+    if (!dateString) return t("common.na");
     return new Date(dateString).toLocaleString("vi-VN", {
       day: "2-digit",
       month: "2-digit",
@@ -327,24 +367,52 @@ const Dashboard = () => {
     });
   };
 
-  const getModalTitle = () => {
-    switch (modalType) {
-      case "users":
-        return "Chi tiết người dùng";
-      case "schools":
-        return "Chi tiết trường học";
-      case "classes":
-        return "Chi tiết lớp học";
-      case "students":
-        return "Chi tiết học sinh";
-      case "teachers":
-        return "Chi tiết giáo viên";
-      case "newUsers":
-        return "Chi tiết người dùng mới tháng này";
-      default:
-        return "";
-    }
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return t("common.na");
+    return new Date(timestamp).toLocaleString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
   };
+
+  const getModalTitle = () => {
+    return t(`dashboard.modalTitles.${modalType}`) || "";
+  };
+
+  const logTypes = [
+    "all",
+    "GENERAL",
+    "LOGIN",
+    "UPDATE",
+    "CREATE",
+    "DELETE",
+  ].map((type) => ({
+    value: type,
+    label: t(`dashboard.logTypes.${type}`),
+  }));
+
+  const logStats = useMemo(() => {
+    if (modalType !== "logs") return null;
+
+    const typeCounts = logTypes.reduce((acc, { value }) => {
+      acc[value] = logs.filter(
+        (log) => value === "all" || log.actionType === value
+      ).length;
+      return acc;
+    }, {});
+
+    const recentLogs = logs.slice(0, 10).reduce((acc, log) => {
+      const date = new Date(log.timestamp).toLocaleDateString("vi-VN");
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    }, {});
+
+    return { typeCounts, recentLogs };
+  }, [logs, modalType, t]);
 
   return (
     <div className="p-4 sm:p-6 bg-gray-50 dark:bg-transparent text-gray-900 dark:text-gray-100">
@@ -413,7 +481,7 @@ const Dashboard = () => {
                       }}
                       className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
                     >
-                      Xem chi tiết
+                      {t("dashboard.viewDetails")}
                     </button>
                   )}
                 </div>
@@ -428,7 +496,7 @@ const Dashboard = () => {
 
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Biểu đồ */}
+        {/* Chart */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
           <h2 className="text-lg font-semibold mb-4">
             {t("dashboard.newUsersChart")}
@@ -439,32 +507,48 @@ const Dashboard = () => {
             <Bar data={chartData} options={chartOptions} />
           ) : (
             <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Chưa có dữ liệu người dùng mới
+              {t("dashboard.noNewUsersData")}
             </p>
           )}
         </div>
 
-        {/* Hoạt động gần đây */}
+        {/* Recent Activities */}
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">
-            {t("dashboard.recentActivities")}
-          </h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">
+              {t("dashboard.recentActivities")}
+            </h2>
+            <button
+              onClick={() => openModal("logs")}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              {t("dashboard.viewMore")}
+            </button>
+          </div>
           <ul className="space-y-3">
-            {activities.map((act, idx) => (
-              <li
-                key={idx}
-                className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0"
-              >
-                <Clock className="w-4 h-4 mt-1 text-gray-500 dark:text-gray-400" />
-                <div>
-                  <span className="font-semibold">{act.time}</span> -{" "}
-                  <span>{act.action}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                    ({act.date})
-                  </span>
-                </div>
-              </li>
-            ))}
+            {loading
+              ? [...Array(5)].map((_, idx) => (
+                  <li key={idx} className="animate-pulse">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                  </li>
+                ))
+              : logs.slice(0, 9).map((log, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0"
+                  >
+                    <Clock className="w-4 h-4 mt-1 text-gray-500 dark:text-gray-400" />
+                    <div>
+                      <span className="font-semibold">
+                        {formatTimestamp(log.timestamp)}
+                      </span>{" "}
+                      - <span>{log.content}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                        ({log.user.fullName})
+                      </span>
+                    </div>
+                  </li>
+                ))}
           </ul>
         </div>
       </div>
@@ -497,6 +581,70 @@ const Dashboard = () => {
                 </svg>
               </button>
             </div>
+            {modalType === "logs" && (
+              <>
+                <div className="space-y-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        {t("dashboard.logStatsByType")}
+                      </h3>
+                      <ul className="space-y-1">
+                        {Object.entries(logStats.typeCounts).map(
+                          ([type, count]) => (
+                            <li
+                              key={type}
+                              className="flex justify-between text-sm"
+                            >
+                              <span>{t(`dashboard.logTypes.${type}`)}</span>
+                              <span className="font-medium">{count}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        {t("dashboard.recentLogs")}
+                      </h3>
+                      <ul className="space-y-1">
+                        {Object.entries(logStats.recentLogs).map(
+                          ([date, count]) => (
+                            <li
+                              key={date}
+                              className="flex justify-between text-sm"
+                            >
+                              <span>{date}</span>
+                              <span className="font-medium">{count}</span>
+                            </li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-3 mb-4">
+                  <input
+                    type="text"
+                    placeholder={t("dashboard.searchLogsPlaceholder")}
+                    value={searchLogText}
+                    onChange={(e) => setSearchLogText(e.target.value)}
+                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                  />
+                  <select
+                    value={filterLogType}
+                    onChange={(e) => setFilterLogType(e.target.value)}
+                    className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                  >
+                    {logTypes.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
             {totalItems > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100 table-fixed">
@@ -507,23 +655,57 @@ const Dashboard = () => {
                         modalType === "teachers" ||
                         modalType === "newUsers") && (
                         <>
-                          <th className="px-4 py-2 w-1/4">Tên</th>
-                          <th className="px-4 py-2 w-1/4">Email</th>
-                          <th className="px-4 py-2 w-1/6">Vai trò</th>
-                          <th className="px-4 py-2 w-1/3">Ngày đăng ký</th>
+                          <th className="px-4 py-2 w-1/4">
+                            {t("manageAccounts.viewUserModal.fullName")}
+                          </th>
+                          <th className="px-4 py-2 w-1/4">
+                            {t("manageAccounts.viewUserModal.email")}
+                          </th>
+                          <th className="px-4 py-2 w-1/6">
+                            {t("manageAccounts.viewUserModal.role")}
+                          </th>
+                          <th className="px-4 py-2 w-1/3">
+                            {t("dashboard.enrollmentDate")}
+                          </th>
                         </>
                       )}
                       {modalType === "schools" && (
                         <>
-                          <th className="px-4 py-2 w-1/2">Tên trường</th>
-                          <th className="px-4 py-2 w-1/2">Địa chỉ</th>
+                          <th className="px-4 py-2 w-1/2">
+                            {t("fields.name")}
+                          </th>
+                          <th className="px-4 py-2 w-1/2">
+                            {t("fields.address")}
+                          </th>
                         </>
                       )}
                       {modalType === "classes" && (
                         <>
-                          <th className="px-4 py-2 w-1/3">Tên lớp</th>
-                          <th className="px-4 py-2 w-1/3">Khối lớp</th>
-                          <th className="px-4 py-2 w-1/3">Số học sinh</th>
+                          <th className="px-4 py-2 w-1/3">
+                            {t("manageClasses.table.name")}
+                          </th>
+                          <th className="px-4 py-2 w-1/3">
+                            {t("manageClasses.table.gradeLevel")}
+                          </th>
+                          <th className="px-4 py-2 w-1/3">
+                            {t("manageClasses.table.classSize")}
+                          </th>
+                        </>
+                      )}
+                      {modalType === "logs" && (
+                        <>
+                          <th className="px-4 py-2 w-1/4">
+                            {t("dashboard.timestamp")}
+                          </th>
+                          <th className="px-4 py-2 w-1/2">
+                            {t("dashboard.content")}
+                          </th>
+                          <th className="px-4 py-2 w-1/6">
+                            {t("dashboard.user")}
+                          </th>
+                          <th className="px-4 py-2 w-1/6">
+                            {t("dashboard.logType")}
+                          </th>
                         </>
                       )}
                     </tr>
@@ -531,7 +713,12 @@ const Dashboard = () => {
                   <tbody>
                     {paginatedData.map((item) => (
                       <tr
-                        key={item.userId || item.schoolId || item.classId}
+                        key={
+                          item.userId ||
+                          item.schoolId ||
+                          item.classId ||
+                          item.logId
+                        }
                         className="border-b border-gray-200 dark:border-gray-700"
                       >
                         {(modalType === "users" ||
@@ -540,13 +727,15 @@ const Dashboard = () => {
                           modalType === "newUsers") && (
                           <>
                             <td className="px-4 py-2 truncate">
-                              {item.fullName || "N/A"}
+                              {item.fullName || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
-                              {item.email || "N/A"}
+                              {item.email || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
-                              {item.role || "N/A"}
+                              {t(
+                                `manageAccounts.roles.${item.role.toLowerCase()}`
+                              ) || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
                               {formatDate(item.enrollmentDate)}
@@ -556,23 +745,40 @@ const Dashboard = () => {
                         {modalType === "schools" && (
                           <>
                             <td className="px-4 py-2 truncate">
-                              {item.name || item.schoolName || "N/A"}
+                              {item.name || item.schoolName || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
-                              {item.address || "N/A"}
+                              {item.address || t("common.na")}
                             </td>
                           </>
                         )}
                         {modalType === "classes" && (
                           <>
                             <td className="px-4 py-2 truncate">
-                              {item.name || "N/A"}
+                              {item.name || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
-                              {gradeLevelMap[item.gradeLevel] || "N/A"}
+                              {gradeLevelMap[item.gradeLevel] || t("common.na")}
                             </td>
                             <td className="px-4 py-2 truncate">
                               {item.classSize || 0}
+                            </td>
+                          </>
+                        )}
+                        {modalType === "logs" && (
+                          <>
+                            <td className="px-4 py-2 truncate">
+                              {formatTimestamp(item.timestamp)}
+                            </td>
+                            <td className="px-4 py-2 truncate">
+                              {item.content || t("common.na")}
+                            </td>
+                            <td className="px-4 py-2 truncate">
+                              {item.user.fullName || t("common.na")}
+                            </td>
+                            <td className="px-4 py-2 truncate">
+                              {t(`dashboard.logTypes.${item.actionType}`) ||
+                                t("common.na")}
                             </td>
                           </>
                         )}
@@ -583,7 +789,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <p className="text-gray-500 dark:text-gray-400 text-center">
-                Chưa có dữ liệu.
+                {t("dashboard.noData")}
               </p>
             )}
             {totalItems > itemsPerPage && (

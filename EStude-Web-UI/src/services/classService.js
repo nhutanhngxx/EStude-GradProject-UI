@@ -8,14 +8,20 @@ const endpoints = {
   updateClass: "/api/classes/{classId}",
   assignHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
   updateHomeroomTeacher: "/api/classes/{classId}/homeroom-teacher",
+  deleteClass: "/api/classes/{classId}",
 };
+
+const accessToken = localStorage.getItem("accessToken");
 
 const classService = {
   addClass: async (classData) => {
     try {
       const response = await fetch(`${config.BASE_URL}${endpoints.addClass}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(classData),
       });
       if (!response.ok) {
@@ -37,7 +43,10 @@ const classService = {
         )}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify(classData),
         }
       );
@@ -47,6 +56,31 @@ const classService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi cập nhật lớp:", error);
+      return null;
+    }
+  },
+
+  deleteClass: async (classId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.deleteClass.replace(
+          "{classId}",
+          classId
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Xóa lớp thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi xóa lớp:", error);
       return null;
     }
   },

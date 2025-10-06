@@ -6,6 +6,7 @@ const endpoints = {
   getEnrollmentsByClass: "/api/classes/{classId}/enrollments",
 };
 
+const accessToken = localStorage.getItem("accessToken");
 const enrollmentService = {
   getAllEnrollments: async () => {
     try {
@@ -33,7 +34,10 @@ const enrollmentService = {
         `${config.BASE_URL}${endpoints.enrollBatch}?classId=${classId}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify(studentIds), // BE nhận mảng studentIds
         }
       );
@@ -56,7 +60,10 @@ const enrollmentService = {
         )}`,
         {
           method: "DELETE",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
         }
       );
       console.log(

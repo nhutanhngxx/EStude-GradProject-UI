@@ -9,6 +9,7 @@ import StudentManagement from "./StudentManagement";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmModal from "../../components/common/ConfirmModal";
 
+// Component hiển thị badge cho môn học
 const Badge = ({ text, color }) => (
   <span
     className={`px-2 py-1 text-xs font-medium rounded-full ${color} dark:bg-blue-900/30 dark:text-blue-300`}
@@ -17,11 +18,11 @@ const Badge = ({ text, color }) => (
   </span>
 );
 
+// Component modal để hiển thị form hoặc danh sách học sinh
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-10/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
-        {/* Header */}
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
@@ -34,14 +35,13 @@ const Modal = ({ title, children, onClose }) =>
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* Body */}
         <div className="px-6 py-4">{children}</div>
       </div>
     </div>,
     document.body
   );
 
+// Hàm định dạng học kỳ
 const formatTerm = (termNumber, beginDate) => {
   if (!termNumber) return "";
   if (!beginDate) return `HK${termNumber}`;
@@ -49,13 +49,14 @@ const formatTerm = (termNumber, beginDate) => {
   const d = new Date(beginDate);
   if (isNaN(d)) return `HK${termNumber}`;
 
-  const month = d.getMonth(); // 0..11
+  const month = d.getMonth();
   const academicStart = month >= 6 ? d.getFullYear() : d.getFullYear() - 1;
   const academicEnd = academicStart + 1;
 
   return `HK${termNumber} ${academicStart} - ${academicEnd}`;
 };
 
+// Object ánh xạ khối lớp
 const gradeMapping = {
   GRADE_6: "Khối 6",
   GRADE_7: "Khối 7",
@@ -66,7 +67,7 @@ const gradeMapping = {
   GRADE_12: "Khối 12",
 };
 
-// ---------------- Toolbar ----------------
+// Component thanh công cụ tìm kiếm và lọc
 const Toolbar = ({ filterStatus, setFilterStatus, keyword, setKeyword }) => (
   <div className="flex flex-wrap gap-4 items-center">
     <div className="flex items-center gap-2">
@@ -91,10 +92,11 @@ const Toolbar = ({ filterStatus, setFilterStatus, keyword, setKeyword }) => (
   </div>
 );
 
-// ---------------- Main ----------------
+// Component chính để quản lý lớp học
 const ManageClasses = () => {
   const { showToast } = useToast();
 
+  // State quản lý thông tin lớp học
   const [name, setName] = useState("");
   const [gradeLevel, setGradeLevel] = useState("GRADE_10");
   const [classSize, setClassSize] = useState(0);
@@ -109,10 +111,11 @@ const ManageClasses = () => {
     { termNumber: 1, beginDate: "", endDate: "" },
   ]);
 
+  // State cho modal xác nhận xóa
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [classToDelete, setClassToDelete] = useState(null);
 
-  // Toolbar states
+  // State cho toolbar
   const [filterStatus, setFilterStatus] = useState("all");
   const [keyword, setKeyword] = useState("");
 
@@ -120,7 +123,7 @@ const ManageClasses = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
 
-  // Load subjects
+  // Load danh sách môn học
   useEffect(() => {
     const fetchSubjects = async () => {
       const result = await subjectService.getAllSubjects();
@@ -129,7 +132,7 @@ const ManageClasses = () => {
     fetchSubjects();
   }, []);
 
-  // Load teachers
+  // Load danh sách giáo viên
   useEffect(() => {
     const fetchTeachers = async () => {
       const result = await teacherService.getAllTeachers();
@@ -139,6 +142,7 @@ const ManageClasses = () => {
     fetchTeachers();
   }, [schoolId]);
 
+  // Hàm lấy danh sách lớp học kèm môn học
   const fetchClassesWithSubjects = useCallback(async () => {
     try {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
@@ -169,7 +173,6 @@ const ManageClasses = () => {
 
         return { ...cls, subjects: subjectsForClass };
       });
-      console.log("classesWithSubjects:", classesWithSubjects);
 
       setClasses(classesWithSubjects);
     } catch (err) {
@@ -182,7 +185,7 @@ const ManageClasses = () => {
     fetchClassesWithSubjects();
   }, [fetchClassesWithSubjects]);
 
-  // ----------------- Functions -----------------
+  // Thêm học kỳ mới
   const addSemester = () => {
     setEditableSemesters((prev) => [
       ...prev,
@@ -190,16 +193,19 @@ const ManageClasses = () => {
     ]);
   };
 
+  // Xóa học kỳ
   const removeSemester = (index) => {
     setEditableSemesters((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Cập nhật thông tin học kỳ
   const updateSemester = (index, field, value) => {
     setEditableSemesters((prev) =>
       prev.map((sem, i) => (i === index ? { ...sem, [field]: value } : sem))
     );
   };
 
+  // Định dạng ngày
   const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const d = new Date(dateStr);
@@ -207,6 +213,7 @@ const ManageClasses = () => {
     return d.toISOString().split("T")[0];
   };
 
+  // Mở modal
   const openModal = (type, cls = null) => {
     setSelectedClass(cls);
     setModalType(type);
@@ -240,16 +247,18 @@ const ManageClasses = () => {
     }
   };
 
+  // Đóng modal
   const closeModal = () => {
     setSelectedClass(null);
     setModalType(null);
   };
 
+  // Xử lý lưu lớp học
   const handleSave = async () => {
     if (!name) return showToast("Vui lòng nhập tên lớp!", "warn");
 
     try {
-      // Payload lớp
+      // Payload lớp học
       const classPayload = {
         classId: selectedClass?.classId,
         name,
@@ -269,7 +278,7 @@ const ManageClasses = () => {
           }),
       };
 
-      // 1. Thêm hoặc update lớp
+      // 1. Thêm hoặc cập nhật lớp học
       let classResult;
       if (modalType === "add") {
         classResult = await classService.addClass(classPayload);
@@ -282,7 +291,7 @@ const ManageClasses = () => {
         return;
       }
 
-      // 2. Gán / cập nhật giáo viên chủ nhiệm
+      // 2. Gán hoặc cập nhật giáo viên chủ nhiệm
       if (selectedTeacher) {
         if (modalType === "add" || !selectedClass?.homeroomTeacher) {
           await classService.assignHomeroomTeacher(
@@ -300,17 +309,54 @@ const ManageClasses = () => {
         }
       }
 
-      // 3. Gán môn học cho lớp (chỉ thêm mới)
-      if (selectedSubjects.length > 0) {
+      // 3. Cập nhật môn học và giáo viên
+      const allClassSubjects = await classSubjectService.getAllClassSubjects();
+
+      if (modalType === "edit" && selectedClass?.subjects) {
+        for (const term of classResult.terms) {
+          for (const subj of selectedSubjects) {
+            const existingSubject = selectedClass.subjects.find(
+              (s) => s.subjectId === subj.subjectId && s.termId === term.termId
+            );
+
+            // Cập nhật hoặc thêm mới classSubject
+            const payload = {
+              classId: classResult.classId,
+              subjectId: subj.subjectId,
+              teacherId: subj.teacherId ?? null,
+              termIds: [term.termId],
+            };
+            if (existingSubject?.classSubjectId) {
+              payload.classSubjectId = existingSubject.classSubjectId;
+            }
+            await classSubjectService.addClassSubject(payload);
+          }
+
+          // Xóa các môn học không còn được chọn
+          const subjectsToRemove = selectedClass.subjects.filter(
+            (existingSubject) =>
+              !selectedSubjects.some(
+                (selected) => selected.subjectId === existingSubject.subjectId
+              ) && existingSubject.termId === term.termId
+          );
+
+          for (const subject of subjectsToRemove) {
+            if (subject.classSubjectId) {
+              await classSubjectService.deleteClassSubject(
+                subject.classSubjectId
+              );
+            }
+          }
+        }
+      } else if (modalType === "add") {
+        // Thêm mới môn học cho lớp
         for (const subj of selectedSubjects) {
           for (const term of classResult.terms) {
-            const exists = classes.some(
-              (c) =>
-                c.classId === classResult.classId &&
-                c.subjects?.some(
-                  (s) =>
-                    s.subjectId === subj.subjectId && s.termId === term.termId
-                )
+            const exists = allClassSubjects.some(
+              (cs) =>
+                cs.classId === classResult.classId &&
+                cs.subject.subjectId === subj.subjectId &&
+                cs.term.termId === term.termId
             );
 
             if (!exists) {
@@ -336,6 +382,7 @@ const ManageClasses = () => {
     }
   };
 
+  // Xử lý xóa lớp học
   const handleDelete = async (classId) => {
     try {
       await classService.deleteClass(classId);
@@ -348,7 +395,7 @@ const ManageClasses = () => {
     }
   };
 
-  // ----------------- Render -----------------
+  // Lọc danh sách lớp học theo từ khóa và trạng thái
   const filteredClasses = classes
     .filter((c) => {
       if (!keyword.trim()) return true;
@@ -373,9 +420,9 @@ const ManageClasses = () => {
       return true;
     });
 
+  // Giao diện chính
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Quản lý lớp học (Giáo vụ)</h1>
@@ -391,14 +438,12 @@ const ManageClasses = () => {
           + Thêm lớp mới
         </button>
       </div>
-      {/* Toolbar */}
       <Toolbar
         filterStatus={filterStatus}
         setFilterStatus={setFilterStatus}
         keyword={keyword}
         setKeyword={setKeyword}
       />
-      {/* Table */}
       <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow mt-4 border border-gray-200 dark:border-gray-600">
         <table className="min-w-[800px] w-full table-fixed text-sm text-left border-collapse">
           <thead className="bg-gray-50 dark:bg-gray-700">
@@ -440,24 +485,25 @@ const ManageClasses = () => {
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {c.homeroomTeacher?.fullName || "-"}
                   </td>
-
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {c.classSize}
                   </td>
-                  <td className="px-4 py-3">
-                    {c.subjects?.length ? (
-                      c.subjects.map((s) => (
-                        <Badge
-                          key={s.subjectId}
-                          text={s.name}
-                          color="bg-blue-100 text-blue-700 mr-1 dark:bg-blue-900/30 dark:text-blue-300"
-                        />
-                      ))
-                    ) : (
-                      <span className="text-gray-500 dark:text-gray-400">
-                        -
-                      </span>
-                    )}
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
+                    <div className="flex overflow-hidden whitespace-nowrap tablet:overflow-x-auto tablet:scrollbar-thin tablet:scrollbar-thumb-gray-400 tablet:scrollbar-track-transparent">
+                      {c.subjects?.length ? (
+                        c.subjects.map((s) => (
+                          <Badge
+                            key={s.subjectId}
+                            text={s.name}
+                            color="bg-blue-100 text-blue-700 mr-1 dark:bg-blue-900/30 dark:text-blue-300 shrink-0"
+                          />
+                        ))
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          -
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 flex flex-wrap items-center gap-4">
                     <button
@@ -491,7 +537,7 @@ const ManageClasses = () => {
         </table>
       </div>
 
-      {/* Modal Students */}
+      {/* Modal quản lý học sinh */}
       {modalType === "students" && selectedClass && (
         <Modal
           title={`Quản lý học sinh - ${selectedClass.name}`}
@@ -501,14 +547,13 @@ const ManageClasses = () => {
         </Modal>
       )}
 
-      {/* Modal Add/Edit */}
+      {/* Modal thêm/sửa lớp học */}
       {(modalType === "add" || modalType === "edit") && (
         <Modal
           title={modalType === "add" ? "Thêm lớp mới" : "Thông tin lớp học"}
           onClose={closeModal}
         >
           <div className="flex flex-col h-[60vh]">
-            {/* Nội dung chính */}
             <form
               id="classForm"
               onSubmit={(e) => {
@@ -517,9 +562,7 @@ const ManageClasses = () => {
               }}
               className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden"
             >
-              {/* Cột 1 */}
               <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
-                {/* Khối lớp */}
                 <select
                   value={gradeLevel}
                   onChange={(e) => setGradeLevel(e.target.value)}
@@ -535,8 +578,6 @@ const ManageClasses = () => {
                   <option value="GRADE_11">Khối 11</option>
                   <option value="GRADE_12">Khối 12</option>
                 </select>
-
-                {/* Tên lớp */}
                 <input
                   type="text"
                   placeholder="Tên lớp"
@@ -544,8 +585,6 @@ const ManageClasses = () => {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
-
-                {/* Sĩ số */}
                 <input
                   type="number"
                   placeholder="Sĩ số lớp"
@@ -554,14 +593,12 @@ const ManageClasses = () => {
                   onChange={(e) => setClassSize(Number(e.target.value))}
                   className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
-
-                {/* GVCN */}
                 <select
                   value={selectedTeacher}
                   onChange={(e) => setSelectedTeacher(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
-             border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
-             focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+                          focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 >
                   <option value="">-- Chọn giáo viên chủ nhiệm --</option>
                   {teachers
@@ -572,8 +609,6 @@ const ManageClasses = () => {
                       </option>
                     ))}
                 </select>
-
-                {/* Học kỳ */}
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
                     Danh sách học kỳ
@@ -662,10 +697,7 @@ const ManageClasses = () => {
                   </button>
                 </div>
               </div>
-
-              {/* Cột 2 */}
               <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
-                {/* Môn học */}
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
                     Môn học
@@ -740,8 +772,6 @@ const ManageClasses = () => {
                 </div>
               </div>
             </form>
-
-            {/* Action buttons */}
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={closeModal}

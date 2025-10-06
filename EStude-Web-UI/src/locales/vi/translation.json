@@ -59,7 +59,9 @@
     "activity1": "Thêm mới 5 tài khoản học sinh",
     "activity2": "Cập nhật thông tin trường học XYZ",
     "activity3": "Xóa lớp học 10A1",
-    "activity4": "Tạo thông báo cho giáo viên"
+    "activity4": "Tạo thông báo cho giáo viên",
+    "viewDetails": "Xem chi tiết",
+    "viewMore": "Xem thêm"
   },
   "manageSchools": {
     "title": "Quản lý Trường học",
@@ -240,5 +242,68 @@
   "teachingSchedule": {
     "title": "Lịch giảng dạy",
     "viewBy": "Xem theo"
+  },
+
+  "notifications": {
+    "title": "Thông báo",
+    "newAssignment": "Bạn có bài tập mới.",
+    "classStart": "Một lớp học vừa bắt đầu.",
+    "gradeUpdated": "Điểm số của bạn đã được cập nhật.",
+    "newTeacherNotice": "Bạn có thông báo mới từ giáo viên.",
+    "examResult": "Kết quả bài kiểm tra của bạn đã có.",
+    "empty": "Chưa có thông báo nào.",
+    "viewAll": "Xem tất cả",
+    "all": "Tất cả thông báo",
+    "loading": "Đang tải thông báo...",
+    "markAsRead": "Đánh dấu đã đọc",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc"
+  },
+
+  "reports": {
+    "title": "Báo cáo",
+    "subtitle": "Phân tích hiệu suất và mức độ sử dụng hệ thống",
+    "daily": "Báo cáo ngày",
+    "monthly": "Báo cáo tháng",
+    "yearly": "Báo cáo năm",
+    "generate": "Tạo báo cáo",
+    "download": "Tải báo cáo",
+    "noData": "Không có dữ liệu báo cáo"
+  },
+
+  "messages": {
+    "success": "Thao tác thực hiện thành công!",
+    "error": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "loading": "Đang tải dữ liệu...",
+    "noData": "Không có dữ liệu"
+  },
+
+  "ui": {
+    "loading": "Đang tải...",
+    "noResults": "Không tìm thấy kết quả",
+    "confirm": "Xác nhận",
+    "back": "Quay lại",
+    "yes": "Có",
+    "no": "Không"
+  },
+
+  "time": {
+    "yesterday": "Hôm qua",
+    "minutesAgo": "{{count}} phút trước",
+    "hoursAgo": "{{count}} giờ trước",
+    "daysAgo": "{{count}} ngày trước"
+  },
+
+  "roleLabels": {
+    "admin": "Quản trị viên",
+    "teacher": "Giáo viên",
+    "student": "Học sinh",
+    "parent": "Phụ huynh"
+  },
+
+  "header": {
+    "notifications": "Thông báo",
+    "profile": "Hồ sơ cá nhân",
+    "settings": "Cài đặt",
+    "logout": "Đăng xuất"
   }
 }

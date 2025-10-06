@@ -4,7 +4,10 @@ const endpoints = {
   addClassSubject: "/api/class-subjects",
   getTeacherClassSubjects: `/api/teachers/classes/{teacherId}/class-subjects`,
   getAllClassSubjects: "/api/class-subjects",
+  deleteClassSubject: "/api/class-subjects/{classSubjectId}",
 };
+
+const accessToken = localStorage.getItem("accessToken");
 
 const classSubjectService = {
   addClassSubject: async (classSubject) => {
@@ -13,7 +16,10 @@ const classSubjectService = {
         `${config.BASE_URL}${endpoints.addClassSubject}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify(classSubject),
         }
       );
@@ -24,6 +30,31 @@ const classSubjectService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi thêm môn học cho lớp:", error);
+      return null;
+    }
+  },
+
+  deleteClassSubject: async (classSubjectId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.deleteClassSubject.replace(
+          "{classSubjectId}",
+          classSubjectId
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Xóa môn học của lớp thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi xóa môn học của lớp:", error);
       return null;
     }
   },
