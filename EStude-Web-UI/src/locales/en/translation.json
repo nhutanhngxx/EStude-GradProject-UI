@@ -28,7 +28,7 @@
     "users": "Manage Users",
     "classes": "Manage Classes",
     "reports": "Analytics & Reports",
-    "notifications": "Send Notifications",
+    "notifications": "Notifications",
     "myClasses": "My Classes",
     "manageSubjects": "Manage Subjects",
     "manageSchedules": "Manage Schedules",
@@ -60,7 +60,25 @@
     "activity3": "Deleted class 10A1",
     "activity4": "Created notification for teachers",
     "viewDetails": "View Details",
-    "viewMore": "View More"
+    "viewMore": "View More",
+    "modalTitles": { "logs": "Activity Logs" },
+    "timestamp": "Timestamp",
+    "content": "Content",
+    "user": "User",
+    "logType": "Log Type",
+    "recentLogs": "Recent Logs",
+    "logStatsByType": "Log Statistics by Type",
+    "logTypes": {
+      "all": "All",
+      "GENERAL": "General",
+      "LOGIN": "Login",
+      "UPDATE": "Update",
+      "CREATE": "Create",
+      "DELETE": "Delete"
+    },
+    "searchLogsPlaceholder": "Search logs...",
+    "sampleData": "Sample data is being loaded...",
+    "noData": "No data available"
   },
 
   "manageSchools": {

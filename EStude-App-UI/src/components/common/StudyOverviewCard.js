@@ -16,8 +16,6 @@ export default function StudyOverviewCard({
     requiredCredits > 0
       ? Math.round((passedCredits / requiredCredits) * 100)
       : 0;
-  const submissionPercent = Math.round(submissionRate * 100);
-  const attendancePercent = Math.round(attendanceRate);
 
   return (
     <View style={styles.card}>
@@ -49,10 +47,9 @@ export default function StudyOverviewCard({
 
         <View style={styles.stat}>
           <Text style={styles.statValue}>
-            {/* {passedCredits}/ */}
-            {requiredCredits}
+            {passedCredits}/{requiredCredits}
           </Text>
-          <Text style={styles.statLabel}>Tổng môn học</Text>
+          <Text style={styles.statLabel}>Môn đã hoàn thành</Text>
         </View>
       </View>
 
@@ -63,12 +60,12 @@ export default function StudyOverviewCard({
         <Text style={styles.progressText}>{creditPercent}% hoàn thành</Text>
 
         <Text style={styles.blockTitle}>Nộp bài</Text>
-        <ProgressBar value={submissionPercent} />
-        <Text style={styles.progressText}>{submissionPercent}%</Text>
+        <ProgressBar value={submissionRate} />
+        <Text style={styles.progressText}>{submissionRate}%</Text>
 
         <Text style={styles.blockTitle}>Điểm danh</Text>
-        <ProgressBar value={attendancePercent} />
-        <Text style={styles.progressText}>{attendancePercent}%</Text>
+        <ProgressBar value={attendanceRate} />
+        <Text style={styles.progressText}>{attendanceRate}%</Text>
       </View>
     </View>
   );

@@ -65,7 +65,7 @@ export default function DetailStudyScreen() {
             totalStudents: overviewData.totalStudents ?? "-",
             passedCredits: overviewData.completedSubjects ?? 0,
             requiredCredits: overviewData.totalSubjects ?? 0,
-            submissionRate: (overviewData.submissionRate ?? 0) * 100,
+            submissionRate: overviewData.submissionRate ?? 0,
             attendanceRate: overviewData.attendanceRate ?? 0,
           });
         }

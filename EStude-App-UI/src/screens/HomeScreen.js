@@ -129,7 +129,7 @@ export default function HomeStudentScreen({ navigation }) {
               totalStudents: overviewData.totalStudents ?? "-",
               passedCredits: overviewData.completedSubjects ?? 0,
               requiredCredits: overviewData.totalSubjects ?? 0,
-              submissionRate: (overviewData.submissionRate ?? 0) * 100,
+              submissionRate: overviewData.submissionRate ?? 0,
               attendanceRate: overviewData.attendanceRate ?? 0,
             });
           }
@@ -241,6 +241,19 @@ export default function HomeStudentScreen({ navigation }) {
               dueDate: a.dueDate,
             }))}
             onPressDetail={() => navigation.navigate("NopBai")}
+            // onPressAssignment={(item) => {
+            //   navigation.navigate("SubjectDetail", {
+            //     subject: {
+            //       classSubjectId: item.classSubjectId,
+            //       name: item.className,
+            //       teacherName: "Giáo viên phụ trách",
+            //       semester: "Học kỳ hiện tại",
+            //       beginDate: new Date().toISOString(),
+            //       endDate: new Date().toISOString(),
+            //     },
+            //     tab: "Bài tập",
+            //   });
+            // }}
           />
         )}
 

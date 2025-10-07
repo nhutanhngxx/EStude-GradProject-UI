@@ -58,7 +58,7 @@ const Dashboard = () => {
   const [logs, setLogs] = useState([]);
   const [modalType, setModalType] = useState(null); // null | "users" | "schools" | "classes" | "students" | "teachers" | "newUsers" | "logs"
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 7;
   const [searchLogText, setSearchLogText] = useState("");
   const [filterLogType, setFilterLogType] = useState("all");
 
@@ -82,9 +82,11 @@ const Dashboard = () => {
     else if (modalType === "newUsers") data = newUsers;
     else if (modalType === "logs") {
       data = logs.filter((log) => {
+        const content = log.content?.toLowerCase() || "";
+        const userName = log.user?.fullName?.toLowerCase() || "";
         const matchesSearch =
-          log.content.toLowerCase().includes(searchLogText.toLowerCase()) ||
-          log.user.fullName.toLowerCase().includes(searchLogText.toLowerCase());
+          content.includes(searchLogText.toLowerCase()) ||
+          userName.includes(searchLogText.toLowerCase());
         const matchesType =
           filterLogType === "all" || log.actionType === filterLogType;
         return matchesSearch && matchesType;
@@ -532,7 +534,7 @@ const Dashboard = () => {
                     <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
                   </li>
                 ))
-              : logs.slice(0, 9).map((log, idx) => (
+              : logs.slice(0, 7).map((log, idx) => (
                   <li
                     key={idx}
                     className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0"
@@ -544,7 +546,7 @@ const Dashboard = () => {
                       </span>{" "}
                       - <span>{log.content}</span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                        ({log.user.fullName})
+                        ({log.user?.fullName || t("common.na")})
                       </span>
                     </div>
                   </li>
@@ -555,15 +557,20 @@ const Dashboard = () => {
 
       {/* Modals */}
       {modalType && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                {getModalTitle()} ({totalItems})
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 sm:p-8 w-11/12 h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {getModalTitle()}{" "}
+                <span className="text-gray-500 dark:text-gray-400">
+                  ({totalItems})
+                </span>
               </h2>
               <button
                 onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                aria-label="Close modal"
               >
                 <svg
                   className="w-6 h-6"
@@ -581,60 +588,47 @@ const Dashboard = () => {
                 </svg>
               </button>
             </div>
+
+            {/* Logs Modal Content */}
             {modalType === "logs" && (
               <>
-                <div className="space-y-4 mb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="font-semibold mb-2">
-                        {t("dashboard.logStatsByType")}
-                      </h3>
-                      <ul className="space-y-1">
-                        {Object.entries(logStats.typeCounts).map(
-                          ([type, count]) => (
-                            <li
-                              key={type}
-                              className="flex justify-between text-sm"
-                            >
-                              <span>{t(`dashboard.logTypes.${type}`)}</span>
-                              <span className="font-medium">{count}</span>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-2">
-                        {t("dashboard.recentLogs")}
-                      </h3>
-                      <ul className="space-y-1">
-                        {Object.entries(logStats.recentLogs).map(
-                          ([date, count]) => (
-                            <li
-                              key={date}
-                              className="flex justify-between text-sm"
-                            >
-                              <span>{date}</span>
-                              <span className="font-medium">{count}</span>
-                            </li>
-                          )
-                        )}
-                      </ul>
-                    </div>
+                {/* Log Stats Section */}
+                <div className="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                    {t("dashboard.logStatsByType")}
+                  </h3>
+                  <div className="flex flex-wrap gap-3">
+                    {Object.entries(logStats.typeCounts).map(
+                      ([type, count]) => (
+                        <div
+                          key={type}
+                          className="flex items-center justify-between text-sm bg-white dark:bg-gray-700 rounded-md px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-150 min-w-[120px]"
+                        >
+                          <span className="text-gray-700 dark:text-gray-200">
+                            {t(`dashboard.logTypes.${type}`)}
+                          </span>
+                          <span className="font-medium text-indigo-600 dark:text-indigo-400 ml-2">
+                            {count}
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col md:flex-row gap-3 mb-4">
+
+                {/* Filters */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
                   <input
                     type="text"
                     placeholder={t("dashboard.searchLogsPlaceholder")}
                     value={searchLogText}
                     onChange={(e) => setSearchLogText(e.target.value)}
-                    className="flex-1 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:outline-none transition-shadow duration-200"
                   />
                   <select
                     value={filterLogType}
                     onChange={(e) => setFilterLogType(e.target.value)}
-                    className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                    className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:outline-none transition-shadow duration-200"
                   >
                     {logTypes.map(({ value, label }) => (
                       <option key={value} value={value}>
@@ -645,66 +639,107 @@ const Dashboard = () => {
                 </div>
               </>
             )}
+
+            {/* Table */}
             {totalItems > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                 <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100 table-fixed">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
+                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                     <tr>
+                      {modalType === "logs" && (
+                        <>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/4 font-semibold"
+                          >
+                            {t("dashboard.timestamp")}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/2 font-semibold"
+                          >
+                            {t("dashboard.content")}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/6 font-semibold"
+                          >
+                            {t("dashboard.user")}
+                          </th>
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/6 font-semibold"
+                          >
+                            {t("dashboard.logType")}
+                          </th>
+                        </>
+                      )}
                       {(modalType === "users" ||
                         modalType === "students" ||
                         modalType === "teachers" ||
                         modalType === "newUsers") && (
                         <>
-                          <th className="px-4 py-2 w-1/4">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/4 font-semibold"
+                          >
                             {t("manageAccounts.viewUserModal.fullName")}
                           </th>
-                          <th className="px-4 py-2 w-1/4">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/4 font-semibold"
+                          >
                             {t("manageAccounts.viewUserModal.email")}
                           </th>
-                          <th className="px-4 py-2 w-1/6">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/6 font-semibold"
+                          >
                             {t("manageAccounts.viewUserModal.role")}
                           </th>
-                          <th className="px-4 py-2 w-1/3">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/3 font-semibold"
+                          >
                             {t("dashboard.enrollmentDate")}
                           </th>
                         </>
                       )}
                       {modalType === "schools" && (
                         <>
-                          <th className="px-4 py-2 w-1/2">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/2 font-semibold"
+                          >
                             {t("fields.name")}
                           </th>
-                          <th className="px-4 py-2 w-1/2">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/2 font-semibold"
+                          >
                             {t("fields.address")}
                           </th>
                         </>
                       )}
                       {modalType === "classes" && (
                         <>
-                          <th className="px-4 py-2 w-1/3">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/3 font-semibold"
+                          >
                             {t("manageClasses.table.name")}
                           </th>
-                          <th className="px-4 py-2 w-1/3">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/3 font-semibold"
+                          >
                             {t("manageClasses.table.gradeLevel")}
                           </th>
-                          <th className="px-4 py-2 w-1/3">
+                          <th
+                            scope="col"
+                            className="px-4 py-3 w-1/3 font-semibold"
+                          >
                             {t("manageClasses.table.classSize")}
-                          </th>
-                        </>
-                      )}
-                      {modalType === "logs" && (
-                        <>
-                          <th className="px-4 py-2 w-1/4">
-                            {t("dashboard.timestamp")}
-                          </th>
-                          <th className="px-4 py-2 w-1/2">
-                            {t("dashboard.content")}
-                          </th>
-                          <th className="px-4 py-2 w-1/6">
-                            {t("dashboard.user")}
-                          </th>
-                          <th className="px-4 py-2 w-1/6">
-                            {t("dashboard.logType")}
                           </th>
                         </>
                       )}
@@ -719,66 +754,68 @@ const Dashboard = () => {
                           item.classId ||
                           item.logId
                         }
-                        className="border-b border-gray-200 dark:border-gray-700"
+                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150"
                       >
+                        {modalType === "logs" && (
+                          <>
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
+                              {formatTimestamp(item.timestamp)}
+                            </td>
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
+                              {item.content || t("common.na")}
+                            </td>
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
+                              {item.user?.fullName || t("common.na")}
+                            </td>
+                            <td className="px-4 py-2.5 truncate">
+                              <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300">
+                                {t(`dashboard.logTypes.${item.actionType}`) ||
+                                  t("common.na")}
+                              </span>
+                            </td>
+                          </>
+                        )}
                         {(modalType === "users" ||
                           modalType === "students" ||
                           modalType === "teachers" ||
                           modalType === "newUsers") && (
                           <>
-                            <td className="px-4 py-2 truncate">
-                              {item.fullName || t("common.na")}
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
+                              {item.user.fullName || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.email || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {t(
                                 `manageAccounts.roles.${item.role.toLowerCase()}`
                               ) || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {formatDate(item.enrollmentDate)}
                             </td>
                           </>
                         )}
                         {modalType === "schools" && (
                           <>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.name || item.schoolName || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.address || t("common.na")}
                             </td>
                           </>
                         )}
                         {modalType === "classes" && (
                           <>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.name || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {gradeLevelMap[item.gradeLevel] || t("common.na")}
                             </td>
-                            <td className="px-4 py-2 truncate">
+                            <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.classSize || 0}
-                            </td>
-                          </>
-                        )}
-                        {modalType === "logs" && (
-                          <>
-                            <td className="px-4 py-2 truncate">
-                              {formatTimestamp(item.timestamp)}
-                            </td>
-                            <td className="px-4 py-2 truncate">
-                              {item.content || t("common.na")}
-                            </td>
-                            <td className="px-4 py-2 truncate">
-                              {item.user.fullName || t("common.na")}
-                            </td>
-                            <td className="px-4 py-2 truncate">
-                              {t(`dashboard.logTypes.${item.actionType}`) ||
-                                t("common.na")}
                             </td>
                           </>
                         )}
@@ -788,18 +825,21 @@ const Dashboard = () => {
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center">
+              <p className="text-gray-500 dark:text-gray-400 text-center py-8">
                 {t("dashboard.noData")}
               </p>
             )}
+
+            {/* Pagination */}
             {totalItems > itemsPerPage && (
-              <div className="mt-4">
+              <div className="mt-6 flex justify-end">
                 <Pagination
                   totalItems={totalItems}
                   itemsPerPage={itemsPerPage}
                   currentPage={currentPage}
                   onPageChange={handlePageChange}
                   siblingCount={1}
+                  className="inline-flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 p-2"
                 />
               </div>
             )}

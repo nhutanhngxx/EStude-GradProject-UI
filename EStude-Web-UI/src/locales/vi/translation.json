@@ -29,7 +29,7 @@
     "users": "Quản lý người dùng",
     "classes": "Quản lý lớp học",
     "reports": "Phân tích & Báo cáo",
-    "notifications": "Gửi thông báo",
+    "notifications": "Thông báo",
     "myClasses": "Lớp dạy của tôi",
     "manageSubjects": "Quản lý môn học",
     "manageSchedules": "Quản lý lịch học",
@@ -61,7 +61,25 @@
     "activity3": "Xóa lớp học 10A1",
     "activity4": "Tạo thông báo cho giáo viên",
     "viewDetails": "Xem chi tiết",
-    "viewMore": "Xem thêm"
+    "viewMore": "Xem thêm",
+    "modalTitles": { "logs": "Nhật ký hoạt động" },
+    "timestamp": "Thời gian",
+    "content": "Nội dung",
+    "user": "Người dùng",
+    "logType": "Loại nhật ký",
+    "recentLogs": "Nhật ký gần đây",
+    "logStatsByType": "Thống kê nhật ký theo loại",
+    "logTypes": {
+      "all": "Tất cả",
+      "GENERAL": "Tổng quát",
+      "LOGIN": "Đăng nhập",
+      "UPDATE": "Cập nhật",
+      "CREATE": "Tạo mới",
+      "DELETE": "Xóa"
+    },
+    "searchLogsPlaceholder": "Tìm kiếm nhật ký...",
+    "sampleData": "Đang cập nhật dữ liệu mẫu...",
+    "noData": "Không có dữ liệu"
   },
   "manageSchools": {
     "title": "Quản lý Trường học",

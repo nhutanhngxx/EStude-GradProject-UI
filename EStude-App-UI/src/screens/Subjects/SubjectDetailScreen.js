@@ -29,6 +29,8 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const socket = useSocket();
   const { showToast } = useToast();
 
+  console.log("subject:", subject);
+
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
   const [grade, setGrade] = useState(null);
@@ -36,7 +38,12 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const [assignments, setAssignments] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  const tabs = ["Điểm", "Điểm danh", "Bài tập", "Thông báo"];
+  const tabs = [
+    "Điểm",
+    "Điểm danh",
+    "Bài tập",
+    // , "Thông báo"
+  ];
 
   useEffect(() => {
     if (subject?.name) {
@@ -456,7 +463,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
               </View>
             )}
 
-            {activeTab === "Thông báo" && (
+            {/* {activeTab === "Thông báo" && (
               <View style={styles.cardContainer}>
                 <Text style={styles.cardTitle}>Thông báo gần đây</Text>
                 {notifications.length > 0 ? (
@@ -470,7 +477,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                   <Text style={styles.emptyText}>Chưa có thông báo</Text>
                 )}
               </View>
-            )}
+            )} */}
           </View>
         )}
       </ScrollView>
@@ -524,7 +531,7 @@ const styles = StyleSheet.create({
   activeTabText: { color: "#fff", fontWeight: "bold" },
   tabContent: {
     flex: 1,
-    minHeight: "79%", // Chiếm toàn bộ chiều cao còn lại
+    minHeight: "77%", // Chiếm toàn bộ chiều cao còn lại
   },
   cardContainer: {
     backgroundColor: "#fff",

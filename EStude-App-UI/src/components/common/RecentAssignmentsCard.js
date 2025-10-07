@@ -11,9 +11,13 @@ export default function RecentAssignmentsCard({
   title,
   assignments,
   onPressDetail,
+  // onPressAssignment,
 }) {
   const renderItem = ({ item }) => (
-    <View style={styles.assignmentItem}>
+    <TouchableOpacity
+      style={styles.assignmentItem}
+      // onPress={() => onPressAssignment?.(item)}
+    >
       <View style={{ flex: 1, gap: 5 }}>
         <Text style={styles.assignmentName}>{item.name}</Text>
         <Text style={styles.assignmentMeta}>
@@ -32,18 +36,13 @@ export default function RecentAssignmentsCard({
       <Text
         style={[
           styles.statusBadge,
-          item.status === "pending" && { color: "#ff9800" },
-          item.status === "submitted" && { color: "#28a745" },
-          // item.status === "late" && { color: "#f44336" },
+          item.status === "NOT_SUBMITTED" && { color: "#ff9800" },
+          item.status === "SUBMITTED" && { color: "#28a745" },
         ]}
       >
-        {item.status === "pending"
-          ? "CHƯA NỘP"
-          : item.status === "submitted"
-          ? "ĐÃ NỘP"
-          : "TRỄ HẠN"}
+        {item.status === "NOT_SUBMITTED" ? "CHƯA NỘP" : "ĐÃ NỘP"}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -103,7 +102,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
-    color: "#fff",
     fontSize: 12,
   },
 });

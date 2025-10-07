@@ -92,6 +92,12 @@ export default function NotificationScreen() {
 
   useEffect(() => {
     fetchNotifications();
+
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   const filteredNotifications =

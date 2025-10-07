@@ -161,7 +161,7 @@ export default function AttendanceScreen({ navigation }) {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []);
 
   useEffect(() => {
     const dayStart = startOfDay(customDate);
