@@ -7,6 +7,8 @@ import {
   X,
   ListChecks,
   Loader2,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import teacherService from "../../services/teacherService";
 import studentService from "../../services/studentService";
@@ -25,6 +27,9 @@ export default function TeacherGradeInput() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedTerm, setExpandedTerm] = useState(null);
+  const [expandedSubject, setExpandedSubject] = useState(null);
+
   const [filters, setFilters] = useState({
     termName: "all",
     subject: "all",
@@ -39,7 +44,6 @@ export default function TeacherGradeInput() {
     value: "",
   });
 
-  // Fetch classes
   useEffect(() => {
     const fetchMyClasses = async () => {
       const result = await teacherService.getClassSubjectByTeacherId(
@@ -50,12 +54,10 @@ export default function TeacherGradeInput() {
     fetchMyClasses();
   }, [user.userId]);
 
-  // Check admin status
   useEffect(() => {
     setIsAdmin(user?.admin === true);
   }, [user]);
 
-  // Format date for Vietnamese format
   const formatDateVN = (dateString) => {
     if (!dateString) return "";
     const d = new Date(dateString);
@@ -202,7 +204,6 @@ export default function TeacherGradeInput() {
     }
   };
 
-  // Import grades from Excel
   const handleImportExcel = async (event) => {
     if (!selectedClass) {
       showToast("Vui lòng chọn một lớp trước khi nhập điểm!", "error");
@@ -261,7 +262,6 @@ export default function TeacherGradeInput() {
               : "";
           const comment = row["NhậnXét"] || "";
 
-          // Validate scores
           const isValidScore = (score) =>
             score === "" ||
             (typeof score === "number" && score >= 0 && score <= 10);
@@ -302,11 +302,10 @@ export default function TeacherGradeInput() {
       showToast("Nhập điểm từ file thất bại!", "error");
     } finally {
       setIsImporting(false);
-      event.target.value = ""; // Reset file input
+      event.target.value = "";
     }
   };
 
-  // Export to Excel
   const handleExportExcel = () => {
     const data = students.map((s) => {
       const g = grades[s.userId] || {};
@@ -351,7 +350,6 @@ export default function TeacherGradeInput() {
     );
   };
 
-  // Get unique filter options
   const uniqueTerms = [...new Set(classes.map((cls) => cls.termName))];
   const uniqueSubjects = [...new Set(classes.map((cls) => cls.subjectName))];
   const uniqueClasses = [...new Set(classes.map((cls) => cls.className))];
@@ -360,7 +358,7 @@ export default function TeacherGradeInput() {
     <div className="flex min-h-full bg-gray-100 dark:bg-gray-900">
       {/* Sidebar */}
       <div className="pt-2 pl-2 min-h-full">
-        <div className="w-full md:w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
+        <div className="w-full md:w-64 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Bộ lọc
           </h2>
@@ -437,36 +435,92 @@ export default function TeacherGradeInput() {
             </select>
           </div>
 
-          {/* Class List */}
+          {/* Class List Tree */}
           <div className="flex-1 overflow-y-auto">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
               Danh sách lớp
             </h3>
+
             {filteredClasses.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400">
                 Không có lớp nào phù hợp.
               </p>
             ) : (
-              <ul className="space-y-2">
-                {filteredClasses.map((cls) => (
-                  <li
-                    key={cls.key}
-                    onClick={() => {
-                      setSelectedClass(cls);
-                      fetchGrades(cls.classId, cls.classSubjectId);
-                    }}
-                    className={`p-2 rounded-lg cursor-pointer transition ${
-                      selectedClass?.key === cls.key
-                        ? "bg-green-100 dark:bg-green-700 text-green-800 dark:text-white"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    <div className="text-sm font-medium">
-                      {cls.className} - {cls.subjectName}
+              <ul className="space-y-1">
+                {Object.entries(
+                  filteredClasses.reduce((acc, cls) => {
+                    if (!acc[cls.termName]) acc[cls.termName] = {};
+                    if (!acc[cls.termName][cls.subjectName])
+                      acc[cls.termName][cls.subjectName] = [];
+                    acc[cls.termName][cls.subjectName].push(cls);
+                    return acc;
+                  }, {})
+                ).map(([term, subjects]) => (
+                  <li key={term}>
+                    {/* Term */}
+                    <div
+                      className="cursor-pointer font-medium text-gray-700 dark:text-gray-200 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
+                      onClick={() =>
+                        setExpandedTerm((prev) => (prev === term ? null : term))
+                      }
+                    >
+                      <span>{term}</span>
+                      {expandedTerm === term ? (
+                        <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      )}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {cls.termName}
-                    </div>
+
+                    {/* Subject */}
+                    {expandedTerm === term && (
+                      <ul className="ml-4 mt-1 space-y-1">
+                        {Object.entries(subjects).map(([subject, classes]) => (
+                          <li key={subject}>
+                            <div
+                              className="cursor-pointer font-medium text-gray-600 dark:text-gray-300 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
+                              onClick={() =>
+                                setExpandedSubject((prev) =>
+                                  prev === subject ? null : subject
+                                )
+                              }
+                            >
+                              <span>{subject}</span>
+                              {expandedSubject === subject ? (
+                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              )}
+                            </div>
+
+                            {/* Class */}
+                            {expandedSubject === subject && (
+                              <ul className="ml-4 mt-1 space-y-1">
+                                {classes.map((cls) => (
+                                  <li
+                                    key={cls.key}
+                                    onClick={() => {
+                                      setSelectedClass(cls);
+                                      fetchGrades(
+                                        cls.classId,
+                                        cls.classSubjectId
+                                      );
+                                    }}
+                                    className={`p-2 rounded-lg cursor-pointer transition text-sm ${
+                                      selectedClass?.key === cls.key
+                                        ? "bg-green-100 dark:bg-green-700 text-green-800 dark:text-white"
+                                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                    }`}
+                                  >
+                                    LỚP {cls.className}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -478,7 +532,7 @@ export default function TeacherGradeInput() {
       {/* Main Content */}
       <div className="flex-1 p-2 overflow-auto">
         {selectedClass ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+          <div className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 p-5">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -561,21 +615,23 @@ export default function TeacherGradeInput() {
             {/* Table */}
             <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
               <table
-                className="w-full text-sm text-left table-auto border-separate"
+                className="min-w-max w-full text-sm text-left table-auto border-separate"
                 style={{ borderSpacing: 0 }}
               >
                 <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
                   <tr>
-                    <th className="px-3 py-2">#</th>
-                    <th className="px-3 py-2">Mã học sinh</th>
-                    <th className="px-3 py-2">Tên học sinh</th>
-                    <th className="px-3 py-2">Ngày sinh</th>
-                    <th className="px-3 py-2">Điểm thường xuyên</th>
-                    <th className="px-3 py-2">Giữa kỳ</th>
-                    <th className="px-3 py-2">Cuối kỳ</th>
-                    <th className="px-3 py-2">Trung bình</th>
-                    <th className="px-3 py-2">Nhận xét</th>
-                    <th className="px-3 py-2"></th>
+                    <th className="px-3 py-2 min-w-[40px]">#</th>
+                    <th className="px-3 py-2 min-w-[100px]">Mã học sinh</th>
+                    <th className="px-3 py-2 min-w-[150px]">Tên học sinh</th>
+                    <th className="px-3 py-2 min-w-[100px]">Ngày sinh</th>
+                    <th className="px-3 py-2 min-w-[300px]">
+                      Điểm thường xuyên
+                    </th>
+                    <th className="px-3 py-2 min-w-[80px]">Giữa kỳ</th>
+                    <th className="px-3 py-2 min-w-[80px]">Cuối kỳ</th>
+                    <th className="px-3 py-2 min-w-[80px]">Trung bình</th>
+                    <th className="px-3 py-2 min-w-[80px]">Nhận xét</th>
+                    <th className="px-3 py-2 min-w-[60px]"></th>
                   </tr>
                 </thead>
                 <tbody>

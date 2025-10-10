@@ -3,11 +3,12 @@ import { ThemeContext } from "../../contexts/ThemeContext";
 import { useToast } from "../../contexts/ToastContext";
 import scheduleService from "../../services/scheduleService";
 
-// --- helper functions ---
+// --- Helper functions ---
 const isoDateOnly = (d) => {
   const dt = new Date(d);
   return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
 };
+
 const formatVNDate = (date) => {
   if (!date) return "";
   const d = new Date(date);
@@ -16,15 +17,17 @@ const formatVNDate = (date) => {
   const nam = d.getFullYear();
   return `${ngay}/${thang}/${nam}`;
 };
+
 const startOfWeekMonday = (date) => {
   const d = new Date(date);
-  const day = d.getDay(); // 0 (Sun) ... 6
-  const diff = day === 0 ? -6 : 1 - day; // move to Monday
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(d);
   monday.setDate(d.getDate() + diff);
   monday.setHours(0, 0, 0, 0);
   return monday;
 };
+
 const getWeekDates = (date) => {
   const monday = startOfWeekMonday(date);
   return [...Array(7)].map((_, i) => {
@@ -34,6 +37,7 @@ const getWeekDates = (date) => {
     return dd;
   });
 };
+
 const getMonthDates = (date) => {
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -42,9 +46,11 @@ const getMonthDates = (date) => {
     (_, i) => new Date(year, month, i + 1, 0, 0, 0, 0)
   );
 };
+
 const sortSchedules = (arr) =>
   [...arr].sort((a, b) => (a.startPeriod ?? 0) - (b.startPeriod ?? 0));
 
+// --- Main Component ---
 export default function TeachingScheduleFull() {
   const { darkMode } = useContext(ThemeContext);
   const { showToast } = useToast();
@@ -63,9 +69,8 @@ export default function TeachingScheduleFull() {
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
       const teacherId = user?.userId;
-      if (!teacherId) {
+      if (!teacherId)
         throw new Error("Không tìm thấy teacherId trong localStorage.user");
-      }
 
       const data = await scheduleService.getSchedulesByTeacher(teacherId);
       if (!data) throw new Error("Không có dữ liệu lịch");
@@ -86,10 +91,9 @@ export default function TeachingScheduleFull() {
 
   useEffect(() => {
     fetchSchedules();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Navigation helpers
+  // Navigation
   const goPrev = () => {
     setCurrentDate((prev) => {
       const d = new Date(prev);
@@ -99,6 +103,7 @@ export default function TeachingScheduleFull() {
       return new Date(d);
     });
   };
+
   const goNext = () => {
     setCurrentDate((prev) => {
       const d = new Date(prev);
@@ -108,6 +113,7 @@ export default function TeachingScheduleFull() {
       return new Date(d);
     });
   };
+
   const goToday = () => setCurrentDate(startOfWeekMonday(new Date()));
 
   const handleWeekPicker = (e) => {
@@ -117,10 +123,12 @@ export default function TeachingScheduleFull() {
     const year = parseInt(yearStr, 10);
     const week = parseInt(weekStr, 10);
     if (isNaN(year) || isNaN(week)) return;
+
     const jan4 = new Date(year, 0, 4);
     const dayOfJan4 = jan4.getDay() || 7;
     const mondayWeek1 = new Date(jan4);
     mondayWeek1.setDate(jan4.getDate() - (dayOfJan4 - 1));
+
     const target = new Date(mondayWeek1);
     target.setDate(mondayWeek1.getDate() + (week - 1) * 7);
     setCurrentDate(target);
@@ -131,16 +139,14 @@ export default function TeachingScheduleFull() {
     setCurrentDate(new Date(e.target.value));
   };
 
+  // Compute visible dates
   const visibleDates = useMemo(() => {
-    if (viewMode === "day") {
-      return [isoDateOnly(currentDate)];
-    }
-    if (viewMode === "week") {
-      return getWeekDates(currentDate).map(isoDateOnly);
-    }
+    if (viewMode === "day") return [isoDateOnly(currentDate)];
+    if (viewMode === "week") return getWeekDates(currentDate).map(isoDateOnly);
     return getMonthDates(currentDate).map(isoDateOnly);
   }, [viewMode, currentDate]);
 
+  // Map schedules by date
   const schedulesByDate = useMemo(() => {
     const map = {};
     schedules.forEach((s) => {
@@ -148,12 +154,11 @@ export default function TeachingScheduleFull() {
       if (!map[key]) map[key] = [];
       map[key].push(s);
     });
-    Object.keys(map).forEach((k) => {
-      map[k] = sortSchedules(map[k]);
-    });
+    Object.keys(map).forEach((k) => (map[k] = sortSchedules(map[k])));
     return map;
   }, [schedules]);
 
+  // --- Components ---
   const ScheduleCard = ({ sch }) => {
     const subjectName =
       sch.classSubject?.subject?.name ||
@@ -164,19 +169,15 @@ export default function TeachingScheduleFull() {
     return (
       <div
         className={`p-2 rounded-md border ${
-          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          darkMode
+            ? "bg-gray-800 border-gray-700 text-gray-200"
+            : "bg-white border-gray-200 text-gray-900"
         }`}
       >
         <div className="text-sm font-semibold truncate">{subjectName}</div>
         <div className="text-xs mt-1">
-          Tiết {sch.startPeriod} {/* -{sch.endPeriod}{" "} */}
-          {sch.room ? `· ${sch.room}` : ""}
+          Tiết {sch.startPeriod} {sch.room ? `· ${sch.room}` : ""}
         </div>
-        {/* {sch.details && (
-          <div className="text-xs mt-1 text-gray-600 dark:text-gray-300">
-            {sch.details}
-          </div>
-        )} */}
       </div>
     );
   };
@@ -185,6 +186,7 @@ export default function TeachingScheduleFull() {
     const day = visibleDates[0];
     const key = day.toISOString().slice(0, 10);
     const list = schedulesByDate[key] || [];
+
     return (
       <div className="space-y-3">
         <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -218,30 +220,42 @@ export default function TeachingScheduleFull() {
       "Thứ Bảy",
       "Chủ Nhật",
     ];
+    const todayKey = isoDateOnly(new Date()).toISOString().slice(0, 10);
+
     return (
       <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
         {weekDates.map((d, idx) => {
           const key = d.toISOString().slice(0, 10);
           const list = schedulesByDate[key] || [];
+          const isToday = key === todayKey;
+
           return (
             <div
               key={key}
-              className={`p-2 border rounded bg-white dark:bg-transparent min-h-[140px]`}
+              className={`p-2 border rounded min-h-[140px] flex flex-col ${
+                darkMode
+                  ? isToday
+                    ? "bg-gray-700 border-yellow-400"
+                    : "bg-gray-900 border-gray-700"
+                  : isToday
+                  ? "bg-yellow-100 border-yellow-400"
+                  : "bg-white border-gray-200"
+              }`}
             >
-              <div className="mb-3 text-center">
+              <div className="mb-2 text-center">
                 <div className="text-sm font-medium">{thuVN[idx]}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {formatVNDate(d)}
                 </div>
               </div>
               {loading ? (
-                <div className="text-xs text-center py-4">...</div>
+                <div className="text-xs text-center py-4">Đang tải...</div>
               ) : list.length === 0 ? (
                 <div className="text-xs text-gray-500 text-center">
-                  Không có lịch
+                  {/* Không có lịch */}
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 overflow-y-auto max-h-[120px]">
                   {list.map((sch) => (
                     <ScheduleCard key={sch.scheduleId || sch.date} sch={sch} />
                   ))}
@@ -265,6 +279,8 @@ export default function TeachingScheduleFull() {
       "Thứ Bảy",
       "Chủ Nhật",
     ];
+    const todayKey = isoDateOnly(new Date()).toISOString().slice(0, 10);
+
     return (
       <div>
         <div className="grid grid-cols-7 gap-2 mb-2">
@@ -280,6 +296,7 @@ export default function TeachingScheduleFull() {
             const weekdayOfFirst = first.getDay() === 0 ? 7 : first.getDay();
             const pad = weekdayOfFirst - 1;
             const cells = [];
+
             for (let i = 0; i < pad; i++) {
               cells.push(
                 <div
@@ -288,38 +305,46 @@ export default function TeachingScheduleFull() {
                 />
               );
             }
+
             monthDates.forEach((d) => {
               const key = d.toISOString().slice(0, 10);
               const list = schedulesByDate[key] || [];
+              const isToday = key === todayKey;
+
               cells.push(
                 <div
                   key={key}
-                  className={`min-h-[100px] border rounded p-2 ${
-                    darkMode ? "bg-gray-900" : "bg-white"
+                  className={`min-h-[100px] border rounded p-2 flex flex-col ${
+                    darkMode
+                      ? isToday
+                        ? "bg-gray-700 border-yellow-400"
+                        : "bg-gray-900 border-gray-700"
+                      : isToday
+                      ? "bg-green-100 border-green-600"
+                      : "bg-white border-gray-200"
                   }`}
                 >
-                  <div className="text-sm font-semibold">{formatVNDate(d)}</div>
-                  <div className="mt-2 flex flex-col gap-1">
-                    {list.slice(0, 3).map((sch) => (
-                      <div
-                        key={sch.scheduleId || sch.date}
-                        className="text-xs truncate"
-                      >
-                        {sch.startPeriod}-{sch.endPeriod}{" "}
-                        {sch.classSubject?.subject?.name ||
-                          sch.subjectName ||
-                          ""}
+                  <div className="text-sm font-semibold mb-1">
+                    {formatVNDate(d)}
+                  </div>
+                  <div className="flex flex-col gap-1 overflow-y-auto max-h-[120px]">
+                    {list.length === 0 ? (
+                      <div className="text-xs text-gray-500 text-center">
+                        {/* Không có lịch */}
                       </div>
-                    ))}
-                    {list.length > 3 && (
-                      <div className="text-xs text-gray-500">
-                        +{list.length - 3} thêm
-                      </div>
+                    ) : (
+                      list.map((sch) => (
+                        <ScheduleCard
+                          key={sch.scheduleId || sch.date}
+                          sch={sch}
+                        />
+                      ))
                     )}
                   </div>
                 </div>
               );
             });
+
             return cells;
           })()}
         </div>
@@ -377,7 +402,6 @@ export default function TeachingScheduleFull() {
                 className="p-2 border rounded bg-white dark:bg-gray-800"
               />
             )}
-
             {viewMode === "day" && (
               <input
                 type="date"
@@ -388,10 +412,10 @@ export default function TeachingScheduleFull() {
             )}
 
             <button
-              onClick={() => fetchSchedules()}
-              className="px-3 py-2 rounded bg-blue-600 text-white"
+              onClick={fetchSchedules}
+              className="px-3 py-2 text-green-600 bg-transparent hover:underline transition-all duration-200"
             >
-              Tải lại
+              Cập nhật lịch
             </button>
           </div>
         </div>
