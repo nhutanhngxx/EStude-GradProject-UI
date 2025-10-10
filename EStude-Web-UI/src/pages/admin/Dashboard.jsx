@@ -62,6 +62,10 @@ const Dashboard = () => {
   const [searchLogText, setSearchLogText] = useState("");
   const [filterLogType, setFilterLogType] = useState("all");
 
+  // Lấy thông tin người đang đăng nhập
+  // const user = JSON.parse(localStorage.getItem("user") || "{}");
+  // console.log("user:", user);
+
   const openModal = (type) => {
     setModalType(type);
     setCurrentPage(1);
@@ -348,7 +352,7 @@ const Dashboard = () => {
       value: stats.newUsersThisMonth.toString() || "15",
       icon: <Clock className="w-6 h-6 text-teal-600 dark:text-teal-400" />,
       path: "/admin/new-users",
-      note: stats.newUsersThisMonth === 0 ? t("dashboard.sampleData") : "",
+      // note: stats.newUsersThisMonth === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-teal-100",
       bgDark: "dark:bg-teal-900",
       showDetails: true,
@@ -385,17 +389,12 @@ const Dashboard = () => {
     return t(`dashboard.modalTitles.${modalType}`) || "";
   };
 
-  const logTypes = [
-    "all",
-    "GENERAL",
-    "LOGIN",
-    "UPDATE",
-    "CREATE",
-    "DELETE",
-  ].map((type) => ({
-    value: type,
-    label: t(`dashboard.logTypes.${type}`),
-  }));
+  const logTypes = ["all", "GENERAL", "UPDATE", "CREATE", "DELETE"].map(
+    (type) => ({
+      value: type,
+      label: t(`dashboard.logTypes.${type}`),
+    })
+  );
 
   const logStats = useMemo(() => {
     if (modalType !== "logs") return null;
@@ -515,19 +514,20 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Activities */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-xl shadow-md w-full">
+          <div className="flex flex-wrap justify-between items-center mb-4 gap-2">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
               {t("dashboard.recentActivities")}
             </h2>
             <button
               onClick={() => openModal("logs")}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap"
             >
               {t("dashboard.viewMore")}
             </button>
           </div>
-          <ul className="space-y-3">
+
+          <ul className="space-y-3 max-h-80 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent">
             {loading
               ? [...Array(5)].map((_, idx) => (
                   <li key={idx} className="animate-pulse">
@@ -539,12 +539,15 @@ const Dashboard = () => {
                     key={idx}
                     className="flex items-start gap-3 border-b border-gray-200 dark:border-gray-700 pb-2 last:border-0"
                   >
-                    <Clock className="w-4 h-4 mt-1 text-gray-500 dark:text-gray-400" />
-                    <div>
-                      <span className="font-semibold">
+                    <Clock className="w-4 h-4 mt-1 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                    <div className="text-sm sm:text-base">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">
                         {formatTimestamp(log.timestamp)}
                       </span>{" "}
-                      - <span>{log.content}</span>
+                      -{" "}
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {log.content}
+                      </span>
                       <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
                         ({log.user?.fullName || t("common.na")})
                       </span>

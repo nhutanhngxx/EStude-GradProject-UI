@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import classService from "../../services/classService";
 import subjectService from "../../services/subjectService";
+import scheduleService from "../../services/scheduleService";
 import studentService from "../../services/studentService";
 import teacherService from "../../services/teacherService";
 import assignmentService from "../../services/assignmentService";
@@ -54,6 +55,7 @@ const TeacherDashboard = () => {
   const [subjects, setSubjects] = useState([]);
   const [students, setStudents] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [weeklySchedules, setWeeklySchedules] = useState([]);
   const [gradeStats, setGradeStats] = useState([]);
   const [activityFilter, setActivityFilter] = useState("today");
   const [currentPage, setCurrentPage] = useState(1);
@@ -118,6 +120,39 @@ const TeacherDashboard = () => {
     GRADE_11: "Khối 11",
     GRADE_12: "Khối 12",
   };
+
+  useEffect(() => {
+    const fetchWeeklySchedules = async () => {
+      if (!teacherId) return;
+
+      try {
+        const schedules = await scheduleService.getSchedulesByTeacher(
+          teacherId
+        );
+        if (!schedules) return;
+
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay() + 1);
+        weekStart.setHours(0, 0, 0, 0);
+
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+
+        const thisWeekSchedules = schedules.filter((s) => {
+          const scheduleDate = new Date(s.date);
+          return scheduleDate >= weekStart && scheduleDate <= weekEnd;
+        });
+
+        setWeeklySchedules(thisWeekSchedules);
+      } catch (error) {
+        console.error("Lỗi khi tải lịch tuần này:", error);
+      }
+    };
+
+    fetchWeeklySchedules();
+  }, [teacherId]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -286,6 +321,25 @@ const TeacherDashboard = () => {
     return { labels: months.map((m) => m.label), data };
   };
 
+  const getPublishedAssignmentsThisWeek = () => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() + 1); // Thứ 2
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6); // Chủ nhật
+    weekEnd.setHours(23, 59, 59, 999);
+
+    return assignments.filter(
+      (a) =>
+        a.isPublished &&
+        a.createdAt &&
+        new Date(a.createdAt) >= weekStart &&
+        new Date(a.createdAt) <= weekEnd
+    ).length;
+  };
+
   const getAssignmentsByWeek = () => {
     const now = new Date();
     const weeks = Array(4)
@@ -326,12 +380,13 @@ const TeacherDashboard = () => {
     },
     {
       title: "Buổi dạy tuần này",
-      value: "12",
+      value: weeklySchedules.length.toString(),
       icon: <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />,
       path: "/teacher/schedule",
-      note: "*Dữ liệu mẫu",
+      note: weeklySchedules.length === 0 ? "*Dữ liệu mẫu" : "",
       bgLight: "bg-green-100",
       bgDark: "dark:bg-green-900",
+      showDetails: true,
     },
     {
       title: "Tổng học sinh",
@@ -346,11 +401,14 @@ const TeacherDashboard = () => {
       showDetails: true,
     },
     {
-      title: "Bài tập đã giao",
-      value: assignments.length.toString(),
+      title: "Bài tập trong tuần",
+      value: getPublishedAssignmentsThisWeek().toString(),
       icon: <FileBarChart className="w-6 h-6 text-red-600 dark:text-red-400" />,
       path: "/teacher/assignments",
-      note: assignments.length === 0 ? "*Dữ liệu mẫu" : "",
+      note:
+        getPublishedAssignmentsThisWeek() === 0
+          ? "*Chưa có bài tập tuần này"
+          : "",
       bgLight: "bg-red-100",
       bgDark: "dark:bg-red-900",
       showDetails: true,
@@ -560,6 +618,8 @@ const TeacherDashboard = () => {
                           openModal("classes");
                         if (card.title === "ĐTB môn theo lớp")
                           openModal("grades");
+                        if (card.title === "Buổi dạy tuần này")
+                          navigate("/teacher/schedules");
                       }}
                       className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
                     >
@@ -680,9 +740,9 @@ const TeacherDashboard = () => {
                       <th className="px-4 py-3 w-32">Lớp</th>
                       <th className="px-4 py-3 w-32">Môn học</th>
                       <th className="px-4 py-3 w-32">Học kỳ</th>
-                      <th className="px-4 py-3 w-48">Ngày tạo</th>
-                      <th className="px-4 py-3 w-48">Ngày hết hạn</th>
-                      <th className="px-4 py-3 w-24">Trạng thái</th>
+                      <th className="px-4 py-3 w-36">Ngày tạo</th>
+                      <th className="px-4 py-3 w-36">Ngày hết hạn</th>
+                      <th className="px-4 py-3 w-36">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -924,7 +984,7 @@ const TeacherDashboard = () => {
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartLine />
-            <h2 className="text-xl font-semibold">Số bài tập đã giao</h2>
+            <h2 className="text-xl font-semibold">Bài tập trong các tuần</h2>
           </div>
           {loading ? (
             <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
