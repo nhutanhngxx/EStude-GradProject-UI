@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, Trash2, User, X } from "lucide-react";
+import { Eye, Save, Trash2, User, X } from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -486,9 +486,16 @@ const ManageClasses = () => {
                     {c.homeroomTeacher?.fullName || "-"}
                   </td>
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                    {c.classSize}
+                    {/* {c.classSize} */}
+                    {c.classSize ? (
+                      <span className="font-medium">{c.classSize}</span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        0
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
+                  {/* <td className="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
                     <div className="flex overflow-hidden whitespace-nowrap tablet:overflow-x-auto tablet:scrollbar-thin tablet:scrollbar-thumb-gray-400 tablet:scrollbar-track-transparent">
                       {c.subjects?.length ? (
                         c.subjects.map((s) => (
@@ -504,7 +511,17 @@ const ManageClasses = () => {
                         </span>
                       )}
                     </div>
+                  </td> */}
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.subjects?.length ? (
+                      <span className="font-medium">{c.subjects.length}</span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        0
+                      </span>
+                    )}
                   </td>
+
                   <td className="px-4 py-3 flex flex-wrap items-center gap-4">
                     <button
                       onClick={() => openModal("edit", c)}
@@ -775,15 +792,16 @@ const ManageClasses = () => {
             <div className="flex justify-end gap-2 mt-4">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                className="text-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 form="classForm"
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500 transition"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
               >
+                <Save size={16} />
                 {modalType === "add" ? "Lưu lớp học" : "Lưu thay đổi"}
               </button>
             </div>

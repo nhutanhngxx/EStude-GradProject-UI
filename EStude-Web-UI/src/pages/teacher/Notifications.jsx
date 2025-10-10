@@ -96,15 +96,6 @@ const Notifications = () => {
             quan trọng từ giáo viên đến học sinh hoặc phụ huynh.
           </p>
         </div>
-        <button
-          onClick={() => {
-            setForm({ title: "", message: "", recipientsType: "class" });
-            setIsModalOpen(true);
-          }}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
-        >
-          <PlusCircle size={16} /> Gửi thông báo mới
-        </button>
       </div>
 
       {/* Notification History */}
@@ -137,7 +128,6 @@ const Notifications = () => {
                   </p>
                   <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-4 mt-1">
                     <span>📅 {n.date}</span>
-                    <span>👥 {n.recipients} người nhận</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
@@ -147,13 +137,6 @@ const Notifications = () => {
                     className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline text-sm"
                   >
                     <Eye size={16} /> Xem
-                  </button>
-                  <button
-                    title="Xóa"
-                    onClick={() => handleDelete(n.id)}
-                    className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:underline text-sm"
-                  >
-                    <Trash2 size={16} /> Xóa
                   </button>
                 </div>
               </div>
@@ -242,7 +225,7 @@ const Notifications = () => {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                Xem / Sửa thông báo
+                Xem chi tiết thông báo
               </h2>
               <button
                 onClick={() => setIsViewEditOpen(false)}
@@ -259,6 +242,7 @@ const Notifications = () => {
               <input
                 type="text"
                 value={form.title}
+                disabled
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 placeholder="Nhập tiêu đề thông báo"
@@ -271,24 +255,11 @@ const Notifications = () => {
               <textarea
                 rows={4}
                 value={form.message}
+                disabled
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 placeholder="Nhập nội dung thông báo"
               />
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setIsViewEditOpen(false)}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
-              >
-                Đóng
-              </button>
-              <button
-                onClick={handleUpdate}
-                className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
-              >
-                Lưu
-              </button>
             </div>
           </div>
         </div>

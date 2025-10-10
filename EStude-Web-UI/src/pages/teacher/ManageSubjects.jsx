@@ -7,6 +7,7 @@ import {
   UploadCloud,
   Download,
   X,
+  Layers,
 } from "lucide-react";
 
 import subjectService from "../../services/subjectService";
@@ -154,7 +155,6 @@ export default function ManageSubjects() {
     }
   };
 
-  // ---------------- Excel template & import/export ----------------
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const wsData = [
@@ -267,7 +267,6 @@ export default function ManageSubjects() {
     }
   };
 
-  // ---------------- Chart data ----------------
   const chartData = {
     labels: subjects.map((s) => s.name),
     datasets: [
@@ -287,31 +286,32 @@ export default function ManageSubjects() {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">Quản lý môn học (Giáo vụ)</h1>
-          <p className="text-gray-600 dark:text-gray-400 text-sm">
+          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xl">
             Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập
-            và đánh giá học sinh.
+            và đánh giá học sinh. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và
+            import/export Excel dễ dàng.
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => {
               setIsFormOpen(true);
               resetForm();
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
           >
             <PlusCircle size={16} /> Thêm mới môn học
           </button>
           <button
             onClick={downloadTemplate}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
             title="Tải file mẫu Excel"
           >
             <Download size={16} /> Tải file mẫu
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
             title="Import file Excel"
           >
             <UploadCloud size={16} /> Import Excel
@@ -329,14 +329,16 @@ export default function ManageSubjects() {
       {/* Layout 2 cột */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Table */}
-        <div className="flex-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-600">
-          <table className="w-full text-sm text-left">
+        <div className="flex-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
+          <table className="w-full text-sm text-left border-collapse">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                  Tên môn
+                  <div className="flex items-center gap-2">
+                    <Layers size={16} /> Tên môn
+                  </div>
                 </th>
-                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-center">
                   Thao tác
                 </th>
               </tr>
@@ -350,11 +352,16 @@ export default function ManageSubjects() {
                       key={subject.subjectId}
                       className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
                     >
-                      <td className="p-3 text-gray-900 dark:text-gray-100">
-                        {subject.name}
+                      <td className="p-3 text-gray-900 dark:text-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-1 md:gap-0">
+                        <span className="font-medium">{subject.name}</span>
+                        {subject.description && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                            {subject.description}
+                          </span>
+                        )}
                       </td>
-                      <td className="p-3">
-                        <div className="flex gap-5">
+                      <td className="p-3 text-center">
+                        <div className="flex justify-center gap-4">
                           <button
                             className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline text-sm"
                             title="Xem chi tiết"
@@ -395,9 +402,9 @@ export default function ManageSubjects() {
         </div>
 
         {/* Right: Chart */}
-        <div className="flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-600">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-            Thống kê số lớp phân cho môn học
+        {/* <div className="flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
+          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Layers size={18} /> Thống kê số lớp phân cho môn học
           </h2>
           {subjects.length > 0 ? (
             <Bar
@@ -413,13 +420,13 @@ export default function ManageSubjects() {
               Chưa có dữ liệu để hiển thị biểu đồ.
             </p>
           )}
-        </div>
+        </div> */}
       </div>
 
       {/* Modal Add/Edit Subject */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {selectedSubject ? "Sửa môn học" : "Thêm môn học"}
