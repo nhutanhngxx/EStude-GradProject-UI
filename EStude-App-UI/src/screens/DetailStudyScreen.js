@@ -380,7 +380,7 @@ export default function DetailStudyScreen() {
                                       {s.grade?.totalScore ?? "-"}
                                     </Text>
                                   </View>
-                                  <View style={[styles.row, styles.rowEven]}>
+                                  <View style={[styles.row]}>
                                     <Text style={styles.label}>Xếp loại</Text>
                                     <Text style={styles.value}>
                                       {s.grade?.rank ?? "-"}
@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
     borderBottomColor: "#e0e0e0",
     paddingVertical: 8,

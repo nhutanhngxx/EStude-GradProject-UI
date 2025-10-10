@@ -19,6 +19,7 @@ export default function ScheduleScreen() {
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const flatListRef = useRef(null);
+  const weekListRef = useRef(null);
 
   const statusMapping = {
     SCHEDULED: "Đã được lên lịch và dự kiến sẽ diễn ra",
@@ -33,7 +34,6 @@ export default function ScheduleScreen() {
     MAKEUP: "Lịch học bù",
   };
 
-  // Fetch schedules from API
   const fetchSchedules = async () => {
     try {
       setLoading(true);
@@ -42,6 +42,7 @@ export default function ScheduleScreen() {
       );
       if (schedules) {
         setSchedules(schedules);
+        // console.log("schedules:", schedules);
       } else {
         console.warn("No schedules returned from API");
         setSchedules([]);
@@ -60,7 +61,6 @@ export default function ScheduleScreen() {
     }
   }, [user?.userId]);
 
-  // Group schedules by date
   const groupSchedulesByDate = () => {
     const grouped = schedules.reduce((acc, schedule) => {
       const date = schedule.date;
@@ -78,11 +78,9 @@ export default function ScheduleScreen() {
       }));
   };
 
-  // Filter data for the selected date (for day view)
   const getDayData = (date) => schedules.filter((s) => s.date === date);
   const dayData = getDayData(selectedDate);
 
-  // Week view: Calculate days of the current week based on selectedDate
   const current = new Date(selectedDate);
   const dayOfWeek = current.getDay() || 7; // Sunday = 7, to make Monday = 1
   const monday = new Date(current);
@@ -98,7 +96,6 @@ export default function ScheduleScreen() {
     };
   });
 
-  // Month view: Calculate days of the current month based on selectedDate
   const monthStart = new Date(selectedDate);
   monthStart.setDate(1);
   const firstDayOfMonth = monthStart.getDay() || 7; // Monday = 1, Sunday = 7
@@ -114,13 +111,11 @@ export default function ScheduleScreen() {
     return { date: dateStr, items: getDayData(dateStr) };
   });
 
-  // Generate empty cells for the start of the month
   const emptyCells = Array.from({ length: firstDayOfMonth - 1 }, (_, i) => ({
     key: `empty-${i}`,
     isEmpty: true,
   }));
 
-  // Get Vietnamese day name with fallback
   const getDayNameVN = (dateString) => {
     if (!dateString) return "";
     try {
@@ -143,7 +138,6 @@ export default function ScheduleScreen() {
     }
   };
 
-  // Weekday names for header
   const weekdayNames = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
@@ -152,9 +146,19 @@ export default function ScheduleScreen() {
 
   const handleSelectMonthDay = (date) => {
     setSelectedDate(date);
-    const index = schedules.findIndex((s) => s.date === date);
-    if (index !== -1 && flatListRef.current) {
-      flatListRef.current.scrollToIndex({ index, animated: true });
+
+    // Dùng mảng đã nhóm để xác định index đúng
+    const grouped = groupSchedulesByDate();
+    const index = grouped.findIndex((g) => g.date === date);
+
+    if (index !== -1 && flatListRef.current && index < grouped.length) {
+      setTimeout(() => {
+        try {
+          flatListRef.current.scrollToIndex({ index, animated: true });
+        } catch (error) {
+          console.warn("scrollToIndex failed:", error);
+        }
+      }, 100);
     }
   };
 
@@ -186,7 +190,6 @@ export default function ScheduleScreen() {
         })
       : "N/A";
 
-  // Function to get ISO week number
   const getWeekNumber = (date) => {
     const d = new Date(
       Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
@@ -196,7 +199,6 @@ export default function ScheduleScreen() {
     return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
   };
 
-  // Get header title based on mode
   const getHeaderTitle = () => {
     const dateObj = new Date(selectedDate);
     if (mode === "Ngày") {
@@ -214,7 +216,6 @@ export default function ScheduleScreen() {
     return "";
   };
 
-  // Handle previous/next navigation
   const handlePrev = () => {
     const dateObj = new Date(selectedDate);
     if (mode === "Ngày") {
@@ -223,7 +224,7 @@ export default function ScheduleScreen() {
       dateObj.setDate(dateObj.getDate() - 7);
     } else if (mode === "Tháng") {
       dateObj.setMonth(dateObj.getMonth() - 1);
-      dateObj.setDate(1); // Reset to first day of the month
+      dateObj.setDate(1);
     }
     setSelectedDate(dateObj.toISOString().slice(0, 10));
   };
@@ -236,30 +237,61 @@ export default function ScheduleScreen() {
       dateObj.setDate(dateObj.getDate() + 7);
     } else if (mode === "Tháng") {
       dateObj.setMonth(dateObj.getMonth() + 1);
-      dateObj.setDate(1); // Reset to first day of the month
+      dateObj.setDate(1);
     }
     setSelectedDate(dateObj.toISOString().slice(0, 10));
+  };
+
+  const handleSelectWeekDay = (date) => {
+    setSelectedDate(date);
+
+    // Tìm vị trí nhóm ngày cần cuộn tới
+    const grouped = weekDays.filter((d) => d.items.length > 0);
+    const index = grouped.findIndex((g) => g.date === date);
+
+    if (index !== -1 && weekListRef.current && index < grouped.length) {
+      setTimeout(() => {
+        try {
+          weekListRef.current.scrollToIndex({ index, animated: true });
+        } catch (error) {
+          console.warn("scrollToIndex failed:", error);
+        }
+      }, 100);
+    }
   };
 
   const renderSessionCard = ({ item }) => {
     let bgColor = "#fff";
     let statusColor = "#555";
-    if (item.status === "COMPLETED") {
-      bgColor = "#f0f0f0";
-      statusColor = "#10b981";
+
+    if (item.type === "REGULAR") {
+      bgColor = "#f0fdf4"; // xanh lá nhạt
+    } else if (item.type === "EXAM") {
+      bgColor = "#fef9c3"; // vàng nhạt cho lịch thi
+    } else if (item.type === "MAKEUP") {
+      bgColor = "#e0f2fe"; // xanh dương nhạt cho lịch học bù
+    } else {
+      bgColor = "#f3e8ff"; // tím nhạt cho loại đặc biệt khác
     }
+
+    // Ghi đè nếu trạng thái là CANCELLED
     if (item.status === "CANCELLED") {
       bgColor = "#fee2e2";
       statusColor = "#ef4444";
-    }
-    if (item.status === "SCHEDULED") {
-      bgColor = "#f0fdf4";
+    } else if (item.status === "COMPLETED") {
+      statusColor = "#10b981";
+    } else if (item.status === "SCHEDULED") {
       statusColor = "#22c55e";
     }
 
     return (
       <View style={[styles.sessionCard, { backgroundColor: bgColor, gap: 5 }]}>
         <Text style={styles.title}>
+          {item.type !== "REGULAR" && (
+            <Text style={[styles.type, { fontWeight: "bold" }]}>
+              {typeMapping[item.type] || item.type} {"- "}
+            </Text>
+          )}
           {item.classSubject.subjectName.toUpperCase()}
         </Text>
         <Text style={styles.info}>
@@ -272,15 +304,6 @@ export default function ScheduleScreen() {
             Trạng thái: {statusMapping[item.status] || item.status}
           </Text>
         )}
-        {item.type !== "REGULAR" && (
-          <Text style={styles.type}>
-            Loại lịch: {typeMapping[item.type] || item.type}
-          </Text>
-        )}
-
-        {/* {item.details && (
-          <Text style={styles.info}>Ghi chú: {item.details}</Text>
-        )} */}
       </View>
     );
   };
@@ -303,13 +326,13 @@ export default function ScheduleScreen() {
         {/* Nhóm Prev - Title - Next */}
         <View style={styles.dateHeaderGroup}>
           <TouchableOpacity onPress={handlePrev} style={{ paddingRight: 10 }}>
-            <FontAwesome name="arrow-left" size={12} color="#22c55e" />
+            <FontAwesome name="caret-left" size={15} color="#22c55e" />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
 
           <TouchableOpacity onPress={handleNext} style={{ paddingLeft: 10 }}>
-            <FontAwesome name="arrow-right" size={12} color="#22c55e" />
+            <FontAwesome name="caret-right" size={15} color="#22c55e" />
           </TouchableOpacity>
         </View>
 
@@ -374,7 +397,7 @@ export default function ScheduleScreen() {
                     styles.weekCol,
                     selectedDate === d.date && styles.weekColActive,
                   ]}
-                  onPress={() => setSelectedDate(d.date)}
+                  onPress={() => handleSelectWeekDay(d.date)}
                 >
                   <Text
                     style={[
@@ -398,6 +421,7 @@ export default function ScheduleScreen() {
             })}
           </View>
           <FlatList
+            ref={weekListRef}
             data={weekDays.filter((d) => d.items.length > 0)}
             keyExtractor={(item) => item.date}
             renderItem={renderDateGroup}
@@ -451,7 +475,14 @@ export default function ScheduleScreen() {
           </View>
           <FlatList
             ref={flatListRef}
-            data={groupSchedulesByDate()}
+            data={groupSchedulesByDate().filter((g) => {
+              const d = new Date(g.date);
+              const selected = new Date(selectedDate);
+              return (
+                d.getMonth() === selected.getMonth() &&
+                d.getFullYear() === selected.getFullYear()
+              );
+            })}
             keyExtractor={(item) => item.date}
             renderItem={renderDateGroup}
             contentContainerStyle={styles.listContent}
@@ -491,7 +522,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     // fontWeight: "bold",
     color: "#15803d",
-    marginHorizontal: 8,
+    marginHorizontal: 3,
   },
 
   modeSwitch: {

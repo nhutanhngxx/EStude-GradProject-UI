@@ -17,6 +17,7 @@ import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import SubjectListScreen from "../screens/Subjects/SubjectListScreen";
 import studentStudyService from "../services/studentStudyService";
+import SimpleSubjectListScreen from "./Subjects/SimpleSubjectListScreen";
 
 const encodeURIComponentSafe = (str) => encodeURIComponent(str || "Unknown");
 
@@ -27,7 +28,11 @@ export default function ProfileScreen({ navigation }) {
   const [email, setEmail] = useState(user?.email || "");
   const [activeTab, setActiveTab] = useState("Tổng quan");
   const [academicRecords, setAcademicRecords] = useState(null);
-  const tabs = ["Tổng quan", "Các môn học", "Hoạt động"];
+  const tabs = [
+    "Tổng quan",
+    "Đang học",
+    // , "Hoạt động"
+  ];
 
   const handleSave = () => {
     showToast("Lưu thông tin thành công!", { type: "success" });
@@ -255,7 +260,9 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.infoLabel}>Tỷ lệ nộp bài</Text>
                 <Text style={styles.infoValue}>
                   {academicRecords?.submissionRate != null
-                    ? `${(academicRecords.submissionRate * 100).toFixed(2)}%`
+                    ? `${parseFloat(
+                        academicRecords.submissionRate.toFixed(2)
+                      )}%`
                     : "-"}
                 </Text>
               </View>
@@ -263,7 +270,9 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.infoLabel}>Tỷ lệ đi học</Text>
                 <Text style={styles.infoValue}>
                   {academicRecords?.attendanceRate != null
-                    ? `${academicRecords.attendanceRate.toFixed(2)}%`
+                    ? `${parseFloat(
+                        academicRecords.attendanceRate.toFixed(2)
+                      )}%`
                     : "-"}
                 </Text>
               </View>
@@ -271,9 +280,10 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
-        {/* Tab Các môn học */}
-        {activeTab === "Các môn học" && (
-          <SubjectListScreen navigation={navigation} />
+        {/* Tab Đang học */}
+        {activeTab === "Đang học" && (
+          // <SubjectListScreen navigation={navigation} />
+          <SimpleSubjectListScreen navigation={navigation} />
         )}
 
         {/* Tab Lịch sử hoạt động */}

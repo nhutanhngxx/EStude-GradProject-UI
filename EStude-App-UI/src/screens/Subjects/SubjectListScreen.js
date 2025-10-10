@@ -14,13 +14,13 @@ import classSubjectService from "../../services/classSubjectService";
 import Dropdown from "../../components/common/Dropdown";
 import { MaterialIcons } from "@expo/vector-icons";
 
-const formatDate = (dateString) => {
-  const d = new Date(dateString);
-  const day = d.getDate().toString().padStart(2, "0");
-  const month = (d.getMonth() + 1).toString().padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
-};
+// const formatDate = (dateString) => {
+//   const d = new Date(dateString);
+//   const day = d.getDate().toString().padStart(2, "0");
+//   const month = (d.getMonth() + 1).toString().padStart(2, "0");
+//   const year = d.getFullYear();
+//   return `${day}/${month}/${year}`;
+// };
 
 const removeVietnameseTones = (str) => {
   return str
@@ -288,7 +288,7 @@ function SubjectListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, paddingHorizontal: 16 },
   list: { paddingBottom: 20 },
 
   searchRow: {

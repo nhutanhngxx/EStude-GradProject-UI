@@ -61,11 +61,15 @@ export default function StudyOverviewCard({
 
         <Text style={styles.blockTitle}>Nộp bài</Text>
         <ProgressBar value={submissionRate} />
-        <Text style={styles.progressText}>{submissionRate}%</Text>
+        <Text style={styles.progressText}>
+          {parseFloat(submissionRate.toFixed(2))}%
+        </Text>
 
         <Text style={styles.blockTitle}>Điểm danh</Text>
         <ProgressBar value={attendanceRate} />
-        <Text style={styles.progressText}>{attendanceRate}%</Text>
+        <Text style={styles.progressText}>
+          {parseFloat(attendanceRate.toFixed(2))}%
+        </Text>
       </View>
     </View>
   );

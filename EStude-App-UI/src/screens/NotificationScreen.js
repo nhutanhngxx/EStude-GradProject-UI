@@ -27,32 +27,46 @@ export default function NotificationScreen() {
         )}&background=random&size=128`,
       };
 
-  const tabs = ["Tất cả", "Bài tập", "Hệ thống", "Giáo viên"];
+  const tabs = [
+    "Tất cả",
+    "Bài tập",
+    "Điểm danh",
+    "Hệ thống",
+    // , "Giáo viên"
+  ];
 
-  // Function to map API response to component notification format
   const mapApiToNotifications = (apiNotifications) => {
     return apiNotifications.map((item) => {
-      let type, color;
+      let typeLabel, color;
+
       switch (item.type) {
         case "ASSIGNMENT_REMINDER":
-          type = "Bài tập";
-          color = "#ffcc00";
+          typeLabel = "Bài tập";
+          color = "#f39c12"; // vàng
           break;
+
+        case "ATTENDANCE_REMINDER":
+          typeLabel = "Điểm danh";
+          color = "#27ae60"; // xanh lá
+          break;
+
         case "SYSTEM":
-          type = "Hệ thống";
-          color = "#3399ff";
+          typeLabel = "Hệ thống";
+          color = "#2980b9"; // xanh dương
           break;
+
         case "TEACHER":
-          type = "Giáo viên";
-          color = "#ff6666";
+          typeLabel = "Giáo viên";
+          color = "#e74c3c"; // đỏ
           break;
+
         default:
-          type = "Hệ thống";
-          color = "#3399ff";
+          typeLabel = "Khác";
+          color = "#7f8c8d"; // xám
       }
 
       return {
-        type,
+        type: typeLabel,
         title: item.sender?.fullName
           ? `Thông báo từ ${item.sender.fullName}`
           : "Thông báo hệ thống",
@@ -60,7 +74,7 @@ export default function NotificationScreen() {
         time: new Date(item.sentAt).toLocaleString("vi-VN", {
           hour: "2-digit",
           minute: "2-digit",
-          hour12: true,
+          hour12: false,
           day: "2-digit",
           month: "2-digit",
           year: "numeric",
@@ -80,6 +94,8 @@ export default function NotificationScreen() {
     const result = await notificationService.studentGetReceivedNotifications(
       token
     );
+
+    // console.log("result:", result);
 
     setLoading(false);
 
@@ -190,11 +206,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   main: {
     flex: 1,
-    marginTop: 10,
+    // marginTop: 10,
   },
   tabs: {
     flexDirection: "row",
