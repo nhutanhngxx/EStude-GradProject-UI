@@ -51,12 +51,10 @@ export default function AIDashboardScreen() {
   const handlePredict = async () => {
     setLoadingIntro(true);
     try {
-      // 1️⃣ Gọi API để AI phân tích dữ liệu mới
       await aiService.predictSubjectsForStudent(studentId);
 
       await aiService.predictStudentGPA(studentId);
 
-      // 2️⃣ Fetch dữ liệu mới nhất
       const subj = await aiService.getLatestPredictedSubjectsForStudent(
         studentId
       );
@@ -73,7 +71,6 @@ export default function AIDashboardScreen() {
     }
   };
 
-  // Render từng card môn học
   const renderSubjectCard = (subject, data) => {
     const color =
       data.diem_tb_du_doan >= 8

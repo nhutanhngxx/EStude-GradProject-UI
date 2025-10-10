@@ -18,6 +18,7 @@ import ScheduleListScreen from "./src/screens/Schedules/ScheduleListScreen";
 
 import SubjectListScreen from "./src/screens/Subjects/SubjectListScreen";
 import SubjectDetailScreen from "./src/screens/Subjects/SubjectDetailScreen";
+import SimpleSubjectListScreen from "./src/screens/Subjects/SimpleSubjectListScreen";
 
 import AssignmentDoingScreen from "./src/screens/Assignment/AssignmentDoingScreen";
 
@@ -86,6 +87,11 @@ function AppNavigator() {
             name="SubjectList"
             component={SubjectListScreen}
             options={{ title: "Danh sách môn học", headerTitleAlign: "center" }}
+          />
+          <Stack.Screen
+            name="SimpleSubjectListScreen"
+            component={SimpleSubjectListScreen}
+            options={{ title: "Chi tiết môn học", headerTitleAlign: "center" }}
           />
           <Stack.Screen
             name="SubjectDetail"
