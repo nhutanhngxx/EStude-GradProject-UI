@@ -30,12 +30,18 @@ export default function TeacherSidebar() {
     }
   }, [i18n]);
 
-  const toggleLanguage = () => {
-    const newLang = currentLang === "vi" ? "en" : "vi";
-    i18n.changeLanguage(newLang);
-    localStorage.setItem("language", newLang);
-    setCurrentLang(newLang);
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1600) {
+        setOpen(false);
+      } else {
+        setOpen(true);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const isAdmin = user.admin === true;
@@ -71,13 +77,11 @@ export default function TeacherSidebar() {
           },
         ]
       : []),
-
     {
       key: "schedules",
       path: "/teacher/schedules",
       icon: <FileText size={20} />,
     },
-
     {
       key: "notifications",
       path: "/teacher/notifications",

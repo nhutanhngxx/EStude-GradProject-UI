@@ -48,14 +48,6 @@ const AdminHeader = () => {
 
   return (
     <header className="flex justify-end items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      {/* <div className="flex items-center">
-        <img
-          src={darkMode ? bannerDark : bannerLight}
-          alt="EStude Banner"
-          className="w-[100px] sm:w-[130px]"
-        />
-      </div> */}
-
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Toggle Dark Mode */}
         <button
