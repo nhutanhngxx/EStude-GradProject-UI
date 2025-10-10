@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CalendarDays, X, PlusCircle } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import studentService from "../../services/studentService";
 import socketService from "../../services/socketService";
 import { useToast } from "../../contexts/ToastContext";
 import { useAttendance } from "../../contexts/AttendanceContext";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 export default function AttendanceModal({
   classSubjectId,
@@ -14,6 +15,7 @@ export default function AttendanceModal({
   onClose,
 }) {
   const { showToast } = useToast();
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const { sessions, setSessions } = useAttendance();
   const [viewMode, setViewMode] = useState("SESSIONS");
   const [localSessions, setLocalSessions] = useState([]);
@@ -23,6 +25,7 @@ export default function AttendanceModal({
   const [endTime, setEndTime] = useState("");
   const [useGPS, setUseGPS] = useState(false);
   const [gps, setGps] = useState({ lat: null, lng: null });
+  const toastShown = useRef(false);
 
   // console.log("TeacherId: ", teacherId);
 
@@ -66,7 +69,7 @@ export default function AttendanceModal({
           if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
           return [...prev, session];
         });
-        showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
+        // showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
       }
     );
 
@@ -119,7 +122,13 @@ export default function AttendanceModal({
             s.studentId === studentId ? { ...s, status: newStatus } : s
           ),
         }));
-        showToast("Điểm danh thành công!", "success");
+
+        // Show toast chỉ 1 lần
+        if (!toastShown.current) {
+          showToast("Điểm danh thành công!", "success");
+          toastShown.current = true;
+          setTimeout(() => (toastShown.current = false), 1000); // reset sau 1s
+        }
       }
     } catch (err) {
       console.error("Điểm danh lỗi:", err);
@@ -342,7 +351,8 @@ export default function AttendanceModal({
                 </p>
               )}
               <button
-                onClick={handleCreateSession}
+                // onClick={handleCreateSession}
+                onClick={() => setConfirmOpen(true)}
                 disabled={new Date(startTime) >= new Date(endTime)}
                 className={`px-8 py-2 rounded-lg transition ${
                   new Date(startTime) >= new Date(endTime)
@@ -355,66 +365,107 @@ export default function AttendanceModal({
             </div>
           )}
 
+          <ConfirmModal
+            isOpen={confirmOpen}
+            title="Xác nhận tạo buổi điểm danh"
+            message="Bạn có chắc chắn muốn tạo buổi điểm danh này không?"
+            onCancel={() => setConfirmOpen(false)}
+            onConfirm={() => {
+              handleCreateSession();
+              setConfirmOpen(false);
+            }}
+          />
+
           {/* SESSION DETAIL */}
           {viewMode === "DETAIL" && selectedSession && (
-            <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
+            <>
+              {/* Button quay lại ngoài div cuộn */}
               <button
                 onClick={() => setViewMode("SESSIONS")}
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-2"
               >
                 <ArrowLeft size={18} /> Quay lại
               </button>
-              <table
-                className="w-full text-sm text-left table-auto border-separate"
-                style={{ borderSpacing: 0 }}
-              >
-                <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                  <tr>
-                    <th className="p-3 rounded-tl-lg">Mã SV</th>
-                    <th className="p-3">Tên sinh viên</th>
-                    <th className="p-3 rounded-tr-lg">Điểm danh</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedSession.students?.map((a) => (
-                    <tr
-                      key={a.studentId}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                        {a.studentCode}
-                      </td>
-                      <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                        {a.fullName}
-                      </td>
-                      <td className="p-3 border border-gray-300 dark:border-gray-600">
-                        <select
-                          value={a.status ?? "NOT_YET"}
-                          onChange={(e) =>
-                            handleMarkAttendance(a.studentId, e.target.value)
-                          }
-                          className={`px-2 py-1 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400
-                            ${
-                              a.status === "PRESENT"
-                                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
-                                : a.status === "LATE"
-                                ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300"
-                                : a.status === "ABSENT"
-                                ? "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300"
-                                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
-                            }`}
-                        >
-                          <option value="NOT_YET">Chưa điểm danh</option>
-                          <option value="PRESENT">Có mặt</option>
-                          <option value="LATE">Trễ</option>
-                          <option value="ABSENT">Vắng</option>
-                        </select>
-                      </td>
+
+              {/* Bảng cuộn */}
+              <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
+                <table
+                  className="w-full text-sm text-left table-auto border-separate"
+                  style={{ borderSpacing: 0 }}
+                >
+                  <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                    <tr>
+                      <th className="p-3 rounded-tl-lg">Mã SV</th>
+                      <th className="p-3">Tên sinh viên</th>
+                      <th className="p-3 rounded-tr-lg">Điểm danh</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {selectedSession.students?.map((a) => (
+                      <tr
+                        key={a.studentId}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                          {a.studentCode}
+                        </td>
+                        <td className="p-3 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+                          {a.fullName}
+                        </td>
+                        <td className="p-3 border border-gray-300 dark:border-gray-600">
+                          <div className="flex gap-2 flex-wrap">
+                            {["NOT_YET", "PRESENT", "LATE", "ABSENT"].map(
+                              (status) => {
+                                const labels = {
+                                  NOT_YET: "Chưa điểm danh",
+                                  PRESENT: "Có mặt",
+                                  LATE: "Trễ",
+                                  ABSENT: "Vắng",
+                                };
+                                const colors = {
+                                  NOT_YET:
+                                    "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200",
+                                  PRESENT:
+                                    "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+                                  LATE: "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
+                                  ABSENT:
+                                    "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
+                                };
+                                return (
+                                  <label
+                                    key={status}
+                                    className={`px-2 py-1 rounded border cursor-pointer select-none ${
+                                      a.status === status
+                                        ? colors[status]
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                                    }`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`attendance-${a.studentId}`}
+                                      value={status}
+                                      checked={a.status === status}
+                                      onChange={() =>
+                                        handleMarkAttendance(
+                                          a.studentId,
+                                          status
+                                        )
+                                      }
+                                      className="hidden"
+                                    />
+                                    {labels[status]}
+                                  </label>
+                                );
+                              }
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

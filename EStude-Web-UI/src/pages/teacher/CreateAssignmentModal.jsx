@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   X,
   FilePlus2,
@@ -13,12 +13,13 @@ import {
   LayoutGrid,
   Eye,
   FileText,
+  Save,
 } from "lucide-react";
+import ConfirmModal from "../../components/common/ConfirmModal";
 import assignmentService from "../../services/assignmentService";
 import questionService from "../../services/questionService";
 import { useToast } from "../../contexts/ToastContext";
 import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import socketService from "../../services/socketService";
 
 const genId = () => {
@@ -49,7 +50,7 @@ export default function CreateAssignmentModal({
   const [isPublished, setIsPublished] = useState(false);
   const [allowLateSubmission, setAllowLateSubmission] = useState(false);
   const [latePenalty, setLatePenalty] = useState(0);
-  const [submissionLimit, setSubmissionLimit] = useState(0);
+  const [submissionLimit, setSubmissionLimit] = useState(1);
   const [isAutoGraded, setIsAutoGraded] = useState(false);
   const [isExam, setIsExam] = useState(false);
 
@@ -60,23 +61,27 @@ export default function CreateAssignmentModal({
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [importFile, setImportFile] = useState(null);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const totalPoints = useMemo(
     () => questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0),
     [questions]
   );
+
+  const questionRefs = useRef([]);
 
   useEffect(() => {
     if (!isOpen || !classContext?.classSubjectId) return;
 
     const destination = `/topic/class/${classContext.classSubjectId}/assignments`;
     socketService.subscribe(destination, (assignment) => {
+      // Thông báo socket, đã hoạt động tạm thời khóa lại
       // Hiển thị thông báo khi nhận được bài tập mới
-      showToast(
-        `Bài tập mới: ${assignment.title || "Không có tiêu đề"}`,
-        "info"
-      );
-      console.log("New assignment received:", assignment);
-
+      // showToast(
+      //   `Bài tập mới: ${assignment.title || "Không có tiêu đề"}`,
+      //   "info"
+      // );
+      // console.log("New assignment received:", assignment);
       // Cập nhật danh sách bài tập (nếu cần)
       setQuestions((prev) => {
         if (prev.find((q) => q.assignmentId === assignment.assignmentId)) {
@@ -96,6 +101,10 @@ export default function CreateAssignmentModal({
       setMaxScore(totalPoints);
     }
   }, [totalPoints]);
+
+  useEffect(() => {
+    questionRefs.current = questionRefs.current.slice(0, questions.length);
+  }, [questions]);
 
   if (!isOpen) return null;
 
@@ -160,12 +169,12 @@ export default function CreateAssignmentModal({
         optionC: row[5] || "",
         optionD: row[6] || "",
         correct: row[7] || "",
-        tremor:
+        score:
           row[8] !== undefined && row[8] !== ""
             ? parseFloat(
                 typeof row[8] === "string" ? row[8].replace(",", ".") : row[8]
               )
-            : null,
+            : 1,
         note: row[9] || "",
       }));
 
@@ -263,6 +272,16 @@ export default function CreateAssignmentModal({
           : q
       )
     );
+  };
+
+  const isQuestionInvalid = (q) => {
+    if (!q.questionText.trim()) return true;
+    if (
+      q.questionType === "MULTIPLE_CHOICE" &&
+      !q.options.some((o) => o.isCorrect)
+    )
+      return true;
+    return false;
   };
 
   const buildAssignmentPayload = () => ({
@@ -411,7 +430,7 @@ export default function CreateAssignmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 w-11/12 md:w-3/4 max-w-7xl h-[85vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 w-11/12  h-[85vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
@@ -467,9 +486,9 @@ export default function CreateAssignmentModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-6 h-full">
             {/* Left column: Meta info */}
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto">
               <div>
                 <label className="text-sm text-gray-600 dark:text-gray-300">
                   Tiêu đề
@@ -608,7 +627,7 @@ export default function CreateAssignmentModal({
             </div>
 
             {/* Right column: Question builder / Upload */}
-            <div className="flex flex-col gap-4">
+            <div className="overflow-y-auto">
               {tab === "upload" ? (
                 <div className="space-y-4">
                   <div>
@@ -700,38 +719,68 @@ export default function CreateAssignmentModal({
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                      <ListChecks size={18} /> Câu hỏi
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => addQuestion("MULTIPLE_CHOICE")}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                      >
-                        <Plus size={16} /> Trắc nghiệm
-                      </button>
-                      <button
-                        onClick={() => addQuestion("ESSAY")}
-                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
-                      >
-                        <Plus size={16} /> Tự luận
-                      </button>
+                <div className="flex gap-4">
+                  {/* Sidebar */}
+                  {/* {questions.length > 0 && (
+                    <div className="flex flex-col gap-1 sticky top-0 self-start">
+                      {questions.map((q, idx) => (
+                        <button
+                          key={q.tempId}
+                          className={`w-8 h-8 rounded ${
+                            isQuestionInvalid(q)
+                              ? "bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200"
+                              : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
+                          } hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center text-sm font-medium transition`}
+                          onClick={() =>
+                            questionRefs.current[idx]?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            })
+                          }
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
                     </div>
-                  </div>
+                  )} */}
 
-                  <div className="max-h-96 overflow-y-auto pr-2 space-y-4">
+                  {/* Question content */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                        <ListChecks size={18} /> Câu hỏi
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => addQuestion("MULTIPLE_CHOICE")}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
+                        >
+                          <Plus size={16} /> Trắc nghiệm
+                        </button>
+                        <button
+                          onClick={() => addQuestion("ESSAY")}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
+                        >
+                          <Plus size={16} /> Tự luận
+                        </button>
+                      </div>
+                    </div>
+
                     {questions.length === 0 && (
                       <div className="rounded-xl border border-dashed p-6 text-center text-gray-400 dark:text-gray-500">
                         Chưa có câu hỏi nào.
                       </div>
                     )}
 
-                    {questions.map((q) => (
+                    {questions.map((q, idx) => (
                       <div
                         key={q.tempId}
-                        className="rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-sm p-4 space-y-3"
+                        ref={(el) => (questionRefs.current[idx] = el)}
+                        className={`rounded-xl border ${
+                          isQuestionInvalid(q)
+                            ? "border-red-500 dark:border-red-400"
+                            : "border-gray-300 dark:border-gray-600"
+                        } bg-white dark:bg-gray-700 shadow-sm p-4 space-y-3`}
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-1 flex flex-col gap-2">
@@ -855,7 +904,7 @@ export default function CreateAssignmentModal({
                       </div>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -873,21 +922,33 @@ export default function CreateAssignmentModal({
           </div>
           <div className="flex items-center gap-2">
             <button
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
               onClick={onClose}
             >
               Hủy
             </button>
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-700 transition"
-              onClick={handleSubmit}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
+              onClick={() => setConfirmOpen(true)}
             >
+              <Save size={16} />
               Lưu bài
             </button>
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Xác nhận lưu bài tập"
+        message="Bạn có chắc chắn muốn Lưu bài tập này không?"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          handleSubmit();
+          setConfirmOpen(false);
+        }}
+      />
     </div>
   );
 }

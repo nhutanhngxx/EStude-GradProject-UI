@@ -312,20 +312,23 @@ export default function MyClasses() {
 
           {/* Pagination */}
           <Pagination
-            totalItems={filteredClasses.length} // tổng số item sau khi filter
+            totalItems={filteredClasses.length}
             itemsPerPage={itemsPerPage}
             currentPage={currentPage}
             onPageChange={(page) => setCurrentPage(page)}
           />
         </>
       )}
-      {/* Modals */}
+
+      {/* Nhập điểm */}
       <ClassStudentModal
         classId={selectedClass?.classId}
         classSubjectId={selectedClass?.classSubjectId}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+
+      {/* Tạo bài tập */}
       <CreateAssignmentModal
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
@@ -335,6 +338,8 @@ export default function MyClasses() {
           console.log("Assignment đã được tạo:", assignment);
         }}
       />
+
+      {/* Quản lý điểm danh */}
       <AttendanceModal
         teacherId={user.userId}
         classSubjectId={selectedClass?.classSubjectId}
@@ -342,6 +347,8 @@ export default function MyClasses() {
         isOpen={isAttendanceOpen}
         onClose={() => setIsAttendanceOpen(false)}
       />
+
+      {/* Quản lý bài tập */}
       <AssignmentListModal
         classSubjectId={selectedClass?.classSubjectId}
         isOpen={isAssignmentListOpen}
