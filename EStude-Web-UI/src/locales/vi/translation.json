@@ -62,7 +62,10 @@
     "activity4": "Tạo thông báo cho giáo viên",
     "viewDetails": "Xem chi tiết",
     "viewMore": "Xem thêm",
-    "modalTitles": { "logs": "Nhật ký hoạt động" },
+    "modalTitles": {
+      "logs": "Nhật ký hoạt động",
+      "newUsers": "Người dùng mới trong tháng"
+    },
     "timestamp": "Thời gian",
     "content": "Nội dung",
     "user": "Người dùng",
@@ -75,7 +78,8 @@
       "LOGIN": "Đăng nhập",
       "UPDATE": "Cập nhật",
       "CREATE": "Tạo mới",
-      "DELETE": "Xóa"
+      "DELETE": "Xóa",
+      "ATTENDANCE": "Điểm danh"
     },
     "searchLogsPlaceholder": "Tìm kiếm nhật ký...",
     "sampleData": "Đang cập nhật dữ liệu mẫu...",

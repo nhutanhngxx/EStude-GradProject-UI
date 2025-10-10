@@ -61,7 +61,7 @@
     "activity4": "Created notification for teachers",
     "viewDetails": "View Details",
     "viewMore": "View More",
-    "modalTitles": { "logs": "Activity Logs" },
+    "modalTitles": { "logs": "Activity Logs", "newUsers": "New Users" },
     "timestamp": "Timestamp",
     "content": "Content",
     "user": "User",
@@ -74,7 +74,8 @@
       "LOGIN": "Login",
       "UPDATE": "Update",
       "CREATE": "Create",
-      "DELETE": "Delete"
+      "DELETE": "Delete",
+      "ATTENDANCE": "Attendance"
     },
     "searchLogsPlaceholder": "Search logs...",
     "sampleData": "Sample data is being loaded...",
