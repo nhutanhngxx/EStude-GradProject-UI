@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
 import { loadAssignmentsWithStatus } from "../../services/assignmentHelper";
@@ -33,17 +34,13 @@ export default function SubjectDetailScreen({ route, navigation }) {
 
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [grade, setGrade] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  const tabs = [
-    "Điểm",
-    "Điểm danh",
-    "Bài tập",
-    // , "Thông báo"
-  ];
+  const tabs = ["Điểm", "Điểm danh", "Bài tập"];
 
   useEffect(() => {
     if (subject?.name) {
@@ -52,6 +49,51 @@ export default function SubjectDetailScreen({ route, navigation }) {
       });
     }
   }, [subject, navigation]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      if (activeTab === "Điểm") {
+        const res = await subjectGradeService.getGradesOfStudentByClassSubject(
+          user.userId,
+          subject.classSubjectId
+        );
+        setGrade(res);
+      } else if (activeTab === "Bài tập") {
+        if (subject.classId) {
+          const res = await loadAssignmentsWithStatus(
+            user.userId,
+            null,
+            null,
+            subject.classSubjectId
+          );
+          const assignmentsForThisClass = res.filter(
+            (a) => a.classSubject?.classSubjectId === subject.classSubjectId
+          );
+          setAssignments(assignmentsForThisClass);
+        }
+      } else if (activeTab === "Điểm danh") {
+        const res =
+          await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+            subject.classSubjectId,
+            user.userId
+          );
+        setAttendance(res || []);
+      }
+    } catch (e) {
+      console.log("Load error:", e);
+      if (activeTab === "Điểm") setGrade(null);
+      if (activeTab === "Bài tập") setAssignments([]);
+      if (activeTab === "Điểm danh") setAttendance([]);
+      showToast("Lỗi khi tải dữ liệu!", { type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [activeTab]);
 
   useEffect(() => {
     if (!socket || !subject?.classSubjectId || !user?.userId) return;
@@ -87,7 +129,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
           null,
           subject.classSubjectId
         );
-
         setAssignments(res || []);
         showToast(`Bài tập mới: ${msg.title || "Không tên"}`, {
           type: "success",
@@ -128,55 +169,32 @@ export default function SubjectDetailScreen({ route, navigation }) {
     };
   }, [socket, subject?.classSubjectId, user?.userId]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        if (activeTab === "Điểm") {
-          const res =
-            await subjectGradeService.getGradesOfStudentByClassSubject(
-              user.userId,
-              subject.classSubjectId
-            );
-          setGrade(res);
-        } else if (activeTab === "Bài tập") {
-          if (subject.classId) {
-            const res = await loadAssignmentsWithStatus(
-              user.userId,
-              null,
-              null,
-              subject.classSubjectId
-            );
-            const assignmentsForThisClass = res.filter(
-              (a) => a.classSubject?.classSubjectId === subject.classSubjectId
-            );
-            setAssignments(assignmentsForThisClass);
-          }
-        } else if (activeTab === "Điểm danh") {
-          const res =
-            await attendanceService.getAttentanceSessionByClassSubjectForStudent(
-              subject.classSubjectId,
-              user.userId
-            );
-          setAttendance(res || []);
-        }
-      } catch (e) {
-        console.log("Load error:", e);
-        if (activeTab === "Điểm") setGrade(null);
-        if (activeTab === "Bài tập") setAssignments([]);
-        if (activeTab === "Điểm danh") setAttendance([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-  }, [activeTab]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+      showToast("Dữ liệu đã được làm mới!", { type: "success" });
+    } catch (e) {
+      console.error("Refresh error:", e);
+      showToast("Lỗi khi làm mới dữ liệu!", { type: "error" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   return (
     <View style={styles.safe}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#2ecc71"]}
+            tintColor={"#2ecc71"}
+          />
+        }
       >
         {/* Header môn học */}
         <View style={styles.headerCard}>
@@ -489,7 +507,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                                 ]}
                                 disabled={!canMark}
                                 onPress={async (e) => {
-                                  e.stopPropagation(); // tránh trigger onPress card
+                                  e.stopPropagation();
                                   try {
                                     const res =
                                       await attendanceService.markAttendance(
@@ -497,7 +515,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
                                         user.userId,
                                         "BUTTON_PRESS"
                                       );
-
                                     if (res) {
                                       const updated =
                                         await attendanceService.getAttentanceSessionByClassSubjectForStudent(
@@ -559,22 +576,6 @@ export default function SubjectDetailScreen({ route, navigation }) {
                 )}
               </View>
             )}
-
-            {/* {activeTab === "Thông báo" && (
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}>Thông báo gần đây</Text>
-                {notifications.length > 0 ? (
-                  notifications.map((nt) => (
-                    <View key={nt.notificationId} style={styles.recordCard}>
-                      <Text>{new Date(nt.sentAt).toLocaleDateString()}</Text>
-                      <Text>{nt.message}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.emptyText}>Chưa có thông báo</Text>
-                )}
-              </View>
-            )} */}
           </View>
         )}
       </ScrollView>
@@ -628,7 +629,7 @@ const styles = StyleSheet.create({
   activeTabText: { color: "#fff", fontWeight: "bold" },
   tabContent: {
     flex: 1,
-    minHeight: "77%", // Chiếm toàn bộ chiều cao còn lại
+    minHeight: "77%",
   },
   cardContainer: {
     backgroundColor: "#fff",
@@ -694,13 +695,11 @@ const styles = StyleSheet.create({
   rowOdd: { backgroundColor: "#fff" },
   rowLabel: {
     flex: 1,
-    // fontSize: 14,
     fontWeight: "500",
     color: "#333",
   },
   rowValue: {
     flex: 1,
-    // fontSize: 14,
     textAlign: "right",
     color: "#2e7d32",
     fontWeight: "600",
@@ -713,7 +712,6 @@ const styles = StyleSheet.create({
   sessionName: {
     fontWeight: "bold",
     color: "#2e7d32",
-    // fontSize: 16,
   },
   sessionTime: {
     fontSize: 12,
@@ -749,7 +747,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   semesterLabel: {
-    // fontSize: 16,
     fontWeight: "bold",
     marginBottom: 8,
     color: "#333",
@@ -771,20 +768,14 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
-    // borderBottomWidth: 1,
-    // borderBottomColor: "#e0e0e0",
     paddingVertical: 8,
     alignItems: "center",
-    // backgroundColor: "#d",
   },
   tableHeaderText: {
-    // fontSize: 15,
     fontWeight: "bold",
     color: "#333",
   },
   tableCellText: {
-    // fontSize: 15,
-    // fontWeight: "bold",
     color: "#555",
   },
   detailView: {
@@ -811,7 +802,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   regularLabel: {
-    // fontSize: 14,
     fontWeight: "600",
     color: "#333",
     marginRight: 8,
@@ -832,7 +822,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   scoreText: {
-    // fontSize: 13,
     fontWeight: "500",
     color: "#555",
   },
@@ -847,13 +836,10 @@ const styles = StyleSheet.create({
     borderBottomColor: "#ddd",
   },
   label: {
-    // fontSize: 15,
-    // fontWeight: "600",
     color: "#333",
     flex: 1,
   },
   value: {
-    // fontSize: 14,
     color: "#555",
     textAlign: "right",
     flex: 1,
@@ -866,22 +852,18 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderWidth: 1,
     borderColor: "#e6e6e6",
-
-    // Đổ bóng nhẹ
     shadowColor: "#000",
     shadowOpacity: 0.08,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-
   summaryTitle: {
     fontSize: 16,
     fontWeight: "700",
     color: "#2c3e50",
     marginBottom: 12,
   },
-
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -890,20 +872,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-
   summaryRowLast: {
-    borderBottomWidth: 0, // bỏ line ở row cuối
+    borderBottomWidth: 0,
   },
-
   summaryLabel: {
     fontSize: 14,
     color: "#555",
     fontWeight: "500",
   },
-
   summaryValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#27ae60", // màu nhấn mạnh cho kết quả
+    color: "#27ae60",
   },
 });
