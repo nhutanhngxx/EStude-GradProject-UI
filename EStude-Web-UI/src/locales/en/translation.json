@@ -36,6 +36,17 @@
     "manageClasses": "Manage Classes",
     "grades": "Grade Input"
   },
+
+  "gradeLevel": {
+    "GRADE_6": "Grade 6",
+    "GRADE_7": "Grade 7",
+    "GRADE_8": "Grade 8",
+    "GRADE_9": "Grade 9",
+    "GRADE_10": "Grade 10",
+    "GRADE_11": "Grade 11",
+    "GRADE_12": "Grade 12"
+  },
+
   "dashboard": {
     "overview": "Overview",
     "welcome": "Welcome to the admin dashboard",
@@ -61,7 +72,12 @@
     "activity4": "Created notification for teachers",
     "viewDetails": "View Details",
     "viewMore": "View More",
-    "modalTitles": { "logs": "Activity Logs", "newUsers": "New Users" },
+    "modalTitles": {
+      "logs": "Activity Logs",
+      "newUsers": "New Users",
+      "classes": "Manage Classes",
+      "schools": "Manage Schools"
+    },
     "timestamp": "Timestamp",
     "content": "Content",
     "user": "User",
@@ -224,7 +240,9 @@
       "endDate": "End Date",
       "classSize": "Class Size",
       "homeroomTeacher": "Homeroom Teacher",
-      "terms": "Semesters"
+      "terms": "Semesters",
+      "delete": "Delete",
+      "gradeLevel": "Grade Level"
     },
     "placeholders": {
       "name": "Class Name",

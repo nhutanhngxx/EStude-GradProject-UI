@@ -383,7 +383,7 @@ const TeacherDashboard = () => {
       value: weeklySchedules.length.toString(),
       icon: <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />,
       path: "/teacher/schedule",
-      note: weeklySchedules.length === 0 ? "*Dữ liệu mẫu" : "",
+      note: weeklySchedules.length === 0 ? "*Chưa có lịch tuần này" : "",
       bgLight: "bg-green-100",
       bgDark: "dark:bg-green-900",
       showDetails: true,

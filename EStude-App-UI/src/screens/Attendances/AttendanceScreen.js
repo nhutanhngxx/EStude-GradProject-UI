@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -159,9 +160,16 @@ export default function AttendanceScreen({ navigation }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // useEffect(() => {
+  //   fetchData();
+  // }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchData();
+    }, [user])
+  );
 
   useEffect(() => {
     const dayStart = startOfDay(customDate);

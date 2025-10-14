@@ -64,7 +64,9 @@
     "viewMore": "Xem thêm",
     "modalTitles": {
       "logs": "Nhật ký hoạt động",
-      "newUsers": "Người dùng mới trong tháng"
+      "newUsers": "Người dùng mới trong tháng",
+      "classes": "Quản lý lớp học",
+      "schools": "Quản lý trường học"
     },
     "timestamp": "Thời gian",
     "content": "Nội dung",
@@ -194,6 +196,16 @@
     "importSuccess": "Import thành công {{count}} người dùng."
   },
 
+  "gradeLevel": {
+    "GRADE_6": "Khối 6",
+    "GRADE_7": "Khối 7",
+    "GRADE_8": "Khối 8",
+    "GRADE_9": "Khối 9",
+    "GRADE_10": "Khối 10",
+    "GRADE_11": "Khối 11",
+    "GRADE_12": "Khối 12"
+  },
+
   "manageClasses": {
     "title": "Quản lý lớp học (Admin)",
     "className": "Tên lớp học",
@@ -225,7 +237,8 @@
       "classSize": "Sĩ số",
       "homeroomTeacher": "Giáo viên chủ nhiệm",
       "terms": "Học kỳ",
-      "delete": "Xóa"
+      "delete": "Xóa",
+      "gradeLevel": "Khối lớp"
     },
     "placeholders": {
       "name": "Tên lớp",
