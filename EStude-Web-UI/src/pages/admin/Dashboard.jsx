@@ -18,6 +18,7 @@ import {
   Clock,
   Building,
   GraduationCap,
+  Home,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import adminService from "../../services/adminService";
@@ -389,12 +390,17 @@ const Dashboard = () => {
     return t(`dashboard.modalTitles.${modalType}`) || "";
   };
 
-  const logTypes = ["all", "GENERAL", "UPDATE", "CREATE", "DELETE"].map(
-    (type) => ({
-      value: type,
-      label: t(`dashboard.logTypes.${type}`),
-    })
-  );
+  const logTypes = [
+    "all",
+    "GENERAL",
+    "UPDATE",
+    "CREATE",
+    "DELETE",
+    "GRADE",
+  ].map((type) => ({
+    value: type,
+    label: t(`dashboard.logTypes.${type}`),
+  }));
 
   const logStats = useMemo(() => {
     if (modalType !== "logs") return null;
@@ -420,14 +426,15 @@ const Dashboard = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">
+          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
+            <Home className="w-6 h-6 text-green-800" />
             {t("dashboard.overview")}
           </h1>
-          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {t("dashboard.welcome")}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <button
             onClick={createReport}
             className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm sm:text-base shadow"
@@ -437,7 +444,7 @@ const Dashboard = () => {
               {t("dashboard.createReport")}
             </span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Cards */}
@@ -596,7 +603,7 @@ const Dashboard = () => {
             {modalType === "logs" && (
               <>
                 {/* Log Stats Section */}
-                <div className="mb-6 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-sm">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-sm mb-3">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                     {t("dashboard.logStatsByType")}
                   </h3>
@@ -620,7 +627,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-4 mb-3">
                   <input
                     type="text"
                     placeholder={t("dashboard.searchLogsPlaceholder")}
@@ -834,7 +841,7 @@ const Dashboard = () => {
             )}
 
             {/* Pagination */}
-            {totalItems > itemsPerPage && (
+            {totalItems >= itemsPerPage && (
               <div className="mt-6 flex justify-end">
                 <Pagination
                   totalItems={totalItems}

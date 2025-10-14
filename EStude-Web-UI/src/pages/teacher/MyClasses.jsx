@@ -30,8 +30,8 @@ export default function MyClasses() {
   const [selectedTermIdMap, setSelectedTermIdMap] = useState({});
 
   // Bộ lọc
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [keyword, setKeyword] = useState(""); // <-- thêm keyword
+  const [filterStatus, setFilterStatus] = useState("current"); // all | current | upcoming | ended
+  const [keyword, setKeyword] = useState("");
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
