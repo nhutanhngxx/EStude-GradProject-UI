@@ -21,6 +21,7 @@ import StudyOverviewCard from "../components/common/StudyOverviewCard";
 import TodayScheduleCard from "../components/common/TodayScheduleCard";
 import RecentAssignmentsCard from "../components/common/RecentAssignmentsCard";
 import studentStudyService from "../services/studentStudyService";
+import scheduleService from "../services/scheduleService";
 
 import bannerLight from "../assets/images/banner-light.png";
 import UserHeader from "../components/common/UserHeader";
@@ -37,113 +38,214 @@ export default function HomeStudentScreen({ navigation }) {
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
+  const [todayPlan, setTodayPlan] = useState([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
 
-  useEffect(() => {
-    const fetchAssignments = async () => {
-      try {
-        setLoadingAssignments(true);
-        const assignments = await assignmentService.getAssignmentsByStudent(
-          user.userId
+  const fetchAssignments = async () => {
+    try {
+      setLoadingAssignments(true);
+      const assignments = await assignmentService.getAssignmentsByStudent(
+        user.userId
+      );
+
+      // console.log("assignments:", assignments);
+
+      if (Array.isArray(assignments)) {
+        // Sắp xếp theo hạn nộp gần nhất
+        const sorted = assignments.sort(
+          (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
         );
 
-        // console.log("[Home screen] recent assignments:", assignments);
-
-        if (Array.isArray(assignments)) {
-          const sorted = assignments.sort(
-            (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
-          );
-          setRecentAssignments(sorted.slice(0, 3));
-        } else {
-          setRecentAssignments([]);
-        }
-      } catch (error) {
-        console.error("Lỗi khi load assignments:", error);
-        setRecentAssignments([]);
-      } finally {
-        setLoadingAssignments(false);
-      }
-    };
-
-    fetchAssignments();
-  }, [user]);
-
-  useEffect(() => {
-    const fetchAttendance = async () => {
-      setLoadingAttendance(true);
-      try {
-        const subjectsData =
-          await classSubjectService.getClassSubjectsByStudentWithDetails({
-            studentId: user?.userId,
-          });
-        const subjectsWithSessions = await Promise.all(
-          subjectsData.map(async (subject) => {
-            const sessions =
-              await attendanceService.getAttentanceSessionByClassSubjectForStudent(
-                subject.classSubjectId,
-                user?.userId
+        // Lấy chi tiết từng assignment
+        const detailedAssignments = await Promise.all(
+          sorted.slice(0, 3).map(async (a) => {
+            try {
+              const detail = await assignmentService.getAssignmentById(
+                a.assignmentId
               );
-            return { ...subject, sessions: sessions || [] };
+
+              const classSubject = detail?.data?.classSubject || {};
+              const teacherName =
+                classSubject?.teacher?.fullName ||
+                detail?.data?.teacher?.fullName ||
+                "Chưa rõ";
+
+              const subjectInfo = {
+                classSubjectId:
+                  classSubject?.classSubjectId || a.classSubjectId || null,
+                classId: classSubject?.classId || a.classId || null,
+                className: classSubject?.className || a.className || "Chưa rõ",
+                name: classSubject?.subject?.name || "Không rõ",
+                semester: classSubject?.semester || "HK1 2025 - 2026",
+                beginDate: classSubject?.beginDate || "2025-09-05",
+                endDate: classSubject?.endDate || "2026-01-15",
+                teacherName,
+                description: `${classSubject?.subject?.name || "Không rõ"} - ${
+                  classSubject?.className || "Không rõ"
+                }`,
+              };
+
+              return {
+                ...a,
+                teacherName,
+                subject: subjectInfo,
+              };
+            } catch (error) {
+              console.warn(
+                `Không lấy được chi tiết của assignment ${a.assignmentId}`
+              );
+              return {
+                ...a,
+                teacherName: "Chưa rõ",
+                subject: {
+                  classSubjectId: a.classSubjectId || null,
+                  classId: a.classId || null,
+                  className: a.className || "Không rõ",
+                  name: "Không rõ",
+                  semester: "HK1 2025 - 2026",
+                  beginDate: "2025-09-05",
+                  endDate: "2026-01-15",
+                  teacherName: "Chưa rõ",
+                  description: "Không rõ - Không rõ",
+                },
+              };
+            }
           })
         );
 
-        const totalPresent = subjectsWithSessions.reduce(
-          (sum, s) =>
-            sum + s.sessions.filter((sess) => sess.status === "PRESENT").length,
-          0
-        );
-        const totalSessionsCount = subjectsWithSessions.reduce(
-          (sum, s) => sum + s.sessions.length,
-          0
-        );
-        const percent = totalSessionsCount
-          ? Math.round((totalPresent / totalSessionsCount) * 100)
-          : 0;
-
-        setTotalAttendance({
-          present: totalPresent,
-          total: totalSessionsCount,
-          percent,
-        });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingAttendance(false);
+        // console.log("detailedAssignments:", detailedAssignments);
+        setRecentAssignments(detailedAssignments);
+      } else {
+        setRecentAssignments([]);
       }
-    };
+    } catch (error) {
+      console.error("Lỗi khi load assignments:", error);
+      setRecentAssignments([]);
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
 
-    fetchAttendance();
-  }, [user]);
+  const fetchAttendance = async () => {
+    setLoadingAttendance(true);
+    try {
+      const subjectsData =
+        await classSubjectService.getClassSubjectsByStudentWithDetails({
+          studentId: user?.userId,
+        });
+      const subjectsWithSessions = await Promise.all(
+        subjectsData.map(async (subject) => {
+          const sessions =
+            await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+              subject.classSubjectId,
+              user?.userId
+            );
+          return { ...subject, sessions: sessions || [] };
+        })
+      );
+
+      const totalPresent = subjectsWithSessions.reduce(
+        (sum, s) =>
+          sum + s.sessions.filter((sess) => sess.status === "PRESENT").length,
+        0
+      );
+      const totalSessionsCount = subjectsWithSessions.reduce(
+        (sum, s) => sum + s.sessions.length,
+        0
+      );
+      const percent = totalSessionsCount
+        ? Math.round((totalPresent / totalSessionsCount) * 100)
+        : 0;
+
+      setTotalAttendance({
+        present: totalPresent,
+        total: totalSessionsCount,
+        percent,
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  };
+
+  const fetchOverview = async () => {
+    setLoadingOverview(true);
+    try {
+      if (user?.userId) {
+        const overviewData = await studentStudyService.getAcademicRecords(
+          user.userId
+        );
+        if (overviewData) {
+          setOverview({
+            gpa: overviewData.averageScore ?? 0,
+            rank: overviewData.rank ?? "-",
+            totalStudents: overviewData.totalStudents ?? "-",
+            passedCredits: overviewData.completedSubjects ?? 0,
+            requiredCredits: overviewData.totalSubjects ?? 0,
+            submissionRate: overviewData.submissionRate ?? 0,
+            attendanceRate: overviewData.attendanceRate ?? 0,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Load overview failed:", err);
+    } finally {
+      setLoadingOverview(false);
+    }
+  };
+
+  const fetchTodaySchedule = async () => {
+    try {
+      setLoadingSchedule(true);
+
+      const schedules = await scheduleService.getSchedulesByStudent(
+        user.userId
+      );
+
+      if (Array.isArray(schedules)) {
+        // Lấy ngày hiện tại (chuẩn YYYY-MM-DD)
+        const today = new Date().toISOString().split("T")[0];
+
+        // Lọc những lịch có cùng ngày hôm nay
+        const todaySchedules = schedules.filter((s) => s.date === today);
+
+        // Map dữ liệu sang dạng hiển thị trong TodayScheduleCard
+        const formatted = todaySchedules.map((s) => ({
+          id: s.scheduleId,
+          subject: s.classSubject?.subjectName || "Không rõ",
+          time: `Tiết ${s.startPeriod}${
+            s.endPeriod && s.endPeriod !== s.startPeriod
+              ? `-${s.endPeriod}`
+              : ""
+          }`,
+          room: s.room || "Không rõ",
+          status:
+            s.status === "SCHEDULED"
+              ? "upcoming"
+              : s.status === "ONGOING"
+              ? "in_progress"
+              : "done",
+        }));
+
+        setTodayPlan(formatted);
+      } else {
+        setTodayPlan([]);
+      }
+    } catch (error) {
+      console.error("Lỗi khi lấy lịch học hôm nay:", error);
+      setTodayPlan([]);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchOverview = async () => {
-      setLoadingOverview(true);
-      try {
-        if (user?.userId) {
-          const overviewData = await studentStudyService.getAcademicRecords(
-            user.userId
-          );
-          if (overviewData) {
-            setOverview({
-              gpa: overviewData.averageScore ?? 0,
-              rank: overviewData.rank ?? "-",
-              totalStudents: overviewData.totalStudents ?? "-",
-              passedCredits: overviewData.completedSubjects ?? 0,
-              requiredCredits: overviewData.totalSubjects ?? 0,
-              submissionRate: overviewData.submissionRate ?? 0,
-              attendanceRate: overviewData.attendanceRate ?? 0,
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Load overview failed:", err);
-      } finally {
-        setLoadingOverview(false);
-      }
-    };
+    fetchAssignments();
+    fetchAttendance();
     fetchOverview();
-  }, [user]);
-
-  const todayPlan = [];
+    fetchTodaySchedule();
+  }, []);
 
   const quickActions = [
     { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" }, // xanh lá
@@ -237,32 +339,34 @@ export default function HomeStudentScreen({ navigation }) {
             assignments={recentAssignments.map((a) => ({
               id: a.assignmentId,
               name: a.title,
-              subject: a.className,
               dueDate: a.dueDate,
+              subject: a.subject,
+              status: a.status,
             }))}
-            onPressDetail={() => navigation.navigate("NopBai")}
-            // onPressAssignment={(item) => {
-            //   navigation.navigate("SubjectDetail", {
-            //     subject: {
-            //       classSubjectId: item.classSubjectId,
-            //       name: item.className,
-            //       teacherName: "Giáo viên phụ trách",
-            //       semester: "Học kỳ hiện tại",
-            //       beginDate: new Date().toISOString(),
-            //       endDate: new Date().toISOString(),
-            //     },
-            //     tab: "Bài tập",
-            //   });
-            // }}
           />
         )}
 
         {/* Lịch học hôm nay */}
-        {/* <TodayScheduleCard
-          title="Lịch học hôm nay"
-          scheduleList={todayPlan}
-          onPressDetail={() => navigation.navigate("ScheduleList")}
-        /> */}
+        {loadingSchedule ? (
+          <ActivityIndicator
+            size="large"
+            color="#00cc66"
+            style={{ marginTop: 16 }}
+          />
+        ) : todayPlan.length > 0 ? (
+          <TodayScheduleCard
+            title="Lịch học hôm nay"
+            scheduleList={todayPlan}
+            onPressDetail={() => navigation.navigate("ScheduleList")}
+          />
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Lịch học hôm nay</Text>
+            <Text style={{ color: "#777", marginTop: 8 }}>
+              Không có lịch học hôm nay
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

@@ -29,7 +29,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const socket = useSocket();
   const { showToast } = useToast();
 
-  // console.log("subject:", subject);
+  console.log("subject:", subject);
 
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
@@ -229,104 +229,194 @@ export default function SubjectDetailScreen({ route, navigation }) {
         ) : (
           <View style={styles.tabContent}>
             {activeTab === "Điểm" && (
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}>Kết quả học tập</Text>
+              <View>
+                <View style={styles.tableContainer}>
+                  {/* Header */}
+                  <View style={styles.tableHeader}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableHeaderText}></Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[styles.tableHeaderText, { textAlign: "right" }]}
+                      >
+                        Điểm số
+                      </Text>
+                    </View>
+                  </View>
 
-                <View style={styles.verticalTable}>
-                  {/* Thường kỳ 1-3 */}
+                  {/* Thường kỳ */}
                   {(grade?.regularScores ?? ["-", "-", "-"]).map((v, i) => (
-                    <View
-                      style={[
-                        styles.row,
-                        i % 2 === 0 ? styles.rowEven : styles.rowOdd,
-                        i === (grade?.regularScores?.length ?? 3) - 1 && {
-                          borderBottomWidth: 1,
-                        },
-                      ]}
-                      key={`reg${i}`}
-                    >
-                      <Text style={styles.rowLabel}>Thường kỳ {i + 1}</Text>
-                      <Text style={styles.rowValue}>{v ?? "-"}</Text>
+                    <View key={`reg${i}`} style={styles.tableRow}>
+                      <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                        <Text style={styles.tableCellText}>
+                          Thường kỳ {i + 1}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                        <Text
+                          style={[
+                            styles.tableCellText,
+                            {
+                              textAlign: "right",
+                              color: v ? "#27ae60" : "#999",
+                            },
+                          ]}
+                        >
+                          {v ?? "-"}
+                        </Text>
+                      </View>
                     </View>
                   ))}
 
                   {/* Giữa kỳ */}
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Giữa kỳ</Text>
-                    <Text style={styles.rowValue}>
-                      {grade?.midtermScore ?? "-"}
-                    </Text>
+                  <View style={styles.tableRow}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableCellText}>Giữa kỳ</Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[
+                          styles.tableCellText,
+                          {
+                            textAlign: "right",
+                            color: grade?.midtermScore ? "#27ae60" : "#999",
+                          },
+                        ]}
+                      >
+                        {grade?.midtermScore ?? "-"}
+                      </Text>
+                    </View>
                   </View>
 
                   {/* Cuối kỳ */}
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Cuối kỳ</Text>
-                    <Text style={styles.rowValue}>
-                      {grade?.finalScore ?? "-"}
-                    </Text>
+                  <View style={styles.tableRow}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableCellText}>Cuối kỳ</Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[
+                          styles.tableCellText,
+                          {
+                            textAlign: "right",
+                            color: grade?.finalScore ? "#27ae60" : "#999",
+                          },
+                        ]}
+                      >
+                        {grade?.finalScore ?? "-"}
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Điểm trung bình */}
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Điểm trung bình</Text>
-                    <Text style={styles.rowValue}>
-                      {grade?.actualAverage ?? "-"}
-                    </Text>
+                  {/* Trung bình */}
+                  <View style={styles.tableRow}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableCellText}>Điểm trung bình</Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[
+                          styles.tableCellText,
+                          {
+                            textAlign: "right",
+                            color: grade?.actualAverage ? "#27ae60" : "#999",
+                          },
+                        ]}
+                      >
+                        {grade?.actualAverage ?? "-"}
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Học lực</Text>
-                    <Text style={styles.rowValue}>{"-"}</Text>
+                  {/* Học lực */}
+                  <View style={styles.tableRow}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableCellText}>Học lực</Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[
+                          styles.tableCellText,
+                          { textAlign: "right", color: "#555" },
+                        ]}
+                      >
+                        {grade?.rank ?? "-"}
+                      </Text>
+                    </View>
                   </View>
 
-                  <View style={styles.row}>
-                    <Text style={styles.rowLabel}>Xếp loại</Text>
-                    <Text style={styles.rowValue}>{"-"}</Text>
+                  {/* Xếp loại */}
+                  <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
+                    <View style={{ flex: 2, paddingHorizontal: 8 }}>
+                      <Text style={styles.tableCellText}>Xếp loại</Text>
+                    </View>
+                    <View style={{ flex: 1, paddingHorizontal: 8 }}>
+                      <Text
+                        style={[
+                          styles.tableCellText,
+                          { textAlign: "right", color: "#555" },
+                        ]}
+                      >
+                        {grade?.conduct ?? "-"}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
             )}
 
             {activeTab === "Bài tập" && (
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}>Danh sách bài tập</Text>
+              <View>
                 {assignments.length > 0 ? (
-                  assignments.map((as) => (
-                    <TouchableOpacity
-                      key={as.assignmentId}
-                      style={styles.assignmentItem}
-                      onPress={() =>
-                        navigation.navigate("ChiTietBaiTap", {
-                          assignment: as,
-                          isExam: activeTab === "Exams",
-                          status: as.status || "Chưa nộp",
-                          submissionId: as.submissionId || null,
-                        })
-                      }
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.assignmentTitle}>{as.title}</Text>
-                        <Text style={styles.assignmentDeadline}>
-                          Hạn nộp:{" "}
-                          {new Date(as.dueDate).toLocaleString("vi-VN", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                          })}
-                        </Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.assignmentStatus,
-                          as.status === "Đã nộp" ? styles.done : styles.pending,
-                        ]}
+                  [...assignments]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.dueDate).getTime() -
+                        new Date(a.dueDate).getTime()
+                    )
+                    .map((as) => (
+                      <TouchableOpacity
+                        key={as.assignmentId}
+                        style={styles.recordCard}
+                        activeOpacity={0.8}
+                        onPress={() =>
+                          navigation.navigate("ChiTietBaiTap", {
+                            assignment: as,
+                            isExam: activeTab === "Exams",
+                            status: as.status || "Chưa nộp",
+                            submissionId: as.submissionId || null,
+                          })
+                        }
                       >
-                        {as.status}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
+                        <View style={styles.recordInfo}>
+                          <Text style={styles.sessionName}>{as.title}</Text>
+                          <Text style={styles.sessionTime}>
+                            Hạn nộp:{" "}
+                            {new Date(as.dueDate).toLocaleString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </Text>
+                        </View>
+
+                        <View style={styles.recordActions}>
+                          <Text
+                            style={[
+                              styles.statusText,
+                              as.status === "Đã nộp"
+                                ? { color: "#27ae60" }
+                                : { color: "#e74c3c" },
+                            ]}
+                          >
+                            {as.status || "Chưa nộp"}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
                 ) : (
                   <Text style={styles.emptyText}>Chưa có bài tập</Text>
                 )}
@@ -334,129 +424,136 @@ export default function SubjectDetailScreen({ route, navigation }) {
             )}
 
             {activeTab === "Điểm danh" && (
-              <View style={styles.cardContainer}>
-                <Text style={styles.cardTitle}>Danh sách phiên điểm danh</Text>
+              <View>
                 {attendance.length > 0 ? (
-                  attendance.map((ses) => {
-                    const now = new Date();
-                    const startTime = new Date(ses.startTime);
-                    const endTime = new Date(ses.endTime);
-                    const canMark =
-                      now.getTime() >= startTime.getTime() && !ses.status;
+                  [...attendance]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.startTime).getTime() -
+                        new Date(a.startTime).getTime()
+                    )
+                    .map((ses) => {
+                      const now = new Date();
+                      const startTime = new Date(ses.startTime);
+                      const endTime = new Date(ses.endTime);
+                      const canMark =
+                        now.getTime() >= startTime.getTime() && !ses.status;
 
-                    return (
-                      <View key={ses.sessionId} style={styles.recordCard}>
-                        {/* Cột trái: thông tin */}
-                        <View style={styles.recordInfo}>
-                          <Text style={styles.sessionName}>
-                            {ses.sessionName}
-                          </Text>
-                          <Text style={styles.sessionTime}>
-                            Bắt đầu:{" "}
-                            {startTime.toLocaleString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Text>
+                      return (
+                        <TouchableOpacity
+                          key={ses.sessionId}
+                          style={styles.recordCard}
+                          activeOpacity={0.8}
+                          onPress={() =>
+                            navigation.navigate("AttendanceDetail", {
+                              session: ses,
+                              subject: subject,
+                              userId: user.userId,
+                            })
+                          }
+                        >
+                          {/* Cột trái: thông tin */}
+                          <View style={styles.recordInfo}>
+                            <Text style={styles.sessionName}>
+                              {ses.sessionName}
+                            </Text>
+                            <Text style={styles.sessionTime}>
+                              Bắt đầu:{" "}
+                              {startTime.toLocaleString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </Text>
+                            <Text style={styles.sessionTime}>
+                              Kết thúc:{" "}
+                              {endTime.toLocaleString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </Text>
+                          </View>
 
-                          <Text style={styles.sessionTime}>
-                            Kết thúc:{" "}
-                            {endTime.toLocaleString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Text>
-                        </View>
-
-                        {/* Cột phải: trạng thái / nút */}
-                        <View style={styles.recordActions}>
-                          {!ses.status ? (
-                            <TouchableOpacity
-                              style={[
-                                styles.attendanceButton,
-                                !canMark && { backgroundColor: "#ccc" },
-                              ]}
-                              disabled={!canMark}
-                              onPress={async () => {
-                                try {
-                                  const res =
-                                    await attendanceService.markAttendance(
-                                      ses.sessionId,
-                                      user.userId,
-                                      "BUTTON_PRESS"
-                                    );
-
-                                  if (res) {
-                                    const updated =
-                                      await attendanceService.getAttentanceSessionByClassSubjectForStudent(
-                                        subject.classSubjectId,
-                                        user.userId
+                          {/* Cột phải: trạng thái hoặc nút điểm danh */}
+                          <View style={styles.recordActions}>
+                            {!ses.status ? (
+                              <TouchableOpacity
+                                style={[
+                                  styles.attendanceButton,
+                                  !canMark && { backgroundColor: "#ccc" },
+                                ]}
+                                disabled={!canMark}
+                                onPress={async (e) => {
+                                  e.stopPropagation(); // tránh trigger onPress card
+                                  try {
+                                    const res =
+                                      await attendanceService.markAttendance(
+                                        ses.sessionId,
+                                        user.userId,
+                                        "BUTTON_PRESS"
                                       );
-                                    setAttendance(updated || []);
-                                    showToast("Bạn đã điểm danh thành công!", {
-                                      type: "success",
-                                    });
-                                  } else {
-                                    showToast("Điểm danh thất bại!", {
+
+                                    if (res) {
+                                      const updated =
+                                        await attendanceService.getAttentanceSessionByClassSubjectForStudent(
+                                          subject.classSubjectId,
+                                          user.userId
+                                        );
+                                      setAttendance(updated || []);
+                                      showToast(
+                                        "Bạn đã điểm danh thành công!",
+                                        {
+                                          type: "success",
+                                        }
+                                      );
+                                    } else {
+                                      showToast("Điểm danh thất bại!", {
+                                        type: "error",
+                                      });
+                                    }
+                                  } catch (error) {
+                                    showToast("Có lỗi xảy ra khi điểm danh!", {
                                       type: "error",
                                     });
+                                    console.error(error);
                                   }
-                                } catch (error) {
-                                  showToast("Có lỗi xảy ra khi điểm danh!", {
-                                    type: "error",
-                                  });
-                                  console.error(error);
-                                }
-                              }}
-                            >
-                              <Text style={styles.attendanceButtonText}>
-                                {canMark ? "ĐIỂM DANH" : "CHƯA MỞ"}
-                              </Text>
-                            </TouchableOpacity>
-                          ) : (
-                            <Text
-                              style={[
-                                styles.statusText,
-                                ses.status === "PRESENT"
-                                  ? { color: "#27ae60" }
+                                }}
+                              >
+                                <Text style={styles.attendanceButtonText}>
+                                  {canMark ? "ĐIỂM DANH" : "CHƯA MỞ"}
+                                </Text>
+                              </TouchableOpacity>
+                            ) : (
+                              <Text
+                                style={[
+                                  styles.statusText,
+                                  ses.status === "PRESENT"
+                                    ? { color: "#27ae60" }
+                                    : ses.status === "ABSENT"
+                                    ? { color: "#e74c3c" }
+                                    : ses.status === "LATE"
+                                    ? { color: "#f39c12" }
+                                    : { color: "#999" },
+                                ]}
+                              >
+                                {ses.status === "PRESENT"
+                                  ? "CÓ MẶT"
                                   : ses.status === "ABSENT"
-                                  ? { color: "#e74c3c" }
+                                  ? "VẮNG"
                                   : ses.status === "LATE"
-                                  ? { color: "#f39c12" }
-                                  : { color: "#999" },
-                              ]}
-                            >
-                              {ses.status === "PRESENT"
-                                ? "CÓ MẶT"
-                                : ses.status === "ABSENT"
-                                ? "VẮNG"
-                                : ses.status === "LATE"
-                                ? "TRỄ"
-                                : "Chưa điểm danh"}
-                            </Text>
-                          )}
-
-                          <TouchableOpacity
-                            onPress={() =>
-                              navigation.navigate("AttendanceDetail", {
-                                session: ses,
-                                subject: subject,
-                                userId: user.userId,
-                              })
-                            }
-                          >
-                            <Text style={styles.detailLink}>Xem chi tiết</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })
+                                  ? "TRỄ"
+                                  : "Chưa điểm danh"}
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })
                 ) : (
                   <Text style={styles.emptyText}>Chưa có phiên điểm danh</Text>
                 )}
@@ -584,7 +681,6 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     borderRadius: 10,
     overflow: "hidden",
-    marginTop: 8,
   },
   row: {
     flexDirection: "row",
@@ -598,13 +694,13 @@ const styles = StyleSheet.create({
   rowOdd: { backgroundColor: "#fff" },
   rowLabel: {
     flex: 1,
-    fontSize: 14,
+    // fontSize: 14,
     fontWeight: "500",
     color: "#333",
   },
   rowValue: {
     flex: 1,
-    fontSize: 14,
+    // fontSize: 14,
     textAlign: "right",
     color: "#2e7d32",
     fontWeight: "600",
@@ -615,9 +711,9 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   sessionName: {
-    fontWeight: "600",
+    fontWeight: "bold",
     color: "#2e7d32",
-    fontSize: 16,
+    // fontSize: 16,
   },
   sessionTime: {
     fontSize: 12,
@@ -648,5 +744,166 @@ const styles = StyleSheet.create({
     color: "#2e7d32",
     fontSize: 13,
     textDecorationLine: "underline",
+  },
+  semesterSection: {
+    marginBottom: 20,
+  },
+  semesterLabel: {
+    // fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 8,
+    color: "#333",
+  },
+  tableContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+  },
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+    paddingVertical: 8,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+  },
+  tableRow: {
+    flexDirection: "row",
+    // borderBottomWidth: 1,
+    // borderBottomColor: "#e0e0e0",
+    paddingVertical: 8,
+    alignItems: "center",
+    // backgroundColor: "#d",
+  },
+  tableHeaderText: {
+    // fontSize: 15,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  tableCellText: {
+    // fontSize: 15,
+    // fontWeight: "bold",
+    color: "#555",
+  },
+  detailView: {
+    padding: 8,
+    backgroundColor: "#f5f5f5",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  detailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingVertical: 6,
+  },
+  detailColumn: {
+    flex: 1,
+    flexDirection: "column",
+    paddingRight: 8,
+  },
+  regularScoresContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
+  regularLabel: {
+    // fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginRight: 8,
+    textAlign: "center",
+    alignSelf: "center",
+    width: 80,
+  },
+  scoresGrid: {
+    flex: 1,
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: 10,
+  },
+  scoreBox: {
+    borderRadius: 6,
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scoreText: {
+    // fontSize: 13,
+    fontWeight: "500",
+    color: "#555",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  rowEven: {
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  label: {
+    // fontSize: 15,
+    // fontWeight: "600",
+    color: "#333",
+    flex: 1,
+  },
+  value: {
+    // fontSize: 14,
+    color: "#555",
+    textAlign: "right",
+    flex: 1,
+  },
+  summaryContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#e6e6e6",
+
+    // Đổ bóng nhẹ
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2c3e50",
+    marginBottom: 12,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+
+  summaryRowLast: {
+    borderBottomWidth: 0, // bỏ line ở row cuối
+  },
+
+  summaryLabel: {
+    fontSize: 14,
+    color: "#555",
+    fontWeight: "500",
+  },
+
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#27ae60", // màu nhấn mạnh cho kết quả
   },
 });

@@ -377,7 +377,7 @@ export default function DetailStudyScreen() {
                                   <View style={[styles.row, styles.rowEven]}>
                                     <Text style={styles.label}>Tổng kết</Text>
                                     <Text style={styles.value}>
-                                      {s.grade?.totalScore ?? "-"}
+                                      {s.grade?.actualAverage ?? "-"}
                                     </Text>
                                   </View>
                                   <View style={[styles.row]}>

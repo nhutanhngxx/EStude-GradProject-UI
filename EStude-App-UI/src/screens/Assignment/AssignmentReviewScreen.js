@@ -1,4 +1,3 @@
-// src/screens/ExamReviewScreen.js
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -9,6 +8,7 @@ import {
   Linking,
 } from "react-native";
 import submissionService from "../../services/submissionService";
+import { Ionicons } from "@expo/vector-icons";
 import aiService from "../../services/aiService";
 
 const themeColors = {
@@ -161,7 +161,8 @@ export default function ExamReviewScreen({ route }) {
                 <View style={[styles.feedbackBox, { backgroundColor: "#fff" }]}>
                   {aiFb.feedback && (
                     <Text style={styles.aiAnalysisComment}>
-                      AI đánh giá: {aiFb.feedback}
+                      <Ionicons name="sparkles" size={15} color="green" /> AI
+                      EStude đã đánh giá: {aiFb.feedback}
                     </Text>
                   )}
                 </View>
@@ -233,8 +234,8 @@ const styles = StyleSheet.create({
   aiAnalysisComment: {
     fontSize: 14,
     marginTop: 4,
-    fontStyle: "italic",
-    color: "#444",
+    // fontStyle: "italic",
+    color: "green",
     textAlign: "justify",
   },
 });
