@@ -91,7 +91,8 @@
       "UPDATE": "Update",
       "CREATE": "Create",
       "DELETE": "Delete",
-      "ATTENDANCE": "Attendance"
+      "ATTENDANCE": "Attendance",
+      "GRADE": "Grade"
     },
     "searchLogsPlaceholder": "Search logs...",
     "sampleData": "Sample data is being loaded...",
@@ -126,7 +127,11 @@
     "name": "School Name",
     "address": "Address",
     "email": "Contact Email",
-    "phone": "Phone Number"
+    "phone": "Phone Number",
+    "message": "Message",
+    "targetType": "Target Type",
+    "type": "Type",
+    "priority": "Priority"
   },
   "actions": {
     "action": "Action",
@@ -278,7 +283,8 @@
   },
   "pagination": {
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "summary": "Showing {{start}} to {{end}} of {{total}} entries"
   },
   "teachingSchedule": {
     "title": "Teaching Schedule",
@@ -304,7 +310,8 @@
     "all": "All Notifications",
     "loading": "Loading notifications...",
     "markAsRead": "Mark as read",
-    "markAllAsRead": "Mark all as read"
+    "markAllAsRead": "Mark all as read",
+    "recipients": "recipients"
   },
 
   "time": {
@@ -353,5 +360,42 @@
     "back": "Back",
     "yes": "Yes",
     "no": "No"
+  },
+
+  "manageNotifications": {
+    "subtitle": "Manage Notifications",
+    "description": "Create, edit, and send notifications to users."
+  },
+  "newNotification": "New Notification",
+  "edit": "Edit",
+  "delete": "Delete",
+  "noNotifications": "No notifications found.",
+  "confirmSendTitle": "Confirm Send",
+  "confirmSendMessage": "Are you sure you want to send this notification?",
+  "confirmUpdateTitle": "Confirm Update",
+  "confirmUpdateMessage": "Are you sure you want to update this notification?",
+  "confirmDeleteTitle": "Confirm Delete",
+  "confirmDeleteMessage": "Are you sure you want to delete this notification?",
+
+  "values": {
+    "SYSTEM": "System",
+    "GENERAL": "General",
+    "SYSTEM_MAINTENANCE": "System Maintenance",
+    "LOW": "Low",
+    "MEDIUM": "Medium",
+    "HIGH": "High"
+  },
+  "buttons": {
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "toast": {
+    "emptyMessage": "Message cannot be empty.",
+    "sentSuccess": "Notification sent successfully!",
+    "updateSuccess": "Notification updated successfully!",
+    "deleteSuccess": "Notification deleted successfully!",
+    "sendError": "Failed to send notification.",
+    "updateError": "Failed to update notification.",
+    "deleteError": "Failed to delete notification."
   }
 }
