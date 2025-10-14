@@ -6,22 +6,48 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 export default function RecentAssignmentsCard({
   title,
-  assignments,
+  assignments = [],
   onPressDetail,
-  // onPressAssignment,
 }) {
+  const navigation = useNavigation();
+
+  const handlePressAssignment = (item) => {
+    if (!item.subject) {
+      console.warn("Assignment missing subject data:", item);
+      return;
+    }
+
+    const subjectData = {
+      beginDate: item.subject.beginDate,
+      classId: item.subject.classId,
+      className: item.subject.className,
+      classSubjectId: item.subject.classSubjectId,
+      description: item.subject.description,
+      endDate: item.subject.endDate,
+      name: item.subject.name,
+      semester: item.subject.semester,
+      teacherName: item.subject.teacherName,
+    };
+
+    navigation.navigate("SubjectDetail", {
+      subject: subjectData,
+      tab: "Bài tập",
+    });
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.assignmentItem}
-      // onPress={() => onPressAssignment?.(item)}
+      onPress={() => handlePressAssignment(item)}
     >
       <View style={{ flex: 1, gap: 5 }}>
         <Text style={styles.assignmentName}>{item.name}</Text>
         <Text style={styles.assignmentMeta}>
-          {item.subject} •{" "}
+          {item.subject?.name || "Không rõ môn"} •{" "}
           {item.dueDate
             ? new Date(item.dueDate).toLocaleString("vi-VN", {
                 day: "2-digit",
@@ -57,7 +83,7 @@ export default function RecentAssignmentsCard({
       </View>
       <FlatList
         data={assignments}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
         renderItem={renderItem}
         scrollEnabled={false}
       />
@@ -87,7 +113,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#333",
   },
-  link: { color: "#007bff", fontWeight: "500" },
+  link: {
+    color: "#007bff",
+    fontWeight: "500",
+  },
   assignmentItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -96,8 +125,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
   },
-  assignmentName: { fontSize: 14, fontWeight: "bold", color: "#333" },
-  assignmentMeta: { fontSize: 12, color: "#666", marginTop: 2 },
+  assignmentName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  assignmentMeta: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
   statusBadge: {
     paddingVertical: 4,
     paddingHorizontal: 8,

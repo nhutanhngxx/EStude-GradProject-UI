@@ -11,8 +11,10 @@ import {
   SafeAreaView,
   Platform,
   Image,
+  RefreshControl,
 } from "react-native";
 import { AuthContext } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import Dropdown from "../../components/common/Dropdown";
 import attendanceService from "../../services/attandanceService";
 import classSubjectService from "../../services/classSubjectService";
@@ -23,9 +25,10 @@ import UserHeader from "../../components/common/UserHeader";
 
 export default function AttendanceScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
   const [selectedFilter, setSelectedFilter] = useState("Tất cả");
-  const [selectedActivity, setSelectedActivity] = useState("Ngày"); // "Ngày" | "Tuần" | "Tháng" | "Range"
-  const [subjects, setSubjects] = useState([]); // each subject has .sessions: []
+  const [selectedActivity, setSelectedActivity] = useState("Ngày");
+  const [subjects, setSubjects] = useState([]);
   const [sessionsData, setSessionsData] = useState({
     Ngày: [],
     Tuần: [],
@@ -33,6 +36,7 @@ export default function AttendanceScreen({ navigation }) {
     Range: [],
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [totalAttendance, setTotalAttendance] = useState({
     present: 0,
     total: 0,
@@ -40,17 +44,12 @@ export default function AttendanceScreen({ navigation }) {
   });
 
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pickerMode, setPickerMode] = useState("single"); // "single" | "start" | "end"
-  const [customDate, setCustomDate] = useState(new Date()); // used for Ngày/Tuần/Tháng
+  const [pickerMode, setPickerMode] = useState("single");
+  const [customDate, setCustomDate] = useState(new Date());
   const [rangeStart, setRangeStart] = useState(new Date());
   const [rangeEnd, setRangeEnd] = useState(new Date());
 
   const activityOptions = ["Ngày", "Tuần", "Tháng", "Range"];
-
-  // Lấy tất cả item trong list
-  // const filters = ["Tất cả", ...subjects.map((s) => s.name)];
-
-  // Lọc trùng tên môn
   const uniqueSubjects = [...new Set(subjects.map((s) => s.name))];
   const filters = ["Tất cả", ...uniqueSubjects];
 
@@ -60,7 +59,7 @@ export default function AttendanceScreen({ navigation }) {
     new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 
   const startOfWeek = (d) => {
-    const day = d.getDay() === 0 ? 7 : d.getDay(); // sunday => 7
+    const day = d.getDay() === 0 ? 7 : d.getDay();
     const diff = day - 1;
     const s = new Date(d);
     s.setDate(d.getDate() - diff);
@@ -129,11 +128,8 @@ export default function AttendanceScreen({ navigation }) {
           studentId: user?.userId,
         });
 
-      // console.log("subjectsData:", subjectsData);
-
       if (!subjectsData || !Array.isArray(subjectsData)) {
         setSubjects([]);
-        setLoading(false);
         return;
       }
 
@@ -155,21 +151,31 @@ export default function AttendanceScreen({ navigation }) {
     } catch (error) {
       console.error("Lỗi fetchData:", error);
       setSubjects([]);
+      showToast("Lỗi khi tải dữ liệu điểm danh!", { type: "error" });
     } finally {
       setLoading(false);
     }
-  }, [user]);
-
-  // useEffect(() => {
-  //   fetchData();
-  // }, []);
+  }, [user, showToast]);
 
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
       fetchData();
-    }, [user])
+    }, [fetchData])
   );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchData();
+      showToast("Dữ liệu điểm danh đã được làm mới!", { type: "success" });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      showToast("Lỗi khi làm mới dữ liệu!", { type: "error" });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchData, showToast]);
 
   useEffect(() => {
     const dayStart = startOfDay(customDate);
@@ -252,7 +258,7 @@ export default function AttendanceScreen({ navigation }) {
   ]);
 
   const openPickerFor = (mode) => {
-    setPickerMode(mode); // "single" | "start" | "end"
+    setPickerMode(mode);
     setShowDatePicker(true);
   };
 
@@ -338,7 +344,17 @@ export default function AttendanceScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#2ecc71"]}
+            tintColor={"#2ecc71"}
+          />
+        }
+      >
         <UserHeader />
 
         {/* Tổng quan */}
@@ -419,7 +435,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#777",
   },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -443,7 +458,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginLeft: -20,
   },
-
   card: {
     backgroundColor: "#fff",
     borderRadius: 12,
@@ -457,8 +471,6 @@ const styles = StyleSheet.create({
     },
     shadowRadius: 4,
     elevation: 2,
-    // minHeight: "60%",
-    // flex: 1,
   },
   cardTitle: {
     fontSize: 16,
@@ -482,7 +494,6 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
-
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -500,7 +511,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#000",
   },
-
   filterRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -510,7 +520,6 @@ const styles = StyleSheet.create({
   dropdownWrapper: {
     marginHorizontal: 2,
   },
-
   dateBtn: {
     marginLeft: 8,
     padding: 8,
@@ -521,7 +530,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
   },
-
   borderPresent: {
     borderLeftWidth: 5,
     borderLeftColor: "#27ae60",
@@ -534,7 +542,6 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     borderLeftColor: "#e74c3c",
   },
-
   loadingInline: {
     alignItems: "center",
     justifyContent: "center",

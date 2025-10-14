@@ -8,6 +8,7 @@ import {
   Image,
   SafeAreaView,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -25,12 +26,12 @@ export default function AIDashboardScreen() {
   const [subjectAnalysis, setSubjectAnalysis] = useState(null);
   const [semesterAnalysis, setSemesterAnalysis] = useState(null);
   const [loadingIntro, setLoadingIntro] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Hàm fetch dữ liệu AI
   const fetchData = async () => {
     setLoadingIntro(true);
     try {
@@ -47,12 +48,23 @@ export default function AIDashboardScreen() {
     }
   };
 
-  // Hàm dự đoán mới khi nhấn nút
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchData();
+      showToast("Dữ liệu AI đã được làm mới!", { type: "success" });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      showToast("Lỗi khi làm mới dữ liệu AI!", { type: "error" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handlePredict = async () => {
     setLoadingIntro(true);
     try {
       await aiService.predictSubjectsForStudent(studentId);
-
       await aiService.predictStudentGPA(studentId);
 
       const subj = await aiService.getLatestPredictedSubjectsForStudent(
@@ -106,7 +118,6 @@ export default function AIDashboardScreen() {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
 
-      {/* Intro overlay */}
       {loadingIntro && (
         <AILoadingIntro onFinish={() => setLoadingIntro(false)} />
       )}
@@ -115,35 +126,26 @@ export default function AIDashboardScreen() {
         <ScrollView
           style={styles.container}
           contentContainerStyle={{ paddingBottom: 32 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#00cc66"]}
+              tintColor={"#00cc66"}
+            />
+          }
         >
-          {/* Header */}
-          {/* <View style={styles.header}>
-            <View>
-              <Text style={styles.brand}>AI ESTUDE</Text>
-              <Text style={styles.subtitle}>Phân tích & dự đoán học tập</Text>
-            </View>
-          </View> */}
-
           <AIHeader />
 
           {subjectAnalysis && (
-            <>
-              {/* Button dự đoán */}
-              <TouchableOpacity
-                style={styles.predictBtn}
-                onPress={handlePredict}
-              >
-                <Ionicons name="sparkles" size={18} color="#fff" />
-                <Text style={styles.predictBtnText}> DỰ ĐOÁN BẰNG AI</Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity style={styles.predictBtn} onPress={handlePredict}>
+              <Ionicons name="sparkles" size={18} color="#fff" />
+              <Text style={styles.predictBtnText}> DỰ ĐOÁN BẰNG AI</Text>
+            </TouchableOpacity>
           )}
 
-          {/* Subject Predictions */}
           {subjectAnalysis?.predictions && (
-            <>
-              <Text style={styles.sectionTitle}>Phân tích từng môn học</Text>
-            </>
+            <Text style={styles.sectionTitle}>Phân tích từng môn học</Text>
           )}
           {subjectAnalysis?.predictions ? (
             Object.entries(subjectAnalysis.predictions).map(([subj, data]) =>
@@ -153,7 +155,6 @@ export default function AIDashboardScreen() {
             <Text style={styles.empty}>Chưa có dữ liệu từ AI ESTUDE</Text>
           )}
 
-          {/* Semester Overview */}
           {semesterAnalysis && (
             <>
               <Text style={styles.sectionTitle}>Tổng quan học kỳ</Text>
@@ -209,7 +210,6 @@ export default function AIDashboardScreen() {
             </>
           )}
 
-          {/* Footer */}
           <Text style={styles.footer}>
             © 2025 ESTUDE. TẤT CẢ QUYỀN THUỘC VỀ AI CỦA ESTUDE.
           </Text>
@@ -220,19 +220,34 @@ export default function AIDashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f9fafb" },
-  container: { flex: 1, padding: 16 },
+  safe: {
+    flex: 1,
+    backgroundColor: "#f9fafb",
+  },
+  container: {
+    flex: 1,
+    padding: 16,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
   },
-  brand: { fontSize: 24, fontWeight: "800", color: "#00cc66" },
-  subtitle: { fontSize: 15, color: "#555" },
-  avatar: { width: 50, height: 50, borderRadius: 25 },
-
-  // Button
+  brand: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#00cc66",
+  },
+  subtitle: {
+    fontSize: 15,
+    color: "#555",
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
   predictBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -243,16 +258,17 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginBottom: 20,
   },
-  predictBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
-
+  predictBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "600",
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
     marginVertical: 16,
     color: "#2c3e50",
   },
-
-  // Subject Card
   subjectCard: {
     backgroundColor: "#fff",
     borderRadius: 14,
@@ -260,14 +276,34 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     shadowColor: "#000",
     shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
     shadowRadius: 5,
     elevation: 2,
   },
-  subjectName: { fontSize: 17, fontWeight: "700", color: "#34495e" },
-  predicted: { fontSize: 15, marginTop: 6, color: "#333" },
-  detailText: { fontSize: 14, color: "#555", marginTop: 4 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", marginTop: 10, gap: 8 },
+  subjectName: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#34495e",
+  },
+  predicted: {
+    fontSize: 15,
+    marginTop: 6,
+    color: "#333",
+  },
+  detailText: {
+    fontSize: 14,
+    color: "#555",
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+    gap: 8,
+  },
   chipGoal: {
     backgroundColor: "#ecf0f1",
     paddingHorizontal: 10,
@@ -277,8 +313,6 @@ const styles = StyleSheet.create({
     color: "#555",
     marginRight: 6,
   },
-
-  // Semester Card
   semesterCard: {
     backgroundColor: "#fff",
     borderRadius: 16,
@@ -286,7 +320,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
     shadowColor: "#000",
     shadowOpacity: 0.07,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
     shadowRadius: 6,
     elevation: 3,
   },
@@ -296,7 +333,12 @@ const styles = StyleSheet.create({
     color: "#00cc66",
     marginBottom: 6,
   },
-  rank: { fontSize: 16, fontWeight: "600", color: "#34495e", marginBottom: 10 },
+  rank: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#34495e",
+    marginBottom: 10,
+  },
   comment: {
     fontSize: 14,
     fontStyle: "italic",
@@ -332,10 +374,30 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 12,
   },
-  statBox: { flex: 1, alignItems: "center" },
-  statValue: { fontSize: 18, fontWeight: "700", color: "#2c3e50" },
-  statLabel: { fontSize: 13, color: "#777", marginTop: 2 },
-
-  empty: { fontSize: 15, color: "#999", textAlign: "center", marginTop: 10 },
-  footer: { marginTop: 28, fontSize: 13, textAlign: "center", color: "#888" },
+  statBox: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2c3e50",
+  },
+  statLabel: {
+    fontSize: 13,
+    color: "#777",
+    marginTop: 2,
+  },
+  empty: {
+    fontSize: 15,
+    color: "#999",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  footer: {
+    marginTop: 28,
+    fontSize: 13,
+    textAlign: "center",
+    color: "#888",
+  },
 });
