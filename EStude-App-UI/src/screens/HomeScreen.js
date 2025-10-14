@@ -9,12 +9,14 @@ import {
   StatusBar,
   ActivityIndicator,
   SafeAreaView,
+  RefreshControl,
 } from "react-native";
 import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
 import classSubjectService from "../services/classSubjectService";
 import assignmentService from "../services/assignmentService";
+import { useToast } from "../contexts/ToastContext";
 import AttendanceOverview from "../components/common/AttendanceOverview";
 import ProgressBar from "../components/common/ProgressBar";
 import StudyOverviewCard from "../components/common/StudyOverviewCard";
@@ -28,6 +30,7 @@ import UserHeader from "../components/common/UserHeader";
 
 export default function HomeStudentScreen({ navigation }) {
   const { user } = useContext(AuthContext);
+  const { showToast } = useToast();
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [recentAssignments, setRecentAssignments] = useState([]);
   const [totalAttendance, setTotalAttendance] = useState({
@@ -40,6 +43,7 @@ export default function HomeStudentScreen({ navigation }) {
   const [loadingOverview, setLoadingOverview] = useState(true);
   const [todayPlan, setTodayPlan] = useState([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchAssignments = async () => {
     try {
@@ -48,15 +52,11 @@ export default function HomeStudentScreen({ navigation }) {
         user.userId
       );
 
-      // console.log("assignments:", assignments);
-
       if (Array.isArray(assignments)) {
-        // Sắp xếp theo hạn nộp gần nhất
         const sorted = assignments.sort(
           (a, b) => new Date(a.dueDate) - new Date(b.dueDate)
         );
 
-        // Lấy chi tiết từng assignment
         const detailedAssignments = await Promise.all(
           sorted.slice(0, 3).map(async (a) => {
             try {
@@ -113,7 +113,6 @@ export default function HomeStudentScreen({ navigation }) {
           })
         );
 
-        // console.log("detailedAssignments:", detailedAssignments);
         setRecentAssignments(detailedAssignments);
       } else {
         setRecentAssignments([]);
@@ -204,13 +203,9 @@ export default function HomeStudentScreen({ navigation }) {
       );
 
       if (Array.isArray(schedules)) {
-        // Lấy ngày hiện tại (chuẩn YYYY-MM-DD)
         const today = new Date().toISOString().split("T")[0];
-
-        // Lọc những lịch có cùng ngày hôm nay
         const todaySchedules = schedules.filter((s) => s.date === today);
 
-        // Map dữ liệu sang dạng hiển thị trong TodayScheduleCard
         const formatted = todaySchedules.map((s) => ({
           id: s.scheduleId,
           subject: s.classSubject?.subjectName || "Không rõ",
@@ -240,6 +235,24 @@ export default function HomeStudentScreen({ navigation }) {
     }
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchAssignments(),
+        fetchAttendance(),
+        fetchOverview(),
+        fetchTodaySchedule(),
+      ]);
+      showToast("Dữ liệu đã được làm mới!", { type: "success" });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      showToast("Lỗi khi làm mới dữ liệu!", { type: "error" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     fetchAssignments();
     fetchAttendance();
@@ -248,15 +261,25 @@ export default function HomeStudentScreen({ navigation }) {
   }, []);
 
   const quickActions = [
-    { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" }, // xanh lá
-    { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" }, // cam
-    { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" }, // xanh dương
+    { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
+    { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
+    { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
   ];
 
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" />
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#00cc66"]}
+            tintColor={"#00cc66"}
+          />
+        }
+      >
         <UserHeader />
 
         {/* Tác vụ nhanh */}
@@ -381,7 +404,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -398,7 +420,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     marginLeft: -20,
   },
-
   highlight: {
     fontWeight: "bold",
   },

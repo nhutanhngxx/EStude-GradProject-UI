@@ -12,7 +12,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import subjectService from "../../services/subjectService";
 import classSubjectService from "../../services/classSubjectService";
 import Dropdown from "../../components/common/Dropdown";
-import { MaterialIcons } from "@expo/vector-icons";
+import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 
 // const formatDate = (dateString) => {
 //   const d = new Date(dateString);
@@ -227,8 +227,8 @@ function SubjectListScreen({ navigation }) {
               style={styles.toggleButton}
               onPress={() => setIsGrid(!isGrid)}
             >
-              <MaterialIcons
-                name={isGrid ? "grid-view" : "view-list"}
+              <FontAwesome
+                name={isGrid ? "th-large" : "list"}
                 size={28}
                 color="#555"
               />
@@ -288,7 +288,7 @@ function SubjectListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16 },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 10 },
   list: { paddingBottom: 20 },
 
   searchRow: {

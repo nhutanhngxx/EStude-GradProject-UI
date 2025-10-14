@@ -6,19 +6,22 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  RefreshControl,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
+import { useToast } from "../contexts/ToastContext";
 import UserHeader from "../components/common/UserHeader";
 import notificationService from "../services/notificationService";
 
 export default function NotificationScreen() {
   const { user, token } = useContext(AuthContext);
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState("Tất cả");
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Generate avatar URI based on user data
   const avatarUri = user?.avatarPath
     ? { uri: user.avatarPath }
     : {
@@ -27,13 +30,7 @@ export default function NotificationScreen() {
         )}&background=random&size=128`,
       };
 
-  const tabs = [
-    "Tất cả",
-    "Bài tập",
-    "Điểm danh",
-    "Hệ thống",
-    // , "Giáo viên"
-  ];
+  const tabs = ["Tất cả", "Bài tập", "Điểm danh", "Hệ thống"];
 
   const mapApiToNotifications = (apiNotifications) => {
     return apiNotifications.map((item) => {
@@ -42,27 +39,23 @@ export default function NotificationScreen() {
       switch (item.type) {
         case "ASSIGNMENT_REMINDER":
           typeLabel = "Bài tập";
-          color = "#f39c12"; // vàng
+          color = "#f39c12";
           break;
-
         case "ATTENDANCE_REMINDER":
           typeLabel = "Điểm danh";
-          color = "#27ae60"; // xanh lá
+          color = "#27ae60";
           break;
-
         case "SYSTEM":
           typeLabel = "Hệ thống";
-          color = "#2980b9"; // xanh dương
+          color = "#2980b9";
           break;
-
         case "TEACHER":
           typeLabel = "Giáo viên";
-          color = "#e74c3c"; // đỏ
+          color = "#e74c3c";
           break;
-
         default:
           typeLabel = "Khác";
-          color = "#7f8c8d"; // xám
+          color = "#7f8c8d";
       }
 
       return {
@@ -91,29 +84,43 @@ export default function NotificationScreen() {
     }
 
     setLoading(true);
-    const result = await notificationService.studentGetReceivedNotifications(
-      token
-    );
+    try {
+      const result = await notificationService.studentGetReceivedNotifications(
+        token
+      );
 
-    // console.log("result:", result);
+      if (result && Array.isArray(result)) {
+        setNotifications(mapApiToNotifications(result));
+        setError(null);
+      } else {
+        setError("Không thể tải danh sách thông báo");
+        setNotifications([]);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải thông báo:", error);
+      setError("Lỗi khi tải thông báo");
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setLoading(false);
-
-    if (result && Array.isArray(result)) {
-      setNotifications(mapApiToNotifications(result));
-    } else {
-      setError("Không thể tải danh sách thông báo");
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchNotifications();
+      showToast("Thông báo đã được làm mới!", { type: "success" });
+    } catch (error) {
+      console.error("Refresh error:", error);
+      showToast("Lỗi khi làm mới thông báo!", { type: "error" });
+    } finally {
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 15000);
-
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [token]);
 
   const filteredNotifications =
@@ -126,6 +133,14 @@ export default function NotificationScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#2e7d32"]}
+            tintColor={"#2e7d32"}
+          />
+        }
       >
         <UserHeader />
 
@@ -210,7 +225,6 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-    // marginTop: 10,
   },
   tabs: {
     flexDirection: "row",
