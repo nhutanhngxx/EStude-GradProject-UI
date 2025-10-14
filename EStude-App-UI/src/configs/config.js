@@ -31,7 +31,7 @@ const getHostIP = () => {
 
 // Tạo BASE_URL động
 const getBaseUrl = () => {
-  const DEFAULT_IP = "192.168.1.10"; // fallback
+  const DEFAULT_IP = "192.168.154.240"; // fallback
   const PORT = 8080;
 
   const hostIP = getHostIP();
