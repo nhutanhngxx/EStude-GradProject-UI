@@ -347,7 +347,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                     </View>
                   </View>
 
-                  {/* Học lực */}
+                  {/* Học lực
                   <View style={styles.tableRow}>
                     <View style={{ flex: 2, paddingHorizontal: 8 }}>
                       <Text style={styles.tableCellText}>Học lực</Text>
@@ -362,7 +362,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                         {grade?.rank ?? "-"}
                       </Text>
                     </View>
-                  </View>
+                  </View> */}
 
                   {/* Xếp loại */}
                   <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
@@ -376,7 +376,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                           { textAlign: "right", color: "#555" },
                         ]}
                       >
-                        {grade?.conduct ?? "-"}
+                        {grade?.rank ?? "-"}
                       </Text>
                     </View>
                   </View>
