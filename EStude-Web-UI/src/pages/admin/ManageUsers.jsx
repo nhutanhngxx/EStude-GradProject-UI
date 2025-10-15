@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, Trash2, X } from "lucide-react";
+import { Eye, PlusCircle, Trash2, Users, X } from "lucide-react";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import adminService from "../../services/adminService";
@@ -74,7 +74,7 @@ const ManageAccounts = () => {
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
   const [isAdmin, setisAdmin] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 7;
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -469,7 +469,10 @@ const ManageAccounts = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{t("manageAccounts.title")}</h1>
+          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
+            <Users className="w-6 h-6 text-green-800" />
+            {t("manageAccounts.title")}
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t("manageAccounts.subtitle")}
           </p>
@@ -477,9 +480,10 @@ const ManageAccounts = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => openModal("add")}
-            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-indigo-700 rounded-lg text-white text-sm shadow"
+            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm shadow"
           >
-            + {t("manageAccounts.addNewUser")}
+            <PlusCircle className="w-5 h-5" />
+            {t("manageAccounts.addNewUser")}
           </button>
         </div>
       </div>

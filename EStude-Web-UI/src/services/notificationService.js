@@ -4,6 +4,8 @@ const endpoints = {
   getReceivedNotifications: "/api/notifications/me",
   getSentNotifications: "/api/notifications/sent",
   adminCreateNotification: "/api/notifications",
+  updateNotification: "/api/notifications/{notificationId}",
+  deleteNotification: "/api/notifications/{notificationId}",
 };
 
 const accessToken = localStorage.getItem("accessToken");
@@ -76,6 +78,58 @@ const notificationService = {
     } catch (error) {
       console.error("Lỗi khi tạo thông báo:", error);
       return null;
+    }
+  },
+
+  updateNotification: async (notification) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.updateNotification.replace(
+          "{notificationId}",
+          notification.notificationId
+        )}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(notification),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Cập nhật thông báo thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi cập nhật thông báo:", error);
+      return null;
+    }
+  },
+
+  deleteNotification: async (notificationId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.deleteNotification.replace(
+          "{notificationId}",
+          notificationId
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Xóa thông báo thất bại");
+      }
+      return true;
+    } catch (error) {
+      console.error("Lỗi khi xóa thông báo:", error);
+      return false;
     }
   },
 };

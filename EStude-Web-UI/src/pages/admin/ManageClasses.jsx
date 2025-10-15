@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, Trash2, User, X } from "lucide-react";
+import { Eye, GraduationCap, PlusCircle, Trash2, User, X } from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -12,7 +12,6 @@ import { useToast } from "../../contexts/ToastContext";
 import { useTranslation } from "react-i18next";
 import Pagination from "../../components/common/Pagination";
 
-// ----------------- Components -----------------
 const Badge = ({
   text,
   color = "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
@@ -44,7 +43,6 @@ const Modal = ({ title, children, onClose }) =>
     document.body
   );
 
-// ----------------- Utils -----------------
 const formatTerm = (termNumber, beginDate) => {
   if (!termNumber) return "";
   if (!beginDate) return `HK${termNumber}`;
@@ -56,7 +54,6 @@ const formatTerm = (termNumber, beginDate) => {
   return `HK${termNumber} ${academicStart}-${academicEnd}`;
 };
 
-// ----------------- Main Component -----------------
 const ManageClassesAdmin = () => {
   const { showToast } = useToast();
   const { t } = useTranslation();
@@ -84,7 +81,6 @@ const ManageClassesAdmin = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10; // 10 item trên mỗi trang
 
-  // ----------------- Data Fetching -----------------
   useEffect(() => {
     schoolService.getAllSchools().then(setSchools);
     subjectService.getAllSubjects().then(setSubjects);
@@ -131,7 +127,6 @@ const ManageClassesAdmin = () => {
     fetchClassesWithSubjects();
   }, [fetchClassesWithSubjects]);
 
-  // ----------------- Semester Handlers -----------------
   const addSemester = () =>
     setEditableSemesters((prev) => [
       ...prev,
@@ -144,7 +139,6 @@ const ManageClassesAdmin = () => {
       prev.map((sem, i) => (i === index ? { ...sem, [field]: value } : sem))
     );
 
-  // ----------------- Modal -----------------
   const openModal = (type, cls = null) => {
     setSelectedClass(cls);
     setModalType(type);
@@ -180,7 +174,6 @@ const ManageClassesAdmin = () => {
     setModalType(null);
   };
 
-  // ----------------- CRUD -----------------
   const handleSave = async () => {
     if (!name) return showToast("Vui lòng nhập tên lớp!", "warn");
 
@@ -227,7 +220,6 @@ const ManageClassesAdmin = () => {
     closeModal();
   };
 
-  // ----------------- Filtering -----------------
   const filteredClasses = classes.filter((cls) => {
     const kw = keyword.trim().toLowerCase();
     const matchesKeyword =
@@ -267,13 +259,13 @@ const ManageClassesAdmin = () => {
   );
   const totalItems = filteredClasses.length;
 
-  // ----------------- Render -----------------
   return (
     <div className="p-6 pb-20 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
+            <GraduationCap className="w-6 h-6 text-green-800" />
             {t("manageClasses.title")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -282,9 +274,10 @@ const ManageClassesAdmin = () => {
         </div>
         <button
           onClick={() => openModal("add")}
-          className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-indigo-700 rounded-lg text-white text-sm shadow"
+          className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm shadow"
         >
-          + {t("manageClasses.addNewClass")}
+          <PlusCircle className="w-5 h-5" />
+          {t("manageClasses.addNewClass")}
         </button>
       </div>
 

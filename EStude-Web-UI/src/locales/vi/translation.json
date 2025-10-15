@@ -81,7 +81,8 @@
       "UPDATE": "Cập nhật",
       "CREATE": "Tạo mới",
       "DELETE": "Xóa",
-      "ATTENDANCE": "Điểm danh"
+      "ATTENDANCE": "Điểm danh",
+      "GRADE": "Điểm số"
     },
     "searchLogsPlaceholder": "Tìm kiếm nhật ký...",
     "sampleData": "Đang cập nhật dữ liệu mẫu...",
@@ -113,7 +114,11 @@
     "name": "Tên trường",
     "address": "Địa chỉ",
     "email": "Email liên hệ",
-    "phone": "Số điện thoại"
+    "phone": "Số điện thoại",
+    "message": "Nội dung",
+    "targetType": "Đối tượng nhận",
+    "type": "Loại thông báo",
+    "priority": "Mức độ ưu tiên"
   },
   "actions": {
     "action": "Hành động",
@@ -272,7 +277,8 @@
   },
   "pagination": {
     "prev": "Trước",
-    "next": "Tiếp theo"
+    "next": "Tiếp theo",
+    "summary": "Đang hiển thị {{start}} đến {{end}} của {{total}} mục"
   },
   "teachingSchedule": {
     "title": "Lịch giảng dạy",
@@ -291,7 +297,8 @@
     "all": "Tất cả thông báo",
     "loading": "Đang tải thông báo...",
     "markAsRead": "Đánh dấu đã đọc",
-    "markAllAsRead": "Đánh dấu tất cả đã đọc"
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "recipients": "người nhận"
   },
 
   "reports": {
@@ -340,5 +347,41 @@
     "profile": "Hồ sơ cá nhân",
     "settings": "Cài đặt",
     "logout": "Đăng xuất"
+  },
+
+  "manageNotifications": {
+    "subtitle": "Quản lý thông báo",
+    "description": "Tạo, chỉnh sửa và gửi thông báo đến người dùng."
+  },
+  "newNotification": "Tạo thông báo",
+  "edit": "Chỉnh sửa",
+  "delete": "Xóa",
+  "noNotifications": "Không có thông báo nào.",
+  "confirmSendTitle": "Xác nhận gửi",
+  "confirmSendMessage": "Bạn có chắc chắn muốn gửi thông báo này không?",
+  "confirmUpdateTitle": "Xác nhận cập nhật",
+  "confirmUpdateMessage": "Bạn có chắc chắn muốn cập nhật thông báo này không?",
+  "confirmDeleteTitle": "Xác nhận xóa",
+  "confirmDeleteMessage": "Bạn có chắc chắn muốn xóa thông báo này không?",
+  "values": {
+    "SYSTEM": "Toàn hệ thống",
+    "GENERAL": "Chung",
+    "SYSTEM_MAINTENANCE": "Bảo trì hệ thống",
+    "LOW": "Thấp",
+    "MEDIUM": "Trung bình",
+    "HIGH": "Cao"
+  },
+  "buttons": {
+    "cancel": "Hủy",
+    "confirm": "Xác nhận"
+  },
+  "toast": {
+    "emptyMessage": "Nội dung không được để trống.",
+    "sentSuccess": "Gửi thông báo thành công!",
+    "updateSuccess": "Cập nhật thông báo thành công!",
+    "deleteSuccess": "Xóa thông báo thành công!",
+    "sendError": "Gửi thông báo thất bại.",
+    "updateError": "Cập nhật thông báo thất bại.",
+    "deleteError": "Xóa thông báo thất bại."
   }
 }

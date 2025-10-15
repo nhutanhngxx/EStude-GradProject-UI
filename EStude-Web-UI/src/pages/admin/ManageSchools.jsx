@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, Trash2, X } from "lucide-react";
+import { Eye, PlusCircle, School, Trash2, X } from "lucide-react";
 import * as XLSX from "xlsx";
 import { useTranslation } from "react-i18next";
 import schoolService from "../../services/schoolService";
@@ -45,7 +45,7 @@ const ManageSchools = () => {
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 7;
 
   // Load dark mode từ localStorage
   useEffect(() => {
@@ -250,7 +250,10 @@ const ManageSchools = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{t("manageSchools.title")}</h1>
+          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
+            <School className="w-6 h-6 text-green-800" />
+            {t("manageSchools.title")}
+          </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {t("manageSchools.subtitle")}
           </p>
@@ -258,9 +261,9 @@ const ManageSchools = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => openModal("add")}
-            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-indigo-700 rounded-lg text-white text-sm shadow"
+            className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-700 rounded-lg text-white text-sm shadow"
           >
-            + {t("manageSchools.addButton")}
+            <PlusCircle className="w-5 h-5" /> {t("manageSchools.addButton")}
           </button>
         </div>
       </div>

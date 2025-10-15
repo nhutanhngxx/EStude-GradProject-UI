@@ -116,7 +116,7 @@ const ManageClasses = () => {
   const [classToDelete, setClassToDelete] = useState(null);
 
   // State cho toolbar
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("current"); // all | current | upcoming | ended
   const [keyword, setKeyword] = useState("");
 
   // Lấy schoolId từ user
