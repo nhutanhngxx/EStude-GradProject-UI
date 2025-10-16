@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, Save, Trash2, User, X } from "lucide-react";
+import { Eye, PlusCircle, Save, Trash2, User, X } from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -432,9 +432,10 @@ const ManageClasses = () => {
         </div>
         <button
           onClick={() => openModal("add")}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
         >
-          + Thêm lớp mới
+          <PlusCircle size={16} />
+          Thêm lớp mới
         </button>
       </div>
       <Toolbar

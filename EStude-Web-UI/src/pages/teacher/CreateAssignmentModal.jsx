@@ -18,6 +18,7 @@ import {
 import ConfirmModal from "../../components/common/ConfirmModal";
 import assignmentService from "../../services/assignmentService";
 import questionService from "../../services/questionService";
+import classSubjectService from "../../services/classSubjectService"; // Thêm import
 import { useToast } from "../../contexts/ToastContext";
 import * as XLSX from "xlsx";
 import socketService from "../../services/socketService";
@@ -35,11 +36,11 @@ export default function CreateAssignmentModal({
   classContext,
   onCreated,
 }) {
-  const { showToast } = useToast();
+  const toast = useToast();
   const [tab, setTab] = useState("build");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
-  const [isLoading, setIsLoading] = useState(false); // Trạng thái loading mới
+  const [isLoading, setIsLoading] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -85,7 +86,7 @@ export default function CreateAssignmentModal({
     return () => {
       socketService.unsubscribe(destination);
     };
-  }, [isOpen, classContext?.classSubjectId, showToast]);
+  }, [isOpen, classContext?.classSubjectId]);
 
   useEffect(() => {
     if (!maxScore || maxScore === 0) {
@@ -312,115 +313,104 @@ export default function CreateAssignmentModal({
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      showToast("Vui lòng nhập tiêu đề bài thi", "warn");
+      toast.showToast("Vui lòng nhập tiêu đề bài thi", "warn");
       return;
     }
 
     if (!classContext?.classSubjectId) {
-      showToast("Không có ngữ cảnh lớp/môn (classSubjectId).", "error");
+      toast.showToast("Không có ngữ cảnh lớp/môn (classSubjectId).", "error");
       return;
     }
 
     if (questions.length === 0) {
-      showToast("Vui lòng thêm ít nhất 1 câu hỏi", "warn");
+      toast.showToast("Vui lòng thêm ít nhất 1 câu hỏi", "warn");
       return;
     }
-
-    setIsLoading(true);
-    showToast("Đang tạo bài tập, vui lòng chờ...", "loading");
-    onClose?.();
 
     try {
-      const payload = {
-        ...buildAssignmentPayload(),
-        classSubject: { classSubjectId: classContext.classSubjectId },
-        teacher: { userId: teacherId },
-      };
-
-      const assignment = await assignmentService.addAssignment(payload);
-      const assignmentId = assignment?.data?.assignmentId;
-
-      if (!assignmentId) {
-        throw new Error(
-          "Server trả về lỗi khi tạo bài tập (assignmentId missing)"
-        );
-      }
-
-      for (const q of buildQuestionsPayload()) {
-        await questionService.addQuestion(assignmentId, q);
-      }
-
-      showToast("Tạo bài tập/bài thi thành công!", "success");
-      onCreated?.(assignment?.data);
-
-      // Reset form
-      setTitle("");
-      setDescription("");
-      setStartDate("");
-      setDueDate("");
-      setTimeLimit(45);
-      setType("QUIZ");
-      setMaxScore(0);
-      setIsPublished(false);
-      setAllowLateSubmission(false);
-      setLatePenalty(0);
-      setSubmissionLimit(0);
-      setIsAutoGraded(false);
-      setIsExam(false);
-      setAttachmentFile(null);
-      setAnswerKeyFile(null);
-      setQuestions([]);
-      setExcelQuestions([]);
-      setImportFile(null);
-      setTab("build");
-    } catch (err) {
-      console.error("Tạo bài thất bại:", err);
-      showToast(
-        "Không thể tạo bài thi bây giờ. Vui lòng thử lại sau!",
-        "error"
+      const classSubjects = await classSubjectService.getAllClassSubjects();
+      const classSubject = classSubjects.find(
+        (cs) => cs.classSubjectId === classContext.classSubjectId
       );
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleImportQuestions = () => {
-    if (!importFile) {
-      showToast("Vui lòng chọn file JSON chứa câu hỏi", "warn");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const parsed = JSON.parse(evt.target.result);
-        if (!Array.isArray(parsed))
-          throw new Error("File phải là mảng câu hỏi JSON");
-
-        const parsedQuestions = parsed.map((q, idx) => ({
-          tempId: genId(),
-          questionText: q.questionText || q.text || "",
-          points: Number(q.points) || 1,
-          questionType:
-            q.questionType || (q.options ? "MULTIPLE_CHOICE" : "ESSAY"),
-          questionOrder: idx + 1,
-          options: (q.options || []).map((o, jdx) => ({
-            tempId: genId(),
-            optionText: o.optionText || o.text || "",
-            isCorrect: !!o.isCorrect,
-            optionOrder: jdx + 1,
-          })),
-        }));
-
-        setQuestions(parsedQuestions);
-        setTab("build");
-        showToast(`Đã import ${parsedQuestions.length} câu hỏi`, "success");
-      } catch (err) {
-        console.error(err);
-        showToast("Đọc file thất bại: file không hợp lệ", "error");
+      if (!classSubject) {
+        toast.showToast("Không tìm thấy thông tin lớp học", "error");
+        return;
       }
-    };
-    reader.readAsText(importFile);
+
+      const currentDate = new Date();
+      const termBeginDate = new Date(classSubject.term.beginDate);
+      const termEndDate = new Date(classSubject.term.endDate);
+
+      if (currentDate < termBeginDate || currentDate > termEndDate) {
+        toast.showToast("Không thể tạo vì lớp học đã hoàn thành!", "error");
+        return;
+      }
+
+      setIsLoading(true);
+      const toastId = toast.showToast(
+        "Đang tạo bài tập, vui lòng chờ...",
+        "loading"
+      );
+      onClose?.();
+
+      try {
+        const payload = {
+          ...buildAssignmentPayload(),
+          classSubject: { classSubjectId: classContext.classSubjectId },
+          teacher: { userId: teacherId },
+        };
+
+        const assignment = await assignmentService.addAssignment(payload);
+        const assignmentId = assignment?.data?.assignmentId;
+
+        if (!assignmentId) {
+          throw new Error(
+            "Server trả về lỗi khi tạo bài tập (assignmentId missing)"
+          );
+        }
+
+        for (const q of buildQuestionsPayload()) {
+          await questionService.addQuestion(assignmentId, q);
+        }
+
+        toast.dismiss(toastId);
+        toast.showToast("Tạo bài tập/bài thi thành công!", "success");
+        onCreated?.(assignment?.data);
+
+        setTitle("");
+        setDescription("");
+        setStartDate("");
+        setDueDate("");
+        setTimeLimit(45);
+        setType("QUIZ");
+        setMaxScore(0);
+        setIsPublished(false);
+        setAllowLateSubmission(false);
+        setLatePenalty(0);
+        setSubmissionLimit(0);
+        setIsAutoGraded(false);
+        setIsExam(false);
+        setAttachmentFile(null);
+        setAnswerKeyFile(null);
+        setQuestions([]);
+        setExcelQuestions([]);
+        setImportFile(null);
+        setTab("build");
+      } catch (err) {
+        console.error("Tạo bài thất bại:", err);
+        toast.dismiss(toastId);
+        toast.showToast(
+          "Không thể tạo bài thi bây giờ. Vui lòng thử lại sau!",
+          "error"
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Lỗi khi kiểm tra học kỳ:", err);
+      toast.showToast("Không thể kiểm tra thông tin lớp học", "error");
+    }
   };
 
   return (
@@ -664,7 +654,10 @@ export default function CreateAssignmentModal({
                     <button
                       onClick={() => {
                         if (excelQuestions.length === 0) {
-                          showToast("Chưa có dữ liệu từ file Excel", "warn");
+                          toast.showToast(
+                            "Chưa có dữ liệu từ file Excel",
+                            "warn"
+                          );
                           return;
                         }
 
@@ -673,7 +666,7 @@ export default function CreateAssignmentModal({
                         );
 
                         if (validExcelQuestions.length === 0) {
-                          showToast(
+                          toast.showToast(
                             "File Excel không chứa câu hỏi hợp lệ nào.",
                             "warn"
                           );
@@ -718,7 +711,7 @@ export default function CreateAssignmentModal({
 
                         setQuestions(parsedQuestions);
                         setTab("build");
-                        showToast(
+                        toast.showToast(
                           `Đã import ${parsedQuestions.length} câu hỏi từ Excel`,
                           "success"
                         );
