@@ -14,6 +14,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false); // ✅ thêm state loading
 
   const { login } = useAuth();
   const { showToast } = useToast();
@@ -22,12 +23,13 @@ export default function Login() {
   const roleLabel = {
     TEACHER: "GIÁO VIÊN",
     ADMIN: "QUẢN TRỊ VIÊN",
-    // STUDENT: "HỌC SINH",
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (isLoading) return; // ✅ tránh bấm nhiều lần
     setError(null);
+    setIsLoading(true);
 
     try {
       const success = await login({
@@ -39,6 +41,7 @@ export default function Login() {
       if (!success) {
         setError("Đăng nhập thất bại");
         showToast("Đăng nhập thất bại!", "error");
+        setIsLoading(false);
         return;
       }
 
@@ -48,6 +51,7 @@ export default function Login() {
       if (!storedUser) {
         setError("Không tìm thấy thông tin người dùng");
         showToast("Không tìm thấy thông tin người dùng", "error");
+        setIsLoading(false);
         return;
       }
 
@@ -63,6 +67,8 @@ export default function Login() {
       console.error("Lỗi khi đăng nhập:", err);
       setError("Có lỗi xảy ra, vui lòng thử lại");
       showToast("Có lỗi xảy ra, vui lòng thử lại", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -131,15 +137,46 @@ export default function Login() {
             </button>
           </div>
 
+          {/* Nút đăng nhập có loading */}
           <button
             type="submit"
-            className="bg-green-600 text-white px-4 py-3 rounded-lg w-full font-semibold hover:bg-green-700 transition-all shadow-md"
+            disabled={isLoading}
+            className={`flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-3 rounded-lg w-full font-semibold transition-all shadow-md
+            ${
+              isLoading ? "opacity-70 cursor-not-allowed" : "hover:bg-green-700"
+            }`}
           >
-            Đăng nhập
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  ></path>
+                </svg>
+                <span>Đang đăng nhập...</span>
+              </>
+            ) : (
+              "Đăng nhập"
+            )}
           </button>
+
           {/* Sau button Đăng nhập */}
           <div className="mt-4 flex flex-col sm:flex-row justify-between gap-2">
-            {/* Nút Quay lại */}
             <button
               type="button"
               onClick={() => navigate("/")}
@@ -150,7 +187,6 @@ export default function Login() {
               Quay lại trang chủ
             </button>
 
-            {/* Nút Chuyển role */}
             <button
               type="button"
               onClick={() => {

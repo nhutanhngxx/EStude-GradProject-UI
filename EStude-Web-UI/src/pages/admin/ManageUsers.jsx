@@ -101,18 +101,19 @@ const ManageAccounts = () => {
     fetchSchools();
   }, []);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const result = await adminService.getAllUsers();
-        if (result) {
-          setUsers(result);
-        }
-      } catch (error) {
-        console.error("Lỗi khi load users:", error);
-        showToast(t("manageAccounts.fetchUsersError"), "error");
+  const fetchUsers = async () => {
+    try {
+      const result = await adminService.getAllUsers();
+      if (result) {
+        setUsers(result);
       }
-    };
+    } catch (error) {
+      console.error("Lỗi khi load users:", error);
+      showToast(t("manageAccounts.fetchUsersError"), "error");
+    }
+  };
+
+  useEffect(() => {
     fetchUsers();
   }, []);
 
@@ -230,6 +231,7 @@ const ManageAccounts = () => {
         setGeneratedPassword(password);
         setModalType("password");
         showToast(t("manageAccounts.addSuccess"), "success");
+        fetchUsers();
       } else {
         showToast(t("manageAccounts.addUserFailed"), "error");
       }
@@ -429,6 +431,7 @@ const ManageAccounts = () => {
 
       if (count > 0) {
         showToast(t("manageAccounts.importSuccess", { count }), "success");
+        fetchUsers();
       }
       if (excelUsers.length - count > 0) {
         showToast(

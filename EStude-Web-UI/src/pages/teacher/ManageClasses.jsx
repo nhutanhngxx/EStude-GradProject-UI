@@ -18,7 +18,6 @@ const Badge = ({ text, color }) => (
   </span>
 );
 
-// Component modal để hiển thị form hoặc danh sách học sinh
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">

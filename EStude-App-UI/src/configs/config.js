@@ -29,13 +29,14 @@ const getHostIP = () => {
   }
 };
 
-// Tạo BASE_URL động
 const getBaseUrl = () => {
-  const DEFAULT_IP = "192.168.1.10"; // fallback
+  const DEFAULT_IP = "192.168.1.10";
+  // const DEFAULT_IP = "estude-backend-spring.fly.dev";
   const PORT = 8080;
 
   const hostIP = getHostIP();
-  return `http://${hostIP || DEFAULT_IP}:${PORT}`;
+  return `https://${hostIP || DEFAULT_IP}:${PORT}`;
+  // return `https://${DEFAULT_IP}`;
 };
 
 // Xuất config

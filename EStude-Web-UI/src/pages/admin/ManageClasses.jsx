@@ -272,13 +272,13 @@ const ManageClassesAdmin = () => {
             {t("manageClasses.subtitle")}
           </p>
         </div>
-        <button
+        {/* <button
           onClick={() => openModal("add")}
           className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm shadow"
         >
           <PlusCircle className="w-5 h-5" />
           {t("manageClasses.addNewClass")}
-        </button>
+        </button> */}
       </div>
 
       <Toolbar

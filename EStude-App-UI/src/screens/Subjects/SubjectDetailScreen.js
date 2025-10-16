@@ -30,7 +30,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
   const socket = useSocket();
   const { showToast } = useToast();
 
-  console.log("subject:", subject);
+  // console.log("subject:", subject);
 
   const [activeTab, setActiveTab] = useState(tab || "Điểm");
   const [loading, setLoading] = useState(false);
@@ -58,7 +58,25 @@ export default function SubjectDetailScreen({ route, navigation }) {
           user.userId,
           subject.classSubjectId
         );
-        setGrade(res);
+
+        // console.log("Grade:", res);
+        // setGrade(res);
+
+        const resAll = await subjectGradeService.getAllSubjectGradesOfStudent(
+          user.userId
+        );
+
+        const currentGrade = resAll
+          ?.flatMap((term) => term.subjects)
+          ?.find((s) => s.classSubjectId === subject.classSubjectId);
+
+        // console.log("currentGrade:", currentGrade);
+
+        setGrade({
+          ...res,
+          comment: currentGrade?.comment || null,
+          subjectName: currentGrade?.subjectName || subject.subjectName,
+        });
       } else if (activeTab === "Bài tập") {
         if (subject.classId) {
           const res = await loadAssignmentsWithStatus(
@@ -348,7 +366,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                   </View>
 
                   {/* Học lực */}
-                  <View style={styles.tableRow}>
+                  {/* <View style={styles.tableRow}>
                     <View style={{ flex: 2, paddingHorizontal: 8 }}>
                       <Text style={styles.tableCellText}>Học lực</Text>
                     </View>
@@ -362,7 +380,7 @@ export default function SubjectDetailScreen({ route, navigation }) {
                         {grade?.rank ?? "-"}
                       </Text>
                     </View>
-                  </View>
+                  </View> */}
 
                   {/* Xếp loại */}
                   <View style={[styles.tableRow, { borderBottomWidth: 0 }]}>
@@ -376,11 +394,16 @@ export default function SubjectDetailScreen({ route, navigation }) {
                           { textAlign: "right", color: "#555" },
                         ]}
                       >
-                        {grade?.conduct ?? "-"}
+                        {grade?.rank ?? "-"}
                       </Text>
                     </View>
                   </View>
                 </View>
+                {/* <View>
+                  <Text style={styles.comment}>
+                    {grade?.comment || "Chưa có nhận xét"}
+                  </Text>
+                </View> */}
               </View>
             )}
 

@@ -186,6 +186,7 @@ export default function TeacherGradeInput() {
       );
       showToast("Đã lưu toàn bộ điểm của lớp", "success");
       // await fetchGrades(selectedClass.classId, selectedClass.classSubjectId);
+      fetchGrades(selectedClass.classId, selectedClass.classSubjectId);
     } catch (err) {
       console.error(err);
       showToast("Lưu toàn bộ điểm thất bại!", "error");
@@ -417,7 +418,7 @@ export default function TeacherGradeInput() {
           </div>
 
           {/* Class Filter */}
-          <div>
+          {/* <div>
             <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
               Lớp học
             </label>
@@ -433,7 +434,7 @@ export default function TeacherGradeInput() {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
           {/* Class List Tree */}
           <div className="flex-1 overflow-y-auto">
