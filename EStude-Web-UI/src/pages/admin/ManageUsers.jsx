@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Eye, PlusCircle, Trash2, Users, X } from "lucide-react";
+import { Eye, PlusCircle, Save, Trash2, Users, X } from "lucide-react";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import adminService from "../../services/adminService";
@@ -7,6 +7,7 @@ import schoolService from "../../services/schoolService";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../contexts/ToastContext";
 import Pagination from "../../components/common/Pagination";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 const Badge = ({ text, color }) => (
   <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color}`}>
@@ -67,6 +68,7 @@ const ManageAccounts = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("ALL");
+  const [filterSchool, setFilterSchool] = useState("ALL");
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [schools, setSchools] = useState([]);
   const [selectedSchool, setSelectedSchool] = useState(null);
@@ -74,6 +76,8 @@ const ManageAccounts = () => {
   const [isHomeroomTeacher, setIsHomeroomTeacher] = useState(false);
   const [isAdmin, setisAdmin] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const itemsPerPage = 7;
 
   useEffect(() => {
@@ -142,7 +146,7 @@ const ManageAccounts = () => {
 
   const deleteUser = (id) => {
     setUsers(users.filter((u) => u.userId !== id));
-    closeModal();
+    setConfirmOpen(false);
     showToast(t("manageAccounts.deleteSuccess"), "success");
   };
 
@@ -205,29 +209,6 @@ const ManageAccounts = () => {
       }
 
       if (result) {
-        setUsers([
-          ...users,
-          {
-            userId: result.data?.userId || Date.now(),
-            fullName: result.data?.fullName || newUser.fullName,
-            email: result.data?.email || newUser.email,
-            role: selectedRole,
-            numberPhone: result.data?.numberPhone || newUser.numberPhone,
-            dob: newUser.dob?.toISOString().split("T")[0],
-            adminCode:
-              selectedRole === "ADMIN"
-                ? result.data?.adminCode || "ADM" + Date.now()
-                : undefined,
-            teacherCode:
-              selectedRole === "TEACHER"
-                ? result.data?.teacherCode || "TEA" + Date.now()
-                : undefined,
-            studentCode:
-              selectedRole === "STUDENT"
-                ? result.data?.studentCode || "STU" + Date.now()
-                : undefined,
-          },
-        ]);
         setGeneratedPassword(password);
         setModalType("password");
         showToast(t("manageAccounts.addSuccess"), "success");
@@ -236,7 +217,6 @@ const ManageAccounts = () => {
         showToast(t("manageAccounts.addUserFailed"), "error");
       }
     } catch (error) {
-      // console.error("Lỗi khi thêm người dùng:", error);
       showToast(t("manageAccounts.addUserFailed"), "error");
     }
   };
@@ -246,17 +226,13 @@ const ManageAccounts = () => {
   const parseDate = (value) => {
     if (value === null || value === undefined || value === "") return "";
 
-    // Nếu đã là Date object
     if (value instanceof Date && !isNaN(value)) {
       return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(
         value.getDate()
       )}`;
     }
 
-    // Nếu Excel lưu dưới dạng serial number (số)
     if (typeof value === "number") {
-      // Công thức chuẩn: (serial - 25569) * 86400 * 1000 => milliseconds since 1970-01-01 (UTC)
-      // Dùng getters UTC để tránh lỗi do timezone.
       const utc = Math.round((value - 25569) * 86400 * 1000);
       const date = new Date(utc);
       return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(
@@ -264,10 +240,8 @@ const ManageAccounts = () => {
       )}`;
     }
 
-    // Nếu là chuỗi, thử parse dạng dd/MM/yyyy trước
     if (typeof value === "string") {
       const s = value.trim();
-      // dd/MM/yyyy hoặc d/M/yyyy
       if (s.includes("/")) {
         const parts = s.split("/");
         if (parts.length === 3) {
@@ -283,7 +257,6 @@ const ManageAccounts = () => {
         }
       }
 
-      // Nếu string có thể parse bởi Date (ISO hoặc khác)
       const parsed = new Date(s);
       if (!isNaN(parsed)) {
         return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(
@@ -292,7 +265,6 @@ const ManageAccounts = () => {
       }
     }
 
-    // Không parse được → trả rỗng
     return "";
   };
 
@@ -308,7 +280,6 @@ const ManageAccounts = () => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      // Bỏ header + loại bỏ các dòng rỗng
       const rows = jsonData
         .slice(1)
         .filter(
@@ -327,7 +298,7 @@ const ManageAccounts = () => {
           email: row[1] || "",
           numberPhone: row[2] || "",
           role: row[3] || "STUDENT",
-          dob: parseDate(row[4]), // yyyy-MM-dd
+          dob: parseDate(row[4]),
           isHomeroomTeacher: row[5] === "x" || row[5] === "✓",
           isAdmin: row[6] === "x" || row[6] === "✓",
         };
@@ -370,9 +341,14 @@ const ManageAccounts = () => {
   };
 
   const handleSubmitExcelUsers = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    closeModal();
+    showToast(t("manageAccounts.importing"), "info");
+
     try {
       if (!selectedSchool) {
-        showToast(t("manageAccounts.schoolRequired"), "warning");
+        showToast(t("manageAccounts.schoolRequired"), "warn");
         return;
       }
 
@@ -414,42 +390,31 @@ const ManageAccounts = () => {
         if (result) count++;
       }
 
-      setUsers([...users, ...excelUsers]);
-      setExcelUsers([]);
-      setEditableUsers([
-        {
-          fullName: "",
-          email: "",
-          numberPhone: "",
-          role: "STUDENT",
-          dob: "",
-          isHomeroomTeacher: false,
-          isAdmin: false,
-        },
-      ]);
-      closeModal();
+      await fetchUsers();
 
       if (count > 0) {
         showToast(t("manageAccounts.importSuccess", { count }), "success");
-        fetchUsers();
       }
       if (excelUsers.length - count > 0) {
         showToast(
           t("manageAccounts.importSkipped", {
             count: excelUsers.length - count,
           }),
-          "warning"
+          "warn"
         );
       }
     } catch (error) {
       console.error("Lỗi khi import:", error);
       showToast(t("manageAccounts.importError"), "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const filteredUsers = users.filter(
     (u) =>
       (filterRole === "ALL" || u.role === filterRole) &&
+      (filterSchool === "ALL" || u.school?.schoolId === Number(filterSchool)) &&
       (u.fullName.toLowerCase().includes(search.toLowerCase()) ||
         u.email.toLowerCase().includes(search.toLowerCase()))
   );
@@ -464,8 +429,6 @@ const ManageAccounts = () => {
     TEACHER: t("manageAccounts.roles.teacher"),
     ADMIN: t("manageAccounts.roles.admin"),
   };
-
-  // console.log("User: ", users);
 
   return (
     <div className="p-6 pb-20 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
@@ -509,6 +472,18 @@ const ManageAccounts = () => {
           <option value="STUDENT">{t("manageAccounts.roles.student")}</option>
           <option value="TEACHER">{t("manageAccounts.roles.teacher")}</option>
           <option value="ADMIN">{t("manageAccounts.roles.admin")}</option>
+        </select>
+        <select
+          value={filterSchool}
+          onChange={(e) => setFilterSchool(e.target.value)}
+          className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="ALL">Tất cả trường</option>
+          {schools.map((s) => (
+            <option key={s.schoolId} value={s.schoolId}>
+              {s.schoolName}
+            </option>
+          ))}
         </select>
         <button
           onClick={exportToExcel}
@@ -601,7 +576,10 @@ const ManageAccounts = () => {
                     <Eye className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => openModal("delete", u)}
+                    onClick={() => {
+                      setSelectedUser(u);
+                      setConfirmOpen(true);
+                    }}
                     className="text-red-600 dark:text-red-400 hover:underline"
                   >
                     <Trash2 className="w-5 h-5" />
@@ -622,6 +600,29 @@ const ManageAccounts = () => {
         siblingCount={1}
       />
 
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Xác nhận xóa"
+        message={
+          selectedUser
+            ? `Bạn có chắc chắn muốn xóa người dùng ${selectedUser.fullName}?`
+            : ""
+        }
+        onCancel={() => {
+          setConfirmOpen(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={async () => {
+          if (!selectedUser) return;
+          try {
+            deleteUser(selectedUser.userId);
+          } catch (error) {
+            console.error(error);
+            showToast(t("manageAccounts.deleteError"), "error");
+          }
+        }}
+      />
+
       {modalType === "add" && (
         <Modal
           title={t("manageAccounts.addUserModal.title")}
@@ -630,8 +631,8 @@ const ManageAccounts = () => {
           <div
             className={`${
               excelUsers.length > 0
-                ? "grid grid-cols-1" // Nếu import file Excel -> 1 cột
-                : "grid grid-cols-1 md:grid-cols-2" // Nếu chưa import file -> 2 cột
+                ? "grid grid-cols-1"
+                : "grid grid-cols-1 md:grid-cols-2"
             } gap-6`}
           >
             {excelUsers.length > 0 && (
@@ -659,10 +660,8 @@ const ManageAccounts = () => {
                 </select>
               </div>
             )}
-            {/* CỘT TRÁI */}
             {excelUsers.length === 0 && (
               <div className="space-y-4">
-                {/* Chọn Trường */}
                 <select
                   name="school"
                   value={selectedSchool || ""}
@@ -752,7 +751,6 @@ const ManageAccounts = () => {
                   />
                 </div>
 
-                {/* Chọn Role */}
                 <select
                   name="role"
                   value={selectedRole}
@@ -770,7 +768,6 @@ const ManageAccounts = () => {
                   </option>
                 </select>
 
-                {/* Nếu là TEACHER hiển thị checkbox */}
                 {selectedRole === "TEACHER" && (
                   <>
                     <label className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
@@ -796,7 +793,6 @@ const ManageAccounts = () => {
               </div>
             )}
 
-            {/* CỘT PHẢI */}
             <div className="space-y-4">
               {excelUsers.length > 0 ? (
                 <div className="overflow-x-auto border rounded-lg max-h-[60vh] overflow-y-auto">
@@ -986,8 +982,9 @@ const ManageAccounts = () => {
                   <div className="flex justify-end gap-2 mt-4">
                     <button
                       type="submit"
-                      className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-indigo-700 transition"
+                      className="px-4 py-2 bg-green-700 text-white rounded-lg hover:bg-green-700 transition text-sm flex justify-center items-center gap-2"
                     >
+                      <Save size={16} />
                       {t("common.save")}
                     </button>
                   </div>
@@ -996,22 +993,25 @@ const ManageAccounts = () => {
             </div>
           </div>
 
-          {/* Nút Save khi upload Excel */}
           {excelUsers.length > 0 && (
             <div className="flex justify-end gap-2 mt-4">
               <button
                 type="button"
                 onClick={closeModal}
-                className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
               >
                 {t("common.cancel")}
               </button>
               <button
                 type="button"
                 onClick={handleSubmitExcelUsers}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                disabled={isSubmitting}
+                className={`px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm flex justify-center items-center gap-2 ${
+                  isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
-                {t("common.save")}
+                <Save size={16} />
+                {isSubmitting ? "Đang lưu..." : t("common.save")}
               </button>
             </div>
           )}
@@ -1064,33 +1064,6 @@ const ManageAccounts = () => {
                 {selectedUser.dob}
               </p>
             </div>
-          </div>
-        </Modal>
-      )}
-
-      {modalType === "delete" && selectedUser && (
-        <Modal
-          title={t("manageAccounts.deleteUserModal.title")}
-          onClose={closeModal}
-        >
-          <p className="text-gray-800 dark:text-gray-200">
-            {t("manageAccounts.deleteUserModal.confirm", {
-              name: selectedUser.fullName,
-            })}
-          </p>
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              onClick={() => deleteUser(selectedUser.userId)}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              {t("common.delete")}
-            </button>
           </div>
         </Modal>
       )}

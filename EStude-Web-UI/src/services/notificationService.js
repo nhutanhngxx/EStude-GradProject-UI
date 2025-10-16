@@ -8,11 +8,10 @@ const endpoints = {
   deleteNotification: "/api/notifications/{notificationId}",
 };
 
-const accessToken = localStorage.getItem("accessToken");
-
 const notificationService = {
   getReceivedNotifications: async () => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await fetch(
         `${config.BASE_URL}${endpoints.getReceivedNotifications}`,
         {
@@ -36,6 +35,7 @@ const notificationService = {
 
   getSentNotifications: async () => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await fetch(
         `${config.BASE_URL}${endpoints.getSentNotifications}`,
         {
@@ -59,6 +59,7 @@ const notificationService = {
 
   adminCreateNotification: async (notification) => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await fetch(
         `${config.BASE_URL}${endpoints.adminCreateNotification}`,
         {
@@ -83,6 +84,7 @@ const notificationService = {
 
   updateNotification: async (notification) => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await fetch(
         `${config.BASE_URL}${endpoints.updateNotification.replace(
           "{notificationId}",
@@ -110,6 +112,7 @@ const notificationService = {
 
   deleteNotification: async (notificationId) => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await fetch(
         `${config.BASE_URL}${endpoints.deleteNotification.replace(
           "{notificationId}",

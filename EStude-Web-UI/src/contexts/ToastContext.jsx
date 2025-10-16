@@ -55,6 +55,11 @@ export const ToastProvider = ({ children }) => {
           classes: "bg-yellow-400 text-black",
         };
       case "info":
+        return {
+          icon: <Info className="w-5 h-5 text-white" />,
+          classes: "bg-blue-500 text-white",
+        };
+
       default:
         return {
           icon: <Info className="w-5 h-5 text-white" />,

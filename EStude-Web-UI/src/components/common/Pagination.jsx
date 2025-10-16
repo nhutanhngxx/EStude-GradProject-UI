@@ -15,9 +15,9 @@ export default function Pagination({
     Array.from({ length: end - start + 1 }, (_, i) => i + start);
 
   const getPageNumbers = () => {
-    if (totalPages <= 1) return [1]; // Always show page 1 for single-page cases
+    if (totalPages <= 1) return [1];
 
-    const totalPageNumbers = siblingCount * 2 + 5; // first, last, current, prevDots, nextDots
+    const totalPageNumbers = siblingCount * 2 + 5;
     if (totalPages <= totalPageNumbers) return range(1, totalPages);
 
     const leftSiblingIndex = Math.max(currentPage - siblingCount, 1);
@@ -27,7 +27,6 @@ export default function Pagination({
     const showRightDots = rightSiblingIndex < totalPages - 1;
 
     const pages = [];
-
     pages.push(1);
 
     if (showLeftDots) pages.push("LEFT_DOTS");
@@ -48,9 +47,22 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10">
+    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10">
       <div className="flex flex-wrap gap-2 justify-center items-center">
-        {/* Previous Button */}
+        {/* Nút về trang đầu */}
+        <button
+          onClick={() => onPageChange(1)}
+          disabled={currentPage === 1}
+          aria-label={t("pagination.first")}
+          className="px-3 py-1 rounded-lg border transition
+                     bg-transparent text-gray-700 dark:text-gray-100
+                     border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {t("pagination.first") || "First"}
+        </button>
+
+        {/* Nút trước */}
         <button
           onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
           disabled={currentPage === 1}
@@ -63,14 +75,13 @@ export default function Pagination({
           {t("pagination.prev")}
         </button>
 
-        {/* Page Numbers */}
+        {/* Số trang */}
         {pageNumbers.map((page, idx) => {
           if (page === "LEFT_DOTS" || page === "RIGHT_DOTS") {
             return (
               <span
                 key={idx}
                 className="px-3 py-1 text-gray-500 dark:text-gray-400 select-none"
-                aria-hidden="true"
               >
                 ...
               </span>
@@ -97,7 +108,7 @@ export default function Pagination({
           );
         })}
 
-        {/* Next Button */}
+        {/* Nút sau */}
         <button
           onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
           disabled={currentPage === totalPages}
@@ -109,9 +120,22 @@ export default function Pagination({
         >
           {t("pagination.next")}
         </button>
+
+        {/* Nút về trang cuối */}
+        <button
+          onClick={() => onPageChange(totalPages)}
+          disabled={currentPage === totalPages}
+          aria-label={t("pagination.last")}
+          className="px-3 py-1 rounded-lg border transition
+                     bg-transparent text-gray-700 dark:text-gray-100
+                     border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {t("pagination.last") || "Last"}
+        </button>
       </div>
 
-      {/* Optional: Display total items and current range */}
+      {/* Hiển thị tổng số phần tử */}
       <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
         {t("pagination.summary", {
           start: (currentPage - 1) * itemsPerPage + 1,
