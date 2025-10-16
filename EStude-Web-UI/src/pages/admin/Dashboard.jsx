@@ -19,6 +19,7 @@ import {
   Building,
   GraduationCap,
   Home,
+  Eye,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import adminService from "../../services/adminService";
@@ -62,13 +63,11 @@ const Dashboard = () => {
   const itemsPerPage = 7;
   const [searchLogText, setSearchLogText] = useState("");
   const [filterLogType, setFilterLogType] = useState("all");
-
-  // Lấy thông tin người đang đăng nhập
-  // const user = JSON.parse(localStorage.getItem("user") || "{}");
-  // console.log("user:", user);
+  const [activeModal, setActiveModal] = useState(null);
 
   const openModal = (type) => {
     setModalType(type);
+    setActiveModal(type);
     setCurrentPage(1);
   };
   const closeModal = () => setModalType(null);
@@ -330,7 +329,7 @@ const Dashboard = () => {
       icon: (
         <GraduationCap className="w-6 h-6 text-red-600 dark:text-red-400" />
       ),
-      path: "/admin/students",
+      // path: "/admin/students",
       note: stats.totalStudents === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-red-100",
       bgDark: "dark:bg-red-900",
@@ -341,7 +340,7 @@ const Dashboard = () => {
       title: t("dashboard.totalTeachers"),
       value: stats.totalTeachers.toString() || "30",
       icon: <Bell className="w-6 h-6 text-purple-600 dark:text-purple-400" />,
-      path: "/admin/teachers",
+      // path: "/admin/teachers",
       note: stats.totalTeachers === 0 ? t("dashboard.sampleData") : "",
       bgLight: "bg-purple-100",
       bgDark: "dark:bg-purple-900",
@@ -352,8 +351,7 @@ const Dashboard = () => {
       title: t("dashboard.newUsersThisMonth"),
       value: stats.newUsersThisMonth.toString() || "15",
       icon: <Clock className="w-6 h-6 text-teal-600 dark:text-teal-400" />,
-      path: "/admin/new-users",
-      // note: stats.newUsersThisMonth === 0 ? t("dashboard.sampleData") : "",
+      // path: "/admin/new-users",
       bgLight: "bg-teal-100",
       bgDark: "dark:bg-teal-900",
       showDetails: true,
@@ -434,17 +432,6 @@ const Dashboard = () => {
             {t("dashboard.welcome")}
           </p>
         </div>
-        {/* <div className="flex items-center gap-3">
-          <button
-            onClick={createReport}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm sm:text-base shadow"
-          >
-            <FileBarChart className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {t("dashboard.createReport")}
-            </span>
-          </button>
-        </div> */}
       </div>
 
       {/* Cards */}
@@ -465,7 +452,7 @@ const Dashboard = () => {
           {cards.map((card, idx) => (
             <div
               key={idx}
-              onClick={() => !card.showDetails && navigate(card.path)}
+              onClick={() => navigate(card.path)}
               className={`p-4 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition ${card.bgLight} ${card.bgDark}`}
             >
               <div className="flex items-center justify-between">
@@ -487,8 +474,9 @@ const Dashboard = () => {
                         e.stopPropagation();
                         openModal(card.modalType);
                       }}
-                      className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
+                      className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1"
                     >
+                      {/* <Eye className="w-4 h-4" /> */}
                       {t("dashboard.viewDetails")}
                     </button>
                   )}
@@ -568,7 +556,7 @@ const Dashboard = () => {
       {/* Modals */}
       {modalType && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 transition-opacity duration-300">
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 sm:p-8 w-11/12 h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-6 sm:p-8 w-11/12 min-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-4">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -791,7 +779,7 @@ const Dashboard = () => {
                           modalType === "newUsers") && (
                           <>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
-                              {item.user.fullName || t("common.na")}
+                              {item.fullName || t("common.na")}
                             </td>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.email || t("common.na")}
@@ -809,7 +797,7 @@ const Dashboard = () => {
                         {modalType === "schools" && (
                           <>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
-                              {item.name || item.schoolName || t("common.na")}
+                              {item.schoolName || t("common.na")}
                             </td>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.address || t("common.na")}

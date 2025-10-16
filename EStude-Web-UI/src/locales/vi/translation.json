@@ -21,7 +21,8 @@
     "cancel": "Hủy",
     "delete": "Xóa",
     "save": "Lưu",
-    "lightMode": "Chế độ sáng"
+    "lightMode": "Chế độ sáng",
+    "na": "N/A"
   },
   "sidebar": {
     "overview": "Tổng quan",
@@ -45,13 +46,13 @@
     "newStudents": "Số lượng học sinh mới",
     "overview": "Tổng quan",
     "welcome": "Chào mừng đến với bảng điều khiển quản trị!",
-    "totalUsers": "Tổng số tài khoản",
-    "totalSchools": "Tổng số trường học",
-    "totalClasses": "Tổng số lớp học",
-    "totalStudents": "Tổng số học sinh",
-    "totalTeachers": "Tổng số giáo viên",
+    "totalUsers": "Thống kế người dùng",
+    "totalSchools": "Thống kế trường học",
+    "totalClasses": "Thống kế lớp học",
+    "totalStudents": "Thống kế học sinh",
+    "totalTeachers": "Thống kế giáo viên",
     "newUsers": "Người dùng mới",
-    "newUsersThisMonth": "Người dùng mới tháng này",
+    "newUsersThisMonth": "Người dùng mới trong tháng",
     "newUsersChart": "Số người dùng mới theo tháng",
     "createReport": "Tạo báo cáo",
     "reportCreated": "Báo cáo đã được tạo!",
@@ -66,8 +67,12 @@
       "logs": "Nhật ký hoạt động",
       "newUsers": "Người dùng mới trong tháng",
       "classes": "Quản lý lớp học",
-      "schools": "Quản lý trường học"
+      "schools": "Quản lý trường học",
+      "users": "Quản lý người dùng",
+      "students": "Quản lý học sinh",
+      "teachers": "Quản lý giáo viên"
     },
+    "enrollmentDate": "Ngày đăng ký",
     "timestamp": "Thời gian",
     "content": "Nội dung",
     "user": "Người dùng",
@@ -143,6 +148,10 @@
       "addUser": "Thêm người dùng"
     },
     "loginCode": "Mã đăng nhập",
+    "importing": "Đang import, xin vui lòng chờ trong giây lát...",
+    "deleteSuccess": "Xóa người dùng thành công!",
+
+    "importSkipped": "Bỏ qua {{count}} người dùng trùng số điện thoại hoặc email.",
 
     "downloadTemplate": "Tải file Excel mẫu để thêm nhiều trường nhanh:",
     "downloadHere": "Tải file mẫu tại đây",
@@ -222,6 +231,7 @@
     "selectHomeroomTeacher": "-- Chọn giáo viên chủ nhiệm --",
     "cancel": "Hủy bỏ",
     "saveClass": "Lưu",
+    "saveChanges": "Lưu thay đổi",
     "classInfo": "Thông tin lớp học",
     "filters": {
       "current": "Đang diễn ra",
@@ -278,7 +288,9 @@
   "pagination": {
     "prev": "Trước",
     "next": "Tiếp theo",
-    "summary": "Đang hiển thị {{start}} đến {{end}} của {{total}} mục"
+    "summary": "Đang hiển thị {{start}} đến {{end}} của {{total}} mục",
+    "first": "Về đầu",
+    "last": "Về cuối"
   },
   "teachingSchedule": {
     "title": "Lịch giảng dạy",

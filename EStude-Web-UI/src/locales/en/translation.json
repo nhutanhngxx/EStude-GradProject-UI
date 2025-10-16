@@ -20,7 +20,8 @@
     "actions": "Actions",
     "cancel": "Cancel",
     "delete": "Delete",
-    "save": "Save"
+    "save": "Save",
+    "na": "N/A"
   },
   "sidebar": {
     "overview": "Overview",
@@ -76,7 +77,10 @@
       "logs": "Activity Logs",
       "newUsers": "New Users",
       "classes": "Manage Classes",
-      "schools": "Manage Schools"
+      "schools": "Manage Schools",
+      "users": "Manage Users",
+      "teachers": "Manage Teachers",
+      "students": "Manage Students"
     },
     "timestamp": "Timestamp",
     "content": "Content",
@@ -155,7 +159,10 @@
     "action": {
       "addUser": "Add User"
     },
+    "importSkipped": "Skipped {{count}} duplicate users.",
     "loginCode": "Login code",
+    "importing": "Importing users...",
+    "deleteSuccess": "Class deleted successfully!",
 
     "addSuccess": "Successfully added user.",
 
@@ -226,6 +233,7 @@
     "semesterNumber": "Semester Number",
     "cancel": "Cancel",
     "saveClass": "Save Class",
+    "saveChanges": "Save Changes",
     "classInfo": "Class Information",
     "filters": {
       "current": "Ongoing",
@@ -281,10 +289,13 @@
     "studentManagement": "Student Management - {name}",
     "selectSubjects": "Subjects"
   },
+
   "pagination": {
     "prev": "Previous",
     "next": "Next",
-    "summary": "Showing {{start}} to {{end}} of {{total}} entries"
+    "summary": "Showing {{start}} to {{end}} of {{total}} entries",
+    "first": "Page 1",
+    "last": "Last Page"
   },
   "teachingSchedule": {
     "title": "Teaching Schedule",

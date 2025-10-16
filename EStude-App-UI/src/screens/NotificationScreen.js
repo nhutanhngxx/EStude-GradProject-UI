@@ -193,7 +193,6 @@ export default function NotificationScreen() {
               key={index}
               style={[styles.notificationItem, { borderLeftColor: item.color }]}
             >
-              <Text style={styles.notificationTitle}>{item.title}</Text>
               <Text style={styles.notificationContent}>{item.content}</Text>
               <Text style={styles.notificationTime}>{item.time}</Text>
             </View>

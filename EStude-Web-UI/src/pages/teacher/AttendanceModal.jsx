@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, CalendarDays, X, PlusCircle } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import studentService from "../../services/studentService";
+import classSubjectService from "../../services/classSubjectService";
 import socketService from "../../services/socketService";
 import { useToast } from "../../contexts/ToastContext";
 import { useAttendance } from "../../contexts/AttendanceContext";
@@ -26,8 +27,6 @@ export default function AttendanceModal({
   const [useGPS, setUseGPS] = useState(false);
   const [gps, setGps] = useState({ lat: null, lng: null });
   const toastShown = useRef(false);
-
-  // console.log("TeacherId: ", teacherId);
 
   useEffect(() => {
     if (!isOpen || !classSubjectId || !teacherId) return;
@@ -69,16 +68,14 @@ export default function AttendanceModal({
           if (prev.find((s) => s.sessionId === session.sessionId)) return prev;
           return [...prev, session];
         });
-        // showToast(`Buổi điểm danh mới: ${session.sessionName}`, "info");
       }
     );
 
     return () => {
       socketService.unsubscribe(`/topic/class/${classSubjectId}/sessions`);
     };
-  }, [isOpen, classSubjectId, showToast, setSessions]);
+  }, [isOpen, classSubjectId, setSessions]);
 
-  // Xem chi tiết session
   const openSessionDetail = async (session) => {
     try {
       const allStudents = await studentService.getStudentsByClass(classId);
@@ -106,7 +103,6 @@ export default function AttendanceModal({
     }
   };
 
-  // Giáo viên điểm danh
   const handleMarkAttendance = async (studentId, newStatus) => {
     try {
       const res = await attendanceService.markAttendance(
@@ -123,11 +119,10 @@ export default function AttendanceModal({
           ),
         }));
 
-        // Show toast chỉ 1 lần
         if (!toastShown.current) {
           showToast("Điểm danh thành công!", "success");
           toastShown.current = true;
-          setTimeout(() => (toastShown.current = false), 1000); // reset sau 1s
+          setTimeout(() => (toastShown.current = false), 1000);
         }
       }
     } catch (err) {
@@ -136,7 +131,6 @@ export default function AttendanceModal({
     }
   };
 
-  // Tạo session mới
   const handleCreateSession = async () => {
     if (!sessionName || !startTime || !endTime) {
       showToast("Vui lòng điền đầy đủ thông tin", "error");
@@ -147,15 +141,36 @@ export default function AttendanceModal({
       return;
     }
 
+    // Kiểm tra thời gian học kỳ
     try {
+      const classSubjects = await classSubjectService.getAllClassSubjects();
+      const classSubject = classSubjects.find(
+        (cs) => cs.classSubjectId === classSubjectId
+      );
+
+      if (!classSubject) {
+        showToast("Không tìm thấy thông tin lớp học", "error");
+        return;
+      }
+
+      const currentDate = new Date();
+      const termBeginDate = new Date(classSubject.term.beginDate);
+      const termEndDate = new Date(classSubject.term.endDate);
+
+      if (currentDate < termBeginDate || currentDate > termEndDate) {
+        showToast("Không thể tạo vì lớp học đã hoàn thành!", "error");
+        return;
+      }
+
+      // Tiếp tục tạo session nếu học kỳ hợp lệ
       await attendanceService.createAttendanceSession({
         teacherId,
         classSubjectId,
         sessionName,
         startTime,
         endTime,
-        useGPS,
-        gps: useGPS ? gps : null,
+        gpsLatitude: useGPS ? gps.lat : null,
+        gpsLongitude: useGPS ? gps.lng : null,
       });
 
       const updated =
@@ -184,7 +199,6 @@ export default function AttendanceModal({
     }
   };
 
-  // Bật/tắt GPS
   const handleToggleGPS = () => {
     if (!useGPS) {
       if (navigator.geolocation) {
@@ -351,7 +365,6 @@ export default function AttendanceModal({
                 </p>
               )}
               <button
-                // onClick={handleCreateSession}
                 onClick={() => setConfirmOpen(true)}
                 disabled={new Date(startTime) >= new Date(endTime)}
                 className={`px-8 py-2 rounded-lg transition ${
@@ -379,15 +392,12 @@ export default function AttendanceModal({
           {/* SESSION DETAIL */}
           {viewMode === "DETAIL" && selectedSession && (
             <>
-              {/* Button quay lại ngoài div cuộn */}
               <button
                 onClick={() => setViewMode("SESSIONS")}
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 mb-2"
               >
                 <ArrowLeft size={18} /> Quay lại
               </button>
-
-              {/* Bảng cuộn */}
               <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
                 <table
                   className="w-full text-sm text-left table-auto border-separate"

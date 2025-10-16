@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, GraduationCap, PlusCircle, Trash2, User, X } from "lucide-react";
+import {
+  Eye,
+  GraduationCap,
+  Group,
+  PlusCircle,
+  Save,
+  Trash2,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -11,6 +21,7 @@ import Toolbar from "../../components/common/Toolbar";
 import { useToast } from "../../contexts/ToastContext";
 import { useTranslation } from "react-i18next";
 import Pagination from "../../components/common/Pagination";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 const Badge = ({
   text,
@@ -71,6 +82,8 @@ const ManageClassesAdmin = () => {
   const [selectedSubjects, setSelectedSubjects] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [selectedSchool, setSelectedSchool] = useState("");
+  const [classToDelete, setClassToDelete] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const [editableSemesters, setEditableSemesters] = useState([
     { termNumber: 1, beginDate: "", endDate: "" },
@@ -79,7 +92,7 @@ const ManageClassesAdmin = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // 10 item trên mỗi trang
+  const itemsPerPage = 7;
 
   useEffect(() => {
     schoolService.getAllSchools().then(setSchools);
@@ -259,6 +272,16 @@ const ManageClassesAdmin = () => {
   );
   const totalItems = filteredClasses.length;
 
+  const gradeMapping = {
+    GRADE_6: "Khối 6",
+    GRADE_7: "Khối 7",
+    GRADE_8: "Khối 8",
+    GRADE_9: "Khối 9",
+    GRADE_10: "Khối 10",
+    GRADE_11: "Khối 11",
+    GRADE_12: "Khối 12",
+  };
+
   return (
     <div className="p-6 pb-20 space-y-6">
       {/* Header */}
@@ -272,13 +295,13 @@ const ManageClassesAdmin = () => {
             {t("manageClasses.subtitle")}
           </p>
         </div>
-        <button
+        {/* <button
           onClick={() => openModal("add")}
           className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-800 rounded-lg text-white text-sm shadow"
         >
           <PlusCircle className="w-5 h-5" />
           {t("manageClasses.addNewClass")}
-        </button>
+        </button> */}
       </div>
 
       <Toolbar
@@ -293,69 +316,117 @@ const ManageClassesAdmin = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
-        <table className="w-full text-sm text-gray-800 dark:text-gray-100">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+        <table className="min-w-[800px] w-full table-fixed text-sm text-left border-collapse">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-4 py-3 text-left">
-                {t("manageClasses.table.name")}
+              <th className="px-4 py-3 w-[30%] text-gray-900 dark:text-gray-100">
+                Trường
               </th>
-              <th className="px-4 py-3 text-left">
-                {t("manageClasses.table.school")}
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Khối
               </th>
-              <th className="px-4 py-3 text-left">
-                {t("manageClasses.table.subjects")}
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Tên lớp học
               </th>
-              <th className="px-4 py-3 text-left">
-                {t("manageClasses.table.actions")}
+              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+                Giáo viên chủ nhiệm
+              </th>
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Sĩ số
+              </th>
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Môn học
+              </th>
+              <th className="px-4 py-3 w-[7%] text-gray-900 dark:text-gray-100">
+                Tùy chọn
               </th>
             </tr>
           </thead>
           <tbody>
-            {currentClasses.length > 0 ? (
-              currentClasses.map((c) => (
+            {[...filteredClasses]
+              .sort((a, b) => a.name.localeCompare(b.name, "vi"))
+              .map((c) => (
                 <tr
                   key={c.classId}
-                  className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                  className="border-t border-gray-200 dark:border-gray-700"
                 >
-                  <td className="px-4 py-3 font-medium">{c.name}</td>
-                  <td className="px-4 py-3">{c.school?.schoolName || "-"}</td>
-                  <td className="px-4 py-3">
-                    {c.subjects?.map((s) => (
-                      <Badge key={s.subjectId} text={s.name} />
-                    )) || "-"}
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.school?.schoolName || "-"}
                   </td>
-                  <td className="px-4 py-3 flex gap-2">
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {gradeMapping[c.gradeLevel] || c.gradeLevel}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.name}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.homeroomTeacher?.fullName || "-"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {/* {c.classSize} */}
+                    {c.classSize ? (
+                      <span className="font-medium">{c.classSize}</span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        0
+                      </span>
+                    )}
+                  </td>
+                  {/* <td className="px-4 py-3 text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
+                    <div className="flex overflow-hidden whitespace-nowrap tablet:overflow-x-auto tablet:scrollbar-thin tablet:scrollbar-thumb-gray-400 tablet:scrollbar-track-transparent">
+                      {c.subjects?.length ? (
+                        c.subjects.map((s) => (
+                          <Badge
+                            key={s.subjectId}
+                            text={s.name}
+                            color="bg-blue-100 text-blue-700 mr-1 dark:bg-blue-900/30 dark:text-blue-300 shrink-0"
+                          />
+                        ))
+                      ) : (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          -
+                        </span>
+                      )}
+                    </div>
+                  </td> */}
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {c.subjects?.length ? (
+                      <span className="font-medium">{c.subjects.length}</span>
+                    ) : (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        0
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 flex flex-wrap items-center gap-4">
                     <button
                       onClick={() => openModal("edit", c)}
-                      className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                      className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      <Eye className="w-5 h-5" />
+                      <Eye size={16} />
+                      {/* <span className="hidden sm:inline">Xem</span> */}
                     </button>
                     <button
                       onClick={() => openModal("students", c)}
-                      className="text-green-600 dark:text-green-400 hover:underline"
+                      className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline"
                     >
-                      <User className="w-5 h-5" />
+                      <Users size={16} />
+                      {/* <span className="hidden sm:inline">Danh sách lớp</span> */}
                     </button>
-                    <button
-                      onClick={() => openModal("delete", c)}
-                      className="text-red-600 dark:text-red-400 hover:underline"
+                    {/* <button
+                      onClick={() => {
+                        setClassToDelete(c);
+                        setConfirmOpen(true);
+                      }}
+                      className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline"
                     >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
+                      <Trash2 size={16} />
+                      <span className="hidden sm:inline">Xóa</span>
+                    </button> */}
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={4}
-                  className="px-4 py-3 text-center text-gray-500 dark:text-gray-400"
-                >
-                  {t("manageClasses.noData")}
-                </td>
-              </tr>
-            )}
+              ))}
           </tbody>
         </table>
       </div>
@@ -439,7 +510,7 @@ const ManageClassesAdmin = () => {
                   {t("manageClasses.semesters")}
                 </label>
                 <div className="overflow-x-auto border rounded-lg border-gray-300 dark:border-gray-600">
-                  <table className="w-full text-sm text-gray-800 dark:text-gray-100">
+                  <table className="w-full text-sm text-gray-800 dark:text-gray-100 border-collapse">
                     <thead className="bg-gray-100 dark:bg-gray-700">
                       <tr>
                         <th className="px-3 py-2">
@@ -598,8 +669,9 @@ const ManageClassesAdmin = () => {
               <button
                 type="submit"
                 form="classForm"
-                className="px-4 py-2 bg-green-700 hover:bg-blue-700 text-white rounded-lg transition"
+                className="px-4 py-2 bg-green-700 hover:bg-green-700 text-white rounded-lg transition text-sm flex justify-center items-center gap-2"
               >
+                <Save size={16} />
                 {modalType === "add"
                   ? t("manageClasses.saveClass")
                   : t("manageClasses.saveChanges")}

@@ -14,6 +14,10 @@ import {
   X,
   Edit,
   Trash2,
+  PlusCircle,
+  UploadCloud,
+  XCircle,
+  Save,
 } from "lucide-react";
 import Pagination from "../../components/common/Pagination";
 
@@ -409,6 +413,7 @@ const ManageSchedules = () => {
 
   const handleEdit = (schedule) => {
     setIsEditing(true);
+    setSelectedTerm(schedule.term?.termId || "");
     setEditingScheduleId(schedule.scheduleId);
     setNewSchedule({
       week: schedule.week,
@@ -424,6 +429,10 @@ const ManageSchedules = () => {
       teacherId: schedule.classSubject?.teacherId || "",
     });
     setShowManualForm(true);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const handleDelete = async (scheduleId) => {
@@ -682,9 +691,9 @@ const ManageSchedules = () => {
                 <div className="flex flex-wrap gap-4">
                   <label
                     htmlFor="import-file"
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer transition"
+                    className="text-sm flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 cursor-pointer transition"
                   >
-                    <Upload className="w-5 h-5" />
+                    <UploadCloud className="w-5 h-5" />
                     Import Lịch Học Từ File
                     <input
                       id="import-file"
@@ -715,9 +724,13 @@ const ManageSchedules = () => {
                         });
                       }
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition text-sm"
                   >
-                    <Plus className="w-5 h-5" />
+                    {showManualForm ? (
+                      <XCircle size={16} />
+                    ) : (
+                      <PlusCircle size={16} />
+                    )}
                     {showManualForm
                       ? "Ẩn Form"
                       : isEditing
@@ -915,14 +928,15 @@ const ManageSchedules = () => {
                               teacherId: "",
                             });
                           }}
-                          className="px-4 py-2 bg-gray-300 text-gray-900 rounded-md hover:bg-gray-400 transition"
+                          className="text-sm px-4 py-2 bg-gray-300 text-gray-900 rounded-md hover:bg-gray-400 transition"
                         >
                           Hủy
                         </button>
                         <button
                           type="submit"
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+                          className="text-sm flex justify-center items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
                         >
+                          <Save size={16} />
                           {isEditing ? "Cập Nhật Lịch" : "Lưu Lịch"}
                         </button>
                       </div>
@@ -1041,11 +1055,11 @@ const ManageSchedules = () => {
                   </div>
                   <button
                     onClick={handleClearFilters}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white 
-                       rounded-md hover:bg-red-700 focus:outline-none 
-                       focus:ring-2 focus:ring-red-500 transition"
+                    className="flex items-center gap-2 px-2 py-2.5 border border-red-600 text-red-600 
+                       rounded-md hover:bg-red-700 focus:outline-none hover:text-white
+                       focus:ring-2 focus:ring-red-500 transition text-sm"
                   >
-                    <X className="w-5 h-5" />
+                    <XCircle className="w-5 h-5" />
                     Xóa hết
                   </button>
                 </div>

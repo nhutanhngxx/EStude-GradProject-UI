@@ -8,7 +8,9 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [allNotifications, setAllNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAll, setLoadingAll] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -16,7 +18,11 @@ const NotificationBell = () => {
       try {
         const result = await notificationService.getReceivedNotifications();
         if (result) {
-          setNotifications(result);
+          const sorted = result.sort(
+            (a, b) => new Date(b.sentAt) - new Date(a.sentAt)
+          );
+          setNotifications(sorted.slice(0, 5));
+          setAllNotifications([]);
         }
       } catch (error) {
         console.error("Lỗi khi tải thông báo:", error);
@@ -24,11 +30,9 @@ const NotificationBell = () => {
         setLoading(false);
       }
     };
-
     fetchNotifications();
   }, []);
 
-  // 📦 Đóng menu khi click ra ngoài
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -39,9 +43,30 @@ const NotificationBell = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleViewAll = async () => {
+    setOpen(false);
+    setShowModal(true);
+
+    if (allNotifications.length === 0) {
+      setLoadingAll(true);
+      try {
+        const result = await notificationService.getReceivedNotifications();
+        if (result) {
+          const sorted = result.sort(
+            (a, b) => new Date(b.sentAt) - new Date(a.sentAt)
+          );
+          setAllNotifications(sorted);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải toàn bộ thông báo:", error);
+      } finally {
+        setLoadingAll(false);
+      }
+    }
+  };
+
   return (
     <>
-      {/* Bell Icon */}
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setOpen((prev) => !prev)}
@@ -53,7 +78,6 @@ const NotificationBell = () => {
           )}
         </button>
 
-        {/* Dropdown */}
         <div
           className={`absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden z-50 transform transition-all duration-200 origin-top-right
             ${
@@ -96,10 +120,7 @@ const NotificationBell = () => {
 
           <div className="px-4 py-2 border-t dark:border-gray-700 text-center">
             <button
-              onClick={() => {
-                setShowModal(true);
-                setOpen(false);
-              }}
+              onClick={handleViewAll}
               className="text-blue-600 dark:text-blue-400 text-sm hover:underline"
             >
               {t("notifications.viewAll")}
@@ -108,7 +129,6 @@ const NotificationBell = () => {
         </div>
       </div>
 
-      {/* Modal toàn bộ thông báo */}
       <div
         className={`fixed inset-0 flex items-center justify-center z-50 transition-opacity duration-200
           ${showModal ? "opacity-100 visible" : "opacity-0 invisible"}`}
@@ -135,9 +155,13 @@ const NotificationBell = () => {
           </div>
 
           <div className="overflow-y-auto h-[calc(80vh-60px)]">
-            {notifications.length > 0 ? (
+            {loadingAll ? (
+              <div className="text-center text-gray-500 dark:text-gray-400 py-10">
+                {t("notifications.loading")}
+              </div>
+            ) : allNotifications.length > 0 ? (
               <ul>
-                {notifications.map((n) => (
+                {allNotifications.map((n) => (
                   <li
                     key={n.notificationRecipientId}
                     className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
