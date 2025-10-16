@@ -39,6 +39,7 @@ export default function CreateAssignmentModal({
   const [tab, setTab] = useState("build");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const teacherId = user.userId;
+  const [isLoading, setIsLoading] = useState(false); // Trạng thái loading mới
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -56,11 +57,9 @@ export default function CreateAssignmentModal({
 
   const [questions, setQuestions] = useState([]);
   const [excelQuestions, setExcelQuestions] = useState([]);
-
   const [attachmentFile, setAttachmentFile] = useState(null);
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [importFile, setImportFile] = useState(null);
-
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const totalPoints = useMemo(
@@ -75,14 +74,6 @@ export default function CreateAssignmentModal({
 
     const destination = `/topic/class/${classContext.classSubjectId}/assignments`;
     socketService.subscribe(destination, (assignment) => {
-      // Thông báo socket, đã hoạt động tạm thời khóa lại
-      // Hiển thị thông báo khi nhận được bài tập mới
-      // showToast(
-      //   `Bài tập mới: ${assignment.title || "Không có tiêu đề"}`,
-      //   "info"
-      // );
-      // console.log("New assignment received:", assignment);
-      // Cập nhật danh sách bài tập (nếu cần)
       setQuestions((prev) => {
         if (prev.find((q) => q.assignmentId === assignment.assignmentId)) {
           return prev;
@@ -319,9 +310,7 @@ export default function CreateAssignmentModal({
           : [],
     }));
 
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
-
+  const handleSubmit = async () => {
     if (!title.trim()) {
       showToast("Vui lòng nhập tiêu đề bài thi", "warn");
       return;
@@ -332,12 +321,16 @@ export default function CreateAssignmentModal({
       return;
     }
 
-    try {
-      if (questions.length === 0) {
-        showToast("Vui lòng thêm ít nhất 1 câu hỏi", "warn");
-        return;
-      }
+    if (questions.length === 0) {
+      showToast("Vui lòng thêm ít nhất 1 câu hỏi", "warn");
+      return;
+    }
 
+    setIsLoading(true);
+    showToast("Đang tạo bài tập, vui lòng chờ...", "loading");
+    onClose?.();
+
+    try {
       const payload = {
         ...buildAssignmentPayload(),
         classSubject: { classSubjectId: classContext.classSubjectId },
@@ -356,9 +349,11 @@ export default function CreateAssignmentModal({
       for (const q of buildQuestionsPayload()) {
         await questionService.addQuestion(assignmentId, q);
       }
+
       showToast("Tạo bài tập/bài thi thành công!", "success");
       onCreated?.(assignment?.data);
 
+      // Reset form
       setTitle("");
       setDescription("");
       setStartDate("");
@@ -378,14 +373,14 @@ export default function CreateAssignmentModal({
       setExcelQuestions([]);
       setImportFile(null);
       setTab("build");
-
-      onClose?.();
     } catch (err) {
       console.error("Tạo bài thất bại:", err);
       showToast(
         "Không thể tạo bài thi bây giờ. Vui lòng thử lại sau!",
         "error"
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -430,7 +425,7 @@ export default function CreateAssignmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 w-11/12  h-[85vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-gray-800 border dark:border-gray-600 w-11/12 h-[85vh] rounded-2xl shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
           <div className="flex items-center gap-2">
@@ -453,6 +448,7 @@ export default function CreateAssignmentModal({
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            disabled={isLoading}
           >
             <X size={18} />
           </button>
@@ -463,22 +459,24 @@ export default function CreateAssignmentModal({
           <button
             onClick={() => setTab("build")}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition
-              ${
-                tab === "build"
-                  ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
-                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
+                ${
+                  tab === "build"
+                    ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
+                    : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+            disabled={isLoading}
           >
             <LayoutGrid size={16} /> Tạo trực tiếp
           </button>
           <button
             onClick={() => setTab("upload")}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition
-              ${
-                tab === "upload"
-                  ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
-                  : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
+                ${
+                  tab === "upload"
+                    ? "border-blue-600 dark:border-blue-400 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30"
+                    : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                }`}
+            disabled={isLoading}
           >
             <UploadCloud size={16} /> Tải từ file
           </button>
@@ -498,6 +496,7 @@ export default function CreateAssignmentModal({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ví dụ: Kiểm tra giữa kỳ – Phần 1"
+                  disabled={isLoading}
                 />
               </div>
 
@@ -510,6 +509,7 @@ export default function CreateAssignmentModal({
                   rows={1}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -523,6 +523,7 @@ export default function CreateAssignmentModal({
                     className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -535,6 +536,7 @@ export default function CreateAssignmentModal({
                     className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -550,6 +552,7 @@ export default function CreateAssignmentModal({
                     className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={timeLimit}
                     onChange={(e) => setTimeLimit(Number(e.target.value))}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -561,6 +564,7 @@ export default function CreateAssignmentModal({
                     className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={type}
                     onChange={(e) => setType(e.target.value)}
+                    disabled={isLoading}
                   >
                     <option value="QUIZ">Trắc nghiệm</option>
                     <option value="ESSAY">Tự luận</option>
@@ -579,6 +583,7 @@ export default function CreateAssignmentModal({
                   className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                   value={maxScore}
                   onChange={(e) => setMaxScore(Number(e.target.value))}
+                  disabled={isLoading}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Tổng điểm câu hỏi hiện tại: {totalPoints}
@@ -592,6 +597,7 @@ export default function CreateAssignmentModal({
                     className="accent-blue-600 dark:accent-blue-400"
                     checked={isExam}
                     onChange={(e) => setIsExam(e.target.checked)}
+                    disabled={isLoading}
                   />
                   Đây là bài thi
                 </label>
@@ -601,6 +607,7 @@ export default function CreateAssignmentModal({
                     className="accent-blue-600 dark:accent-blue-400"
                     checked={isPublished}
                     onChange={(e) => setIsPublished(e.target.checked)}
+                    disabled={isLoading}
                   />
                   Công khai
                 </label>
@@ -610,6 +617,7 @@ export default function CreateAssignmentModal({
                     className="accent-blue-600 dark:accent-blue-400"
                     checked={allowLateSubmission}
                     onChange={(e) => setAllowLateSubmission(e.target.checked)}
+                    disabled={isLoading}
                   />
                   Cho nộp trễ
                 </label>
@@ -621,6 +629,7 @@ export default function CreateAssignmentModal({
                     className="ml-2 w-16 rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                     value={submissionLimit}
                     onChange={(e) => setSubmissionLimit(Number(e.target.value))}
+                    disabled={isLoading}
                   />
                 </label>
               </div>
@@ -639,6 +648,7 @@ export default function CreateAssignmentModal({
                       accept=".xlsx,.xls"
                       className="mt-1 w-full rounded-xl border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                       onChange={handleExcelUpload}
+                      disabled={isLoading}
                     />
                   </div>
 
@@ -647,18 +657,30 @@ export default function CreateAssignmentModal({
                       type="button"
                       onClick={handleDownloadTemplate}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                      disabled={isLoading}
                     >
                       Tải file mẫu
                     </button>
                     <button
-                      type="button"
                       onClick={() => {
                         if (excelQuestions.length === 0) {
                           showToast("Chưa có dữ liệu từ file Excel", "warn");
                           return;
                         }
 
-                        const parsedQuestions = excelQuestions.map(
+                        const validExcelQuestions = excelQuestions.filter(
+                          (q) => q && q.content && q.content.trim() !== ""
+                        );
+
+                        if (validExcelQuestions.length === 0) {
+                          showToast(
+                            "File Excel không chứa câu hỏi hợp lệ nào.",
+                            "warn"
+                          );
+                          return;
+                        }
+
+                        const parsedQuestions = validExcelQuestions.map(
                           (q, idx) => ({
                             tempId: genId(),
                             questionText: q.content,
@@ -702,6 +724,7 @@ export default function CreateAssignmentModal({
                         );
                       }}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                      disabled={isLoading}
                     >
                       Import từ Excel
                     </button>
@@ -713,6 +736,7 @@ export default function CreateAssignmentModal({
                         setTab("build");
                       }}
                       className="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                      disabled={isLoading}
                     >
                       Hủy
                     </button>
@@ -720,31 +744,6 @@ export default function CreateAssignmentModal({
                 </div>
               ) : (
                 <div className="flex gap-4">
-                  {/* Sidebar */}
-                  {/* {questions.length > 0 && (
-                    <div className="flex flex-col gap-1 sticky top-0 self-start">
-                      {questions.map((q, idx) => (
-                        <button
-                          key={q.tempId}
-                          className={`w-8 h-8 rounded ${
-                            isQuestionInvalid(q)
-                              ? "bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200"
-                              : "bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
-                          } hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center justify-center text-sm font-medium transition`}
-                          onClick={() =>
-                            questionRefs.current[idx]?.scrollIntoView({
-                              behavior: "smooth",
-                              block: "center",
-                            })
-                          }
-                        >
-                          {idx + 1}
-                        </button>
-                      ))}
-                    </div>
-                  )} */}
-
-                  {/* Question content */}
                   <div className="flex-1 space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="font-semibold flex items-center gap-2 text-gray-900 dark:text-gray-100">
@@ -754,12 +753,14 @@ export default function CreateAssignmentModal({
                         <button
                           onClick={() => addQuestion("MULTIPLE_CHOICE")}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
+                          disabled={isLoading}
                         >
                           <Plus size={16} /> Trắc nghiệm
                         </button>
                         <button
                           onClick={() => addQuestion("ESSAY")}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
+                          disabled={isLoading}
                         >
                           <Plus size={16} /> Tự luận
                         </button>
@@ -797,6 +798,7 @@ export default function CreateAssignmentModal({
                                         : q.options,
                                   })
                                 }
+                                disabled={isLoading}
                               >
                                 <option value="MULTIPLE_CHOICE">
                                   Trắc nghiệm
@@ -812,6 +814,7 @@ export default function CreateAssignmentModal({
                                     questionText: e.target.value,
                                   })
                                 }
+                                disabled={isLoading}
                               />
                               <input
                                 type="number"
@@ -824,6 +827,7 @@ export default function CreateAssignmentModal({
                                     points: parseFloat(e.target.value) || 0,
                                   })
                                 }
+                                disabled={isLoading}
                               />
                             </div>
 
@@ -850,6 +854,7 @@ export default function CreateAssignmentModal({
                                           ),
                                         })
                                       }
+                                      disabled={isLoading}
                                     />
                                     <input
                                       className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
@@ -867,12 +872,14 @@ export default function CreateAssignmentModal({
                                           ),
                                         })
                                       }
+                                      disabled={isLoading}
                                     />
                                     <button
                                       className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 transition"
                                       onClick={() =>
                                         removeOption(q.tempId, o.tempId)
                                       }
+                                      disabled={isLoading}
                                     >
                                       <Trash2 size={16} />
                                     </button>
@@ -881,6 +888,7 @@ export default function CreateAssignmentModal({
                                 <button
                                   onClick={() => addOption(q.tempId)}
                                   className="mt-1 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
+                                  disabled={isLoading}
                                 >
                                   <Plus size={16} /> Thêm phương án
                                 </button>
@@ -897,6 +905,7 @@ export default function CreateAssignmentModal({
                           <button
                             className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-500 transition"
                             onClick={() => removeQuestion(q.tempId)}
+                            disabled={isLoading}
                           >
                             <Trash2 size={18} />
                           </button>
@@ -924,6 +933,7 @@ export default function CreateAssignmentModal({
             <button
               className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
               onClick={onClose}
+              disabled={isLoading}
             >
               Hủy
             </button>
@@ -931,6 +941,7 @@ export default function CreateAssignmentModal({
               type="button"
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
               onClick={() => setConfirmOpen(true)}
+              disabled={isLoading}
             >
               <Save size={16} />
               Lưu bài
@@ -945,8 +956,8 @@ export default function CreateAssignmentModal({
         message="Bạn có chắc chắn muốn Lưu bài tập này không?"
         onCancel={() => setConfirmOpen(false)}
         onConfirm={() => {
-          handleSubmit();
           setConfirmOpen(false);
+          handleSubmit();
         }}
       />
     </div>

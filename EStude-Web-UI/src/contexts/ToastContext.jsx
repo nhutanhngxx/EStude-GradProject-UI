@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Info,
+  X,
+  Loader2,
+} from "lucide-react";
 
 const ToastContext = createContext(null);
 
@@ -19,7 +26,7 @@ export const ToastProvider = ({ children }) => {
       const toast = { id, message, type, visible: true };
       setToasts((prev) => [...prev, toast]);
 
-      if (duration > 0) {
+      if (type !== "loading" && duration > 0) {
         setTimeout(() => removeToast(id), duration);
       }
       return id;
@@ -33,6 +40,7 @@ export const ToastProvider = ({ children }) => {
     error: (msg, d = 5000) => showToast(msg, "error", d),
     info: (msg, d = 3000) => showToast(msg, "info", d),
     warn: (msg, d = 4000) => showToast(msg, "warn", d),
+    loading: (msg, d = 0) => showToast(msg, "loading", d),
     dismiss: removeToast,
     clear: () => setToasts([]),
   };
@@ -59,7 +67,11 @@ export const ToastProvider = ({ children }) => {
           icon: <Info className="w-5 h-5 text-white" />,
           classes: "bg-blue-500 text-white",
         };
-
+      case "loading":
+        return {
+          icon: <Loader2 className="w-5 h-5 text-white animate-spin" />,
+          classes: "bg-blue-600 text-white",
+        };
       default:
         return {
           icon: <Info className="w-5 h-5 text-white" />,

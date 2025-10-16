@@ -35,7 +35,7 @@ const getBaseUrl = () => {
   const PORT = 8080;
 
   const hostIP = getHostIP();
-  return `https://${hostIP || DEFAULT_IP}:${PORT}`;
+  return `http://${hostIP || DEFAULT_IP}:${PORT}`;
   // return `https://${DEFAULT_IP}`;
 };
 
