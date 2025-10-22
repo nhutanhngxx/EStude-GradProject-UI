@@ -28,20 +28,28 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (userData, token) => {
-    setUser(userData);
-    setToken(token);
-    await AsyncStorage.setItem("user", JSON.stringify(userData));
-    await AsyncStorage.setItem("token", token);
+    try {
+      setUser(userData);
+      setToken(token);
+      await AsyncStorage.setItem("user", JSON.stringify(userData));
+      await AsyncStorage.setItem("token", token);
+    } catch (e) {
+      console.log("Login save error:", e);
+    }
   };
 
   const logout = async () => {
-    if (token) {
-      await authService.logout(token);
+    try {
+      if (token) {
+        await authService.logout(token);
+      }
+    } catch (e) {
+      console.log("Logout error:", e);
+    } finally {
+      setUser(null);
+      setToken(null);
+      await AsyncStorage.multiRemove(["user", "token"]);
     }
-    setUser(null);
-    setToken(null);
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("token");
   };
 
   return (
