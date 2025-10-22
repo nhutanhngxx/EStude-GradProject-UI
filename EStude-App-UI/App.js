@@ -27,6 +27,8 @@ import ForgotPasswordScreen from "./src/screens/Auth/ForgotPasswordScreen";
 import AssignmentReviewScreen from "./src/screens/Assignment/AssignmentReviewScreen";
 import DetailStudyScreen from "./src/screens/DetailStudyScreen";
 import { SocketProvider } from "./src/contexts/SocketContext";
+import PracticeQuizScreen from "./src/screens/Assignment/PracticeQuizScreen";
+import ImprovementScreen from "./src/screens/Assignment/ImprovementScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -137,6 +139,18 @@ function AppNavigator() {
             name="DetailStudy"
             component={DetailStudyScreen}
             options={{ title: "Tổng quan học tập", headerTitleAlign: "center" }}
+          />
+
+          <Stack.Screen
+            name="PracticeQuiz"
+            component={PracticeQuizScreen}
+            options={{ title: "Bài luyện tập", headerTitleAlign: "center" }}
+          />
+
+          <Stack.Screen
+            name="Improvement"
+            component={ImprovementScreen}
+            options={{ title: "Đánh giá tiến bộ", headerTitleAlign: "center" }}
           />
         </>
       )}

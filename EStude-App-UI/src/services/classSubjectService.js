@@ -3,6 +3,7 @@ import config from "../configs/config";
 const endpoints = {
   getAllClassSubjects: "/api/class-subjects",
   getClassSubjectsByStudent: "/api/students/{studentId}/subjects",
+  getClassSubject: "/api/class-subjects/{classSubjectId}",
 };
 
 const classSubjectService = {
@@ -21,6 +22,28 @@ const classSubjectService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi lấy danh sách môn học của lớp:", error);
+      return null;
+    }
+  },
+
+  getClassSubject: async (classSubjectId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getClassSubject.replace(
+          "{classSubjectId}",
+          classSubjectId
+        )}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy thông tin môn học của lớp thất bại");
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin môn học của lớp:", error);
       return null;
     }
   },

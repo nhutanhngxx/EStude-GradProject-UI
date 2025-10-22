@@ -110,6 +110,29 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
             : "Không giới hạn"}
         </Text>
       </Text>
+
+      {/* Nút làm bài */}
+      {submissions.length < (assignment.submissionLimit ?? Infinity) && (
+        <TouchableOpacity
+          style={[
+            styles.btn,
+            styles.submitBtn,
+            !canSubmit && styles.disabledBtn,
+          ]}
+          onPress={() =>
+            navigation.navigate("ExamDoing", {
+              exam: assignment,
+              submitted: false,
+            })
+          }
+          disabled={!canSubmit}
+        >
+          <Text style={styles.btnText}>
+            {!canSubmit ? "Quá hạn" : "Làm bài"}
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* Submissions */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Bài nộp của bạn</Text>
@@ -166,28 +189,6 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
           ))
         )}
       </View>
-
-      {/* Nút làm bài */}
-      {submissions.length < (assignment.submissionLimit ?? Infinity) && (
-        <TouchableOpacity
-          style={[
-            styles.btn,
-            styles.submitBtn,
-            !canSubmit && styles.disabledBtn,
-          ]}
-          onPress={() =>
-            navigation.navigate("ExamDoing", {
-              exam: assignment,
-              submitted: false,
-            })
-          }
-          disabled={!canSubmit}
-        >
-          <Text style={styles.btnText}>
-            {!canSubmit ? "Quá hạn" : "Làm bài"}
-          </Text>
-        </TouchableOpacity>
-      )}
     </ScrollView>
   );
 }

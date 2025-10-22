@@ -12,6 +12,7 @@ import {
 import submissionService from "../../services/submissionService";
 import { AuthContext } from "../../contexts/AuthContext";
 import aiService from "../../services/aiService";
+import classSubjectService from "../../services/classSubjectService";
 import { useToast } from "../../contexts/ToastContext";
 
 const themeColors = {
@@ -25,11 +26,10 @@ const themeColors = {
 
 export default function ExamDoingScreen({ navigation, route }) {
   const { exam, submitted: initialSubmitted } = route.params;
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const { showToast } = useToast();
 
   const [submittedScore, setSubmittedScore] = useState(null);
-
   const initialSeconds = (exam?.timeLimit ?? 15) * 60;
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [answers, setAnswers] = useState({});
@@ -38,6 +38,10 @@ export default function ExamDoingScreen({ navigation, route }) {
   const [aiFeedback, setAiFeedback] = useState([]);
   const [submitted, setSubmitted] = useState(initialSubmitted || false);
   const [submitting, setSubmitting] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [recommendations, setRecommendations] = useState(null);
+
+  // console.log("exam: ", exam);
 
   const autoSubmittedRef = useRef(false);
 
@@ -69,7 +73,7 @@ export default function ExamDoingScreen({ navigation, route }) {
       autoSubmittedRef.current = true;
       Alert.alert(
         "Hết giờ",
-        "Thời gian làm bài đã hết. Bài sẽ được tự động nộp.",
+        "Thời gian làm bài đã hết. Bài làm của bạn sẽ được tự động nộp.",
         [{ text: "OK", onPress: () => handleSubmit() }]
       );
     }
@@ -82,8 +86,6 @@ export default function ExamDoingScreen({ navigation, route }) {
     if (submitted) return;
     setAnswers((prev) => {
       const prevAns = prev[q.questionId] || [];
-      // detect multi-select: I assume q.answers chứa đúng số câu trả lời hợp lệ?
-      // original code used q.answers && q.answers.length > 1
       const multi = q.answers && q.answers.length > 1;
       if (multi) {
         if (prevAns.includes(optText)) {
@@ -103,12 +105,11 @@ export default function ExamDoingScreen({ navigation, route }) {
   const handleSubmit = async () => {
     if (submitting || submitted) return;
     setSubmitting(true);
+    setAiLoading(true);
 
     try {
-      // build submission payload
       const answersPayload = Object.entries(answers).flatMap(
         ([questionId, selected]) => {
-          // selected is array of optionText(s)
           const q = exam.questions.find(
             (x) => x.questionId === Number(questionId)
           );
@@ -133,43 +134,155 @@ export default function ExamDoingScreen({ navigation, route }) {
         answers: answersPayload,
       };
 
-      // console.log("submission:", JSON.stringify(submission, null, 2));
-
       const result = await submissionService.addSubmission(submission);
 
       if (result) {
         showToast("Bài tập của bạn đã được nộp!", { type: "success" });
-        setSubmittedScore(result.score);
-        try {
-          const analysis = await aiService.getAIAnalysisBySubmission(
-            exam.assignmentId,
-            user.userId
-          );
-          if (analysis?.success) {
-            setAiResult(analysis.data);
-            const rawFb = analysis.data.feedback || [];
-            const normalizedFb = Array.isArray(rawFb) ? rawFb.flat() : [];
-            setAiFeedback(normalizedFb);
-          } else {
-            setAiResult(null);
-            setAiFeedback([]);
-            console.warn("AI analysis did not return success:", analysis);
-          }
-        } catch (e) {
-          console.error("Lỗi khi gọi AI analysis:", e);
-          setAiResult(null);
-          setAiFeedback([]);
-        }
         setSubmitted(true);
         setSubmitting(false);
+
+        const classSubject = await classSubjectService.getClassSubject(
+          exam.classSubject.classSubjectId
+        );
+
+        const aiPayload = {
+          assignment_id: exam.assignmentId,
+          student_name: user.fullName || user.name || "Học sinh chưa đặt tên",
+          subject:
+            `${classSubject?.subjectName} ${
+              classSubject?.gradeLevel?.match(/\d+/)?.[0] || ""
+            }`.trim() || "Chưa xác định",
+          questions: exam.questions.map((q, idx) => {
+            const selected = answers[q.questionId] || [];
+            const chosenOpt = Array.isArray(selected) ? selected[0] : selected;
+            const chosenIndex = q.options.findIndex(
+              (opt) => opt.optionText === chosenOpt
+            );
+            const correctIndex = q.options.findIndex(
+              (opt) => opt.isCorrect === true
+            );
+
+            return {
+              question_id: Number(q.questionId ?? q.question_id ?? idx + 1),
+              question: q.questionText,
+              options: q.options.map((o) => o.optionText),
+              correct_answer: correctIndex + 1,
+              student_answer: chosenIndex + 1 || null,
+            };
+          }),
+        };
+
+        const aiResult = await aiService.layer1(aiPayload, token);
+        setAiLoading(false);
+
+        if (aiResult) {
+          const processedResult = aiResult?.data || aiResult;
+          setAiResult({
+            detailedAnalysis: {
+              subject: processedResult.subject,
+              summary: processedResult.summary,
+              feedback: processedResult.feedback.map((f, idx) => ({
+                ...f,
+                question_id: idx + 1,
+                is_correct: f.student_answer === f.correct_answer,
+              })),
+            },
+            comment: processedResult.comment || "Phân tích hoàn tất!",
+          });
+          setAiFeedback(processedResult.feedback || []);
+
+          // Gọi Layer 2
+          const layer2Payload = { feedback_data: processedResult };
+          try {
+            const layer2Result = await aiService.layer2(layer2Payload, token);
+            console.log("layer2Result: ", layer2Result);
+            setRecommendations(layer2Result?.data || layer2Result);
+          } catch (layer2Error) {
+            console.error("Lỗi gọi Layer 2:", layer2Error);
+            showToast("Lỗi khi lấy gợi ý học tập.", { type: "error" });
+            setAiLoading(false);
+          }
+        } else {
+          console.warn("Không thể phân tích chi tiết bài nộp.");
+          setAiLoading(false);
+        }
       } else {
         setSubmitting(false);
-        Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
+        setAiLoading(false);
+        showToast("Không thể nộp bài, vui lòng thử lại.", { type: "error" });
       }
     } catch (error) {
       console.error(error);
       setSubmitting(false);
-      Alert.alert("Lỗi", "Không thể nộp bài, vui lòng thử lại.");
+      setAiLoading(false);
+      showToast("Không thể nộp bài, vui lòng thử lại.", { type: "error" });
+    }
+  };
+
+  const handleGeneratePractice = async (rawTopic) => {
+    // Chuẩn hoá topic: nếu là object, lấy thuộc tính phù hợp
+    let topic = rawTopic;
+    if (!topic) {
+      showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {
+        type: "error",
+      });
+      return;
+    }
+    // Nếu weak_topics là object như {topic: 'X'} hoặc {name:'X'}
+    if (typeof topic === "object") {
+      topic = topic.topic ?? topic.name ?? topic.label ?? null;
+    }
+    topic = typeof topic === "string" ? topic.trim() : null;
+
+    if (!topic || topic.toLowerCase() === "không xác định") {
+      showToast("Chủ đề không rõ — không thể tạo bài luyện tập tự động.", {
+        type: "warning",
+      });
+      return;
+    }
+
+    const layer3Payload = {
+      subject: exam.classSubject.subject.name,
+      topics: [topic],
+      difficulty: "easy",
+      num_questions: 3,
+    };
+
+    // console.log("layer3Payload: ", layer3Payload);
+
+    try {
+      setAiLoading(true);
+      const layer3Result = await aiService.layer3(layer3Payload, token);
+      console.log("Layer3 raw result:", layer3Result);
+
+      // Hỗ trợ cả dạng { data: { questions: [...] } } hoặc raw { questions: [...] }
+      const quizData = layer3Result?.data ?? layer3Result;
+      console.log("quizData: ", quizData);
+
+      // Kiểm tra hợp lệ trước khi navigate
+      if (
+        !quizData ||
+        !Array.isArray(quizData.questions) ||
+        quizData.questions.length === 0
+      ) {
+        showToast("Không tạo được bài luyện tập (API trả về rỗng).", {
+          type: "error",
+        });
+        setAiLoading(false);
+        return;
+      }
+
+      // Bảo đảm mỗi câu có questionId và option structure phù hợp
+      // (bạn có thể chuẩn hoá/casting ở đây nếu backend trả khác)
+      navigation.navigate("PracticeQuiz", {
+        quiz: quizData,
+        previousFeedback: aiFeedback,
+      });
+      setAiLoading(false);
+    } catch (error) {
+      console.error("Lỗi gọi Layer 3:", error);
+      showToast("Lỗi khi tạo bài luyện tập.", { type: "error" });
+      setAiLoading(false);
     }
   };
 
@@ -210,38 +323,97 @@ export default function ExamDoingScreen({ navigation, route }) {
             Danh sách câu hỏi
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tabBtn,
+            activeTab === "Recommendations" && styles.tabActive,
+          ]}
+          onPress={() => setActiveTab("Recommendations")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "Recommendations" && styles.tabTextActive,
+            ]}
+          >
+            Gợi ý học tập
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Body */}
       {activeTab === "Doing" ? (
         <ScrollView style={{ flex: 1 }}>
           {submitted ? (
-            <View style={styles.aiSummary}>
-              {aiResult ? (
-                <>
-                  <Text style={styles.aiScoreLabel}>Điểm của bạn</Text>
-                  <Text style={styles.aiScoreValue}>
-                    {submittedScore ?? "Không thể tải điểm"}
+            aiLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={themeColors.primary} />
+                <Text style={styles.loadingText}>
+                  Đang phân tích bài làm của bạn...
+                </Text>
+              </View>
+            ) : aiResult?.detailedAnalysis ? (
+              <ScrollView style={styles.resultContainer}>
+                <View style={styles.summaryBox}>
+                  <Text style={styles.subjectTitle}>
+                    Môn học: {aiResult.detailedAnalysis.subject}
                   </Text>
-                  <Text style={styles.aiPerf}>
-                    {aiResult?.performance_level ?? "Không thể tải"}
+                  <Text style={styles.summaryText}>
+                    Tổng số câu:{" "}
+                    {aiResult.detailedAnalysis.summary.total_questions}
                   </Text>
-                  <Text style={styles.aiRecommend}>
-                    {aiResult?.general_recommendation ?? "Không có gợi ý."}
+                  <Text style={styles.summaryText}>
+                    Số câu đúng:{" "}
+                    {aiResult.detailedAnalysis.summary.correct_count}
                   </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.aiScoreLabel}>Điểm của bạn</Text>
-                  <Text style={styles.aiScoreValue}>
-                    {submittedScore ?? "Không thể tải điểm"}
+                  <Text style={styles.summaryText}>
+                    Độ chính xác:{" "}
+                    {aiResult.detailedAnalysis.summary.accuracy_percentage}%
                   </Text>
-                  <Text style={styles.aiPerf}>(Không có phân tích AI)</Text>
-                </>
-              )}
-            </View>
+                </View>
+
+                {aiResult.detailedAnalysis.feedback.map((f, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.feedbackCard,
+                      { backgroundColor: f.is_correct ? "#E8F5E9" : "#FFEBEE" },
+                    ]}
+                  >
+                    <Text style={styles.questionIndex}>Câu {idx + 1}</Text>
+                    <Text style={styles.questionText}>{f.question}</Text>
+                    <Text
+                      style={[
+                        styles.answerText,
+                        { color: f.is_correct ? "#2E7D32" : "#C62828" },
+                      ]}
+                    >
+                      Đáp án của bạn: {f.student_answer || "Chưa trả lời"}
+                    </Text>
+                    <Text style={{ color: "#333" }}>
+                      Đáp án đúng: {f.correct_answer || "Không có dữ liệu"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.explanation,
+                        { color: f.is_correct ? "#2E7D32" : "#C62828" },
+                      ]}
+                    >
+                      Giải thích: {f.explanation}
+                    </Text>
+                    <Text style={styles.metaInfo}>
+                      Chủ đề: {f.topic} • Mức độ: {f.difficulty_level}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.aiSummary}>
+                <Text>Không có dữ liệu phân tích AI.</Text>
+              </View>
+            )
           ) : (
-            // Trước khi nộp: hiển thị câu hỏi + lựa chọn
             exam.questions.map((q) => (
               <View key={q.questionId} style={styles.questionBlock}>
                 <Text style={styles.questionText}>
@@ -274,30 +446,26 @@ export default function ExamDoingScreen({ navigation, route }) {
             ))
           )}
         </ScrollView>
-      ) : (
+      ) : activeTab === "Overview" ? (
         <ScrollView style={{ flex: 1, padding: 12 }}>
           {exam.questions.map((q) => {
             const isAnswered =
               Array.isArray(answers[q.questionId]) &&
               answers[q.questionId].length > 0;
-
             const fb = aiFeedback.find(
               (f) => Number(f.question_id) === exam.questions.indexOf(q) + 1
             );
 
             return (
               <View key={q.questionId} style={styles.questionBlock}>
-                {/* Câu hỏi */}
                 <Text
                   style={[
                     styles.questionText,
-                    submitted && fb && !fb.is_correct,
+                    submitted && fb && !fb.is_correct && { color: "#C62828" },
                   ]}
                 >
                   {q.questionText}
                 </Text>
-
-                {/* Đáp án đã chọn */}
                 <View
                   style={[
                     styles.answerBox,
@@ -318,13 +486,13 @@ export default function ExamDoingScreen({ navigation, route }) {
                         color:
                           submitted && fb
                             ? fb.is_correct
-                              ? "#2e7d32" // xanh lá cho đúng
-                              : "#c62828" // đỏ cho sai
+                              ? "#2e7d32"
+                              : "#c62828"
                             : isAnswered
                             ? themeColors.secondary
                             : "#666",
                         fontWeight: submitted && fb ? "bold" : "500",
-                        flexShrink: 1, // để text không tràn khi dài
+                        flexShrink: 1,
                       },
                     ]}
                   >
@@ -332,7 +500,6 @@ export default function ExamDoingScreen({ navigation, route }) {
                       ? "Đã chọn: " + answers[q.questionId].join(", ")
                       : "Bạn chưa có đáp án nào."}
                   </Text>
-
                   {submitted && fb && (
                     <Text
                       style={{
@@ -345,8 +512,6 @@ export default function ExamDoingScreen({ navigation, route }) {
                     </Text>
                   )}
                 </View>
-
-                {/* Feedback */}
                 {submitted && fb && (
                   <View
                     style={[
@@ -371,9 +536,35 @@ export default function ExamDoingScreen({ navigation, route }) {
             );
           })}
         </ScrollView>
+      ) : (
+        <ScrollView style={{ flex: 1, padding: 12 }}>
+          {aiLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={themeColors.primary} />
+              <Text style={styles.loadingText}>Đang tải gợi ý học tập...</Text>
+            </View>
+          ) : recommendations ? (
+            <>
+              <Text>{recommendations.overall_advice}</Text>
+
+              <Text style={styles.sectionTitle}>Chủ đề yếu</Text>
+              {recommendations.weak_topics?.map((t, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => handleGeneratePractice(t.topic)}
+                >
+                  <Text style={styles.actionText}>Ôn tập {t.topic}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          ) : (
+            <View style={styles.aiSummary}>
+              <Text>Không có gợi ý học tập nào hiện tại.</Text>
+            </View>
+          )}
+        </ScrollView>
       )}
 
-      {/* Submit button - ẩn sau khi đã nộp */}
       {!submitted && (
         <View style={{ paddingHorizontal: 16 }}>
           <TouchableOpacity
@@ -389,7 +580,7 @@ export default function ExamDoingScreen({ navigation, route }) {
             {submitting ? (
               <ActivityIndicator size="large" color="#2ecc71" />
             ) : (
-              <Text style={styles.submitText}> Nộp bài </Text>
+              <Text style={styles.submitText}>Nộp bài</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -424,7 +615,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     textAlign: "right",
   },
-
   tabRow: {
     flexDirection: "row",
     marginVertical: 8,
@@ -448,7 +638,6 @@ const styles = StyleSheet.create({
   tabTextActive: {
     color: "#fff",
   },
-
   questionBlock: {
     padding: 16,
     marginBottom: 12,
@@ -462,7 +651,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     color: "#000",
   },
-
   answerBox: {
     marginTop: 6,
     padding: 10,
@@ -472,7 +660,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-
   option: {
     padding: 12,
     borderRadius: 8,
@@ -493,13 +680,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
-
   feedbackBox: {
     marginTop: 8,
     padding: 10,
     borderRadius: 8,
   },
-
   submitBtn: {
     backgroundColor: themeColors.secondary,
     padding: 16,
@@ -512,7 +697,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
   },
-
   aiSummary: {
     backgroundColor: "#e8fce8",
     padding: 20,
@@ -521,33 +705,61 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 3,
   },
-  aiScore: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: "#27ae60",
+  resultContainer: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  summaryBox: {
+    backgroundColor: "#f1f8e9",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
   },
-  aiScoreLabel: {
+  subjectTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
+  summaryText: { fontSize: 15, color: "#333", marginVertical: 2 },
+  feedbackCard: {
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  questionIndex: { fontWeight: "bold", fontSize: 16, marginBottom: 4 },
+  questionText: { fontSize: 15, color: "#222", marginBottom: 6 },
+  answerText: { fontSize: 14, fontWeight: "500" },
+  explanation: { marginTop: 6, fontSize: 13, fontStyle: "italic" },
+  metaInfo: { marginTop: 4, fontSize: 12, color: "#666" },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: themeColors.text,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+    color: themeColors.text,
+  },
+  recommendationCard: {
+    backgroundColor: "#E8F5E9",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  recTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2e7d32",
     marginBottom: 4,
   },
-  aiScoreValue: {
-    fontSize: 40,
-    fontWeight: "800",
-    color: "#000",
-  },
-  aiPerf: {
+  actionText: {
+    color: themeColors.secondary,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
     marginTop: 8,
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-  },
-  aiRecommend: {
-    marginTop: 12,
-    fontSize: 15,
-    fontStyle: "italic",
-    color: "#555",
-    textAlign: "center",
   },
 });
