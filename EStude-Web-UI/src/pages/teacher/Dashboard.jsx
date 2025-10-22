@@ -276,8 +276,13 @@ const TeacherDashboard = () => {
             })
         );
 
+        // console.log("assignmentPromises: ", assignmentPromises);
+        
+
         const assignmentResults = await Promise.all(assignmentPromises);
         setAssignments(assignmentResults.flat());
+        console.log("ass: ", assignmentResults);
+        
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
         showToast("Không thể tải dữ liệu!", "error");
@@ -400,19 +405,19 @@ const TeacherDashboard = () => {
       bgDark: "dark:bg-yellow-900",
       showDetails: true,
     },
-    {
-      title: "Bài tập trong tuần",
-      value: getPublishedAssignmentsThisWeek().toString(),
-      icon: <FileBarChart className="w-6 h-6 text-red-600 dark:text-red-400" />,
-      path: "/teacher/assignments",
-      note:
-        getPublishedAssignmentsThisWeek() === 0
-          ? "*Chưa có bài tập tuần này"
-          : "",
-      bgLight: "bg-red-100",
-      bgDark: "dark:bg-red-900",
-      showDetails: true,
-    },
+    // {
+    //   title: "Bài tập trong tuần",
+    //   value: getPublishedAssignmentsThisWeek().toString(),
+    //   icon: <FileBarChart className="w-6 h-6 text-red-600 dark:text-red-400" />,
+    //   path: "/teacher/assignments",
+    //   note:
+    //     getPublishedAssignmentsThisWeek() === 0
+    //       ? "*Chưa có bài tập tuần này"
+    //       : "",
+    //   bgLight: "bg-red-100",
+    //   bgDark: "dark:bg-red-900",
+    //   showDetails: true,
+    // },
     {
       title: "ĐTB môn theo lớp",
       value: (() => {
@@ -575,7 +580,7 @@ const TeacherDashboard = () => {
 
       {/* Cards thống kê */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[...Array(5)].map((_, idx) => (
             <div
               key={idx}
@@ -587,7 +592,7 @@ const TeacherDashboard = () => {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {cards.map((card, idx) => (
             <div
               key={idx}
@@ -969,7 +974,7 @@ const TeacherDashboard = () => {
       )}
 
       {/* Biểu đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartColumn />
@@ -981,7 +986,7 @@ const TeacherDashboard = () => {
             <Bar ref={barChartRef} data={barData} options={chartOptions} />
           )}
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartLine />
             <h2 className="text-xl font-semibold">Bài tập trong các tuần</h2>
@@ -991,7 +996,7 @@ const TeacherDashboard = () => {
           ) : (
             <Line ref={lineChartRef} data={lineData} options={chartOptions} />
           )}
-        </div>
+        </div> */}
         {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
           <div className="flex items-center gap-2 mb-4">
             <ChartColumn />

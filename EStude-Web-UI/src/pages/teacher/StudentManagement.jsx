@@ -34,9 +34,24 @@ const StudentManagement = ({ classId }) => {
     onConfirm: null,
   });
 
+    // Lấy schoolId từ user
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const schoolId = user.school?.schoolId;
+
   useEffect(() => {
-    studentService.getAllStudents().then((res) => res && setAllStudents(res));
-  }, []);
+    const fetchStudents = async () => {
+      const res = await studentService.getAllStudents();
+      if (res) {
+        const filtered = res.filter(
+          (s) => s.school?.schoolId === schoolId // nếu `school` là object
+          // hoặc nếu là mảng: s.schools?.some((sch) => sch.schoolId === schoolId)
+        );
+        setAllStudents(filtered);
+      }
+    };
+    if (schoolId) fetchStudents();
+  }, [schoolId]);
+
 
   const fetchEnrollments = async () => {
     try {
@@ -207,12 +222,31 @@ const StudentManagement = ({ classId }) => {
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-        const studentMap = new Map(allStudents.map((s) => [s.studentCode, s]));
+        // Chuẩn hóa tất cả key trong từng dòng (phòng khi có ký tự lạ hoặc khoảng trắng)
+        const normalizedData = jsonData.map((row) => {
+          const normalizedRow = {};
+          for (const key in row) {
+            const cleanKey = key.trim().replace(/\uFEFF|\u200B/g, ""); // loại bỏ ký tự ẩn
+            normalizedRow[cleanKey] = row[key];
+          }
+          return normalizedRow;
+        });
+
+        const studentMap = new Map(
+          allStudents.map((s) => [String(s.studentCode).trim(), s])
+        );
+
         const validStudentIds = [];
         let errorCount = 0;
 
-        jsonData.forEach((row) => {
-          const code = row["Mã HS"];
+        normalizedData.forEach((row, index) => {
+          let rawCode = row["Mã HS"];
+
+          // Chuẩn hóa giá trị code
+          const code = String(rawCode ?? "")
+            .replace(/\uFEFF|\u200B/g, "") // loại bỏ ký tự ẩn
+            .trim();
+
           const student = studentMap.get(code);
 
           if (
@@ -222,6 +256,7 @@ const StudentManagement = ({ classId }) => {
             validStudentIds.push(student.userId);
           } else {
             errorCount++;
+            console.warn(`⚠️ Hàng ${index + 2}: Mã "${code}" không khớp với dữ liệu!`);
           }
         });
 
@@ -230,6 +265,7 @@ const StudentManagement = ({ classId }) => {
             classId,
             validStudentIds
           );
+
           const newStudents = enrollments.map((en) => ({
             enrollmentId: en.enrollmentId,
             userId: en.student.userId,
@@ -238,6 +274,7 @@ const StudentManagement = ({ classId }) => {
             studentCode: en.student.studentCode,
             email: en.student.email,
           }));
+
           setStudentsInClass((prev) => [...prev, ...newStudents]);
           showToast(
             `Import thành công ${newStudents.length} học sinh, ${errorCount} lỗi!`,
@@ -251,9 +288,11 @@ const StudentManagement = ({ classId }) => {
         showToast("Import thất bại!", "error");
       }
     };
+
     reader.readAsArrayBuffer(file);
     event.target.value = "";
   };
+
 
   const handleExportExcel = () => {
     const data = studentsInClass.map((s) => ({

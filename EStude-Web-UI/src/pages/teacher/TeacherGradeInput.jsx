@@ -13,6 +13,7 @@ import {
 import teacherService from "../../services/teacherService";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
+import aiService from "../../services/aiService";
 import { useToast } from "../../contexts/ToastContext";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -175,6 +176,8 @@ export default function TeacherGradeInput() {
     if (res && showToastMsg) {
       showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
     }
+    await aiService.predictSubjectsForStudent(student.userId);
+    await aiService.predictStudentGPA(student.userId);
     return res;
   };
 

@@ -16,8 +16,8 @@ import { useTranslation } from "react-i18next";
 
 export default function AdminSidebar() {
   const [open, setOpen] = useState(true);
+  const { darkMode } = useContext(ThemeContext);
   const { t, i18n } = useTranslation();
-  const { darkMode } = useContext(ThemeContext); // Sử dụng darkMode từ ThemeContext
   const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
 
   useEffect(() => {
@@ -28,12 +28,18 @@ export default function AdminSidebar() {
     }
   }, [i18n]);
 
-  const toggleLanguage = () => {
-    const newLang = currentLang === "vi" ? "en" : "vi";
-    i18n.changeLanguage(newLang);
-    localStorage.setItem("language", newLang);
-    setCurrentLang(newLang);
-  };
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1600) {
+        setOpen(false);
+      } else {
+        setOpen(true);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const menuItems = [
     { key: "overview", path: "/admin/dashboard", icon: <Home size={20} /> },
@@ -44,11 +50,11 @@ export default function AdminSidebar() {
       path: "/admin/classes",
       icon: <GraduationCap size={20} />,
     },
-    // {
-    //   key: "reports",
-    //   path: "/admin/statistics-reports",
-    //   icon: <FileBarChart size={20} />,
-    // },
+    {
+      key: "reports",
+      path: "/admin/statistics-reports",
+      icon: <FileBarChart size={20} />,
+    },
     {
       key: "notifications",
       path: "/admin/notifications",
@@ -65,14 +71,12 @@ export default function AdminSidebar() {
       {/* Toggle button */}
       <button
         className="p-4 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
-        onClick={() => {
-          if (window.innerWidth >= 720) setOpen(!open);
-        }}
+        onClick={() => setOpen((prev) => !prev)}
       >
         {!open && <Menu size={20} />}
         {open && (
           <img
-            src={darkMode ? bannerDark : bannerLight} // Sử dụng darkMode từ ThemeContext
+            src={darkMode ? bannerDark : bannerLight}
             alt="EStude Banner"
             className="w-[100px] sm:w-[130px]"
           />
@@ -81,7 +85,7 @@ export default function AdminSidebar() {
 
       {/* Menu items */}
       <nav className="flex-1 mt-2">
-        <ul className="flex flex-col gap-5 px-2">
+        <ul className="flex flex-col gap-3 px-2">
           {menuItems.map((item, idx) => (
             <li key={idx}>
               <NavLink

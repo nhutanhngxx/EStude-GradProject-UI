@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, PlusCircle, Save, Trash2, User, X } from "lucide-react";
+import { Eye, PlusCircle, Save, Trash2, User, Users, X } from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -121,15 +121,27 @@ const ManageClasses = () => {
   // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
+  // console.log("School ID của user: ", schoolId);
 
   // Load danh sách môn học
   useEffect(() => {
     const fetchSubjects = async () => {
       const result = await subjectService.getAllSubjects();
-      if (result) setSubjects(result);
+      // console.log("Subjects: ", result);
+
+      const filtered = result.filter(
+        (s) => Array.isArray(s.schools) && s.schools.some((sch) => sch.schoolId === schoolId)
+      );
+
+      // console.log("Filtered Subjects: ", filtered);
+      setSubjects(filtered);
     };
-    fetchSubjects();
-  }, []);
+
+    if (schoolId) {
+      fetchSubjects();
+    }
+  }, [schoolId]);
+
 
   // Load danh sách giáo viên
   useEffect(() => {
@@ -145,6 +157,8 @@ const ManageClasses = () => {
   const fetchClassesWithSubjects = useCallback(async () => {
     try {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
+      console.log("all class: ", allClasses);
+      
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
       if (!allClasses || !allClassSubjects) return;
 
@@ -419,6 +433,7 @@ const ManageClasses = () => {
       return true;
     });
 
+
   // Giao diện chính
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
@@ -449,21 +464,24 @@ const ManageClasses = () => {
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+                Học kỳ
+              </th>
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
                 Khối
               </th>
               <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
                 Tên lớp học
               </th>
-              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[25%] text-gray-900 dark:text-gray-100">
                 Giáo viên chủ nhiệm
               </th>
               <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
                 Sĩ số
               </th>
-              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
                 Môn học
               </th>
-              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
                 Tùy chọn
               </th>
             </tr>
@@ -476,6 +494,15 @@ const ManageClasses = () => {
                   key={c.classId}
                   className="border-t border-gray-200 dark:border-gray-700"
                 >
+                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                    {/* Học kỳ */}
+                    {c.terms && c.terms.length > 0 ? (
+                      c.terms.map((t) => <div key={t.termId}>{t.name}</div>)
+                    ) : (
+                      <div>Chưa có học kỳ</div>
+                    )}
+                  </td>
+
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {gradeMapping[c.gradeLevel] || c.gradeLevel}
                   </td>
@@ -528,14 +555,14 @@ const ManageClasses = () => {
                       className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline"
                     >
                       <Eye size={16} />
-                      <span className="hidden sm:inline">Xem</span>
+                      {/* <span className="hidden sm:inline">Xem</span> */}
                     </button>
                     <button
                       onClick={() => openModal("students", c)}
                       className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline"
                     >
-                      <User size={16} />
-                      <span className="hidden sm:inline">Danh sách lớp</span>
+                      <Users size={16} />
+                      {/* <span className="hidden sm:inline">Danh sách lớp</span> */}
                     </button>
                     <button
                       onClick={() => {
@@ -545,7 +572,7 @@ const ManageClasses = () => {
                       className="flex items-center gap-1 text-red-500 dark:text-red-400 hover:underline"
                     >
                       <Trash2 size={16} />
-                      <span className="hidden sm:inline">Xóa</span>
+                      {/* <span className="hidden sm:inline">Xóa</span> */}
                     </button>
                   </td>
                 </tr>
@@ -719,6 +746,8 @@ const ManageClasses = () => {
                   <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
                     Môn học
                   </label>
+
+                  {subjects ? (
                   <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
                     {subjects.map((subj) => {
                       const selected = selectedSubjects.find(
@@ -785,7 +814,11 @@ const ManageClasses = () => {
                         </div>
                       );
                     })}
-                  </div>
+                  </div> ) : (
+                    <span className="text-gray-500 dark:text-gray-400 italic">
+                      Hiện tại chưa có môn học nào.
+                    </span>
+                  )}
                 </div>
               </div>
             </form>

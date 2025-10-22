@@ -152,7 +152,7 @@ export default function AIDashboardScreen() {
               renderSubjectCard(subj, data)
             )
           ) : (
-            <Text style={styles.empty}>Chưa có dữ liệu từ AI ESTUDE</Text>
+            <Text style={styles.empty}>Chưa có dữ liệu phân tích</Text>
           )}
 
           {semesterAnalysis && (
