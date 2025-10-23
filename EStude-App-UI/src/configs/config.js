@@ -30,7 +30,7 @@ const getHostIP = () => {
 };
 
 const getBaseUrl = () => {
-  const DEFAULT_IP = "192.168.1.10";
+  const DEFAULT_IP = "192.168.100.210";
   // const DEFAULT_IP = "estude-backend-spring.fly.dev";
   const PORT = 8080;
 

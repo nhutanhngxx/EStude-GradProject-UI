@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import SearchBar from "../common/SearchBar";
 import NotificationBell from "../common/NotificationBell";
 import UserMenu from "../common/UserMenu";
 import { Sun, Moon, Globe } from "lucide-react";
@@ -23,11 +22,26 @@ const TeacherHeader = () => {
     const newLang = currentLang === "vi" ? "en" : "vi";
     i18n.changeLanguage(newLang);
     localStorage.setItem("language", newLang);
-    setCurrentLang(newLang); // cập nhật state để re-render
+    setCurrentLang(newLang);
   };
 
+  // Lấy thông tin người dùng từ localStorage (nếu cần)
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  console.log(user);
+  
+  // Lấy tên trường
+  const schoolName = user.school.schoolName || "";
+
   return (
-    <header className="flex justify-end items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+    <header className="flex justify-between items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      {/* Bên trái: Tên trường */}
+      <div>
+        <h1 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+          {schoolName}
+        </h1>
+      </div>
+
+      {/* Bên phải: Nút chức năng */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Toggle Dark Mode */}
         <button

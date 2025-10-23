@@ -26,9 +26,10 @@ export default function ExamReviewScreen({ route, navigation }) {
   const { user, token } = useContext(AuthContext);
   const { showToast } = useToast();
   const [submission, setSubmission] = useState(null);
-  const [aiResult, setAiResult] = useState(null); // Layer 1
+  const [aiResult, setAiResult] = useState(null); // Layer 1 - Feedback
   const [recommendations, setRecommendations] = useState(null); // Layer 2
-  const [practiceSubmissions, setPracticeSubmissions] = useState([]); // Lịch sử bài luyện tập
+  const [practiceReviews, setPracticeReviews] = useState([]); // Layer 3.5 - Lịch sử bài luyện tập
+  const [improvements, setImprovements] = useState([]); // Layer 4 - Đánh giá tiến bộ
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Details"); // Tab mặc định
 
@@ -39,14 +40,26 @@ export default function ExamReviewScreen({ route, navigation }) {
     const matchById = aiResult.detailedAnalysis.feedback.find(
       (f) => Number(f.question_id) === Number(question.questionId)
     );
-    if (matchById) return matchById;
+    
+    if (matchById) {
+      // console.log(`✅ Matched by ID - Question ${question.questionId}:`, matchById);
+      return matchById;
+    }
 
     // Fallback khớp theo nội dung câu hỏi
-    return aiResult.detailedAnalysis.feedback.find(
+    const matchByText = aiResult.detailedAnalysis.feedback.find(
       (f) =>
         f.question?.trim()?.toLowerCase() ===
         question.questionText?.trim()?.toLowerCase()
     );
+    
+    if (matchByText) {
+      console.log(`⚠️ Matched by text - Question ${question.questionId}:`, matchByText);
+      return matchByText;
+    }
+
+    console.log(`❌ No match found for Question ${question.questionId}:`, question.questionText);
+    return null;
   };
 
   useEffect(() => {
@@ -57,27 +70,81 @@ export default function ExamReviewScreen({ route, navigation }) {
         if (result?.data) {
           setSubmission(result.data);
 
-          const ai = await aiService.getAIAnalysisResultOfSubmission(
-            result.data.studentId,
-            result.data.assignmentId
+          const assignmentId = result.data.assignmentId;
+
+          // Lấy Feedback layer 1 theo assignment_id (trả về mảng)
+          const feedbackResults = await aiService.getAIFeedbackByAssignmentId(
+            assignmentId,
+            token
           );
-          if (ai) setAiResult(ai);
+          console.log("📊 Feedback Results:", feedbackResults);
+          
+          if (feedbackResults && Array.isArray(feedbackResults) && feedbackResults.length > 0) {
+            // Lấy kết quả mới nhất (resultId lớn nhất hoặc generatedAt gần nhất)
+            const latestFeedback = feedbackResults.reduce((latest, current) => {
+              return current.resultId > latest.resultId ? current : latest;
+            }, feedbackResults[0]);
+            
+            console.log("✅ Latest Feedback:", latestFeedback);
+            console.log("📝 Feedback List:", latestFeedback?.detailedAnalysis?.feedback);
+            
+            // Tính topic_breakdown nếu chưa có
+            if (!latestFeedback?.detailedAnalysis?.topic_breakdown && latestFeedback?.detailedAnalysis?.feedback) {
+              const topicMap = {};
+              latestFeedback.detailedAnalysis.feedback.forEach((f) => {
+                const topic = f.topic || "Không xác định";
+                if (!topicMap[topic]) {
+                  topicMap[topic] = { correct: 0, total: 0 };
+                }
+                topicMap[topic].total += 1;
+                if (f.is_correct) topicMap[topic].correct += 1;
+              });
+              
+              latestFeedback.detailedAnalysis.topic_breakdown = Object.keys(topicMap).map((topic) => ({
+                topic,
+                correct: topicMap[topic].correct,
+                total: topicMap[topic].total,
+                accuracy: topicMap[topic].total > 0 
+                  ? topicMap[topic].correct / topicMap[topic].total 
+                  : 0,
+              }));
+            }
+            
+            setAiResult(latestFeedback);
+          }
 
-          // const layer2Result = await aiService.getAIRecommendations(
-          //   result.data.studentId,
-          //   result.data.assignmentId
-          // );
-          // if (layer2Result)
-          //   setRecommendations(layer2Result.data || layer2Result);
+          // Lấy Recommendation layer 2 theo assignment_id (trả về mảng)
+          const recommendationResults =
+            await aiService.getAIRecommendationByAssignmentId(
+              assignmentId,
+              token
+            );
+          if (recommendationResults && Array.isArray(recommendationResults) && recommendationResults.length > 0) {
+            // Lấy kết quả mới nhất
+            const latestRecommendation = recommendationResults.reduce((latest, current) => {
+              return current.resultId > latest.resultId ? current : latest;
+            }, recommendationResults[0]);
+            setRecommendations(
+              latestRecommendation.detailedAnalysis || latestRecommendation
+            );
+          }
 
-          // const practiceResults =
-          //   await submissionService.getAllSubmissionsByStudentId(user.userId);
-          // const filteredPractices = practiceResults.filter(
-          //   (sub) =>
-          //     sub.assignmentType === "PRACTICE" &&
-          //     sub.relatedAssignmentId === result.data.assignmentId
-          // );
-          // setPracticeSubmissions(filteredPractices);
+          // Lấy Practice Review layer 3.5 theo assignment_id
+          const practiceReviewResult =
+            await aiService.getAIPracticeReviewByAssignmentId(
+              assignmentId,
+              token
+            );
+          if (practiceReviewResult && Array.isArray(practiceReviewResult)) {
+            setPracticeReviews(practiceReviewResult);
+          }
+
+          // Lấy Improvement layer 4 theo assignment_id
+          const improvementResult =
+            await aiService.getAIImprovementByAssignmentId(assignmentId, token);
+          if (improvementResult && Array.isArray(improvementResult)) {
+            setImprovements(improvementResult);
+          }
         }
       } catch (err) {
         console.error("Lỗi khi load dữ liệu:", err);
@@ -87,7 +154,7 @@ export default function ExamReviewScreen({ route, navigation }) {
       }
     };
     fetchData();
-  }, [submissionId, user.userId]);
+  }, [submissionId, token]);
 
   const handleGeneratePractice = async (rawTopic) => {
     let topic = rawTopic;
@@ -110,6 +177,7 @@ export default function ExamReviewScreen({ route, navigation }) {
     }
 
     const layer3Payload = {
+      assignment_id: submission.assignmentId,
       subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
       topics: [topic],
       difficulty: "easy",
@@ -134,8 +202,8 @@ export default function ExamReviewScreen({ route, navigation }) {
       }
 
       navigation.navigate("PracticeQuiz", {
-        quiz: quizData,
-        previousFeedback: aiResult?.detailedAnalysis?.feedback,
+        quiz: { ...quizData, assignmentId: submission.assignmentId },
+        previousFeedback: aiResult, // Truyền toàn bộ object Layer 1 (có resultId, detailedAnalysis)
       });
     } catch (error) {
       console.error("Lỗi gọi Layer 3:", error);
@@ -145,49 +213,28 @@ export default function ExamReviewScreen({ route, navigation }) {
     }
   };
 
-  const handleViewPractice = (practiceSubmissionId) => {
-    navigation.navigate("ExamReview", { submissionId: practiceSubmissionId });
+  const handleViewPractice = (practiceReviewData) => {
+    // Hiển thị chi tiết của practice review
+    navigation.navigate("PracticeReviewDetail", { practiceReview: practiceReviewData });
   };
 
   const handleEvaluateProgress = async () => {
-    const previousResults =
-      aiResult?.detailedAnalysis?.feedback?.map((f) => ({
-        topic: f.topic,
-        accuracy: f.is_correct ? 100 : 0,
-      })) || [];
-
-    const practiceResults = practiceSubmissions.flatMap((sub) =>
-      sub.answers.map((a) => ({
-        topic: a.question.topic || "Chưa xác định",
-        accuracy: a.isCorrect ? 100 : 0,
-      }))
-    );
-
-    const layer4Payload = {
-      subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
-      student_id: user.userId,
-      previous_results: previousResults,
-      new_results: practiceResults,
-    };
-
-    try {
-      setLoading(true);
-      const layer4Result = await aiService.layer4(layer4Payload, token);
-      navigation.navigate("Improvement", {
-        evaluation: layer4Result,
-        quiz: {
-          subject:
-            aiResult?.detailedAnalysis?.subject || submission.assignmentName,
-          assignmentId: submission.assignmentId,
-        },
-        previousFeedback: aiResult?.detailedAnalysis?.feedback,
-      });
-    } catch (error) {
-      console.error("Lỗi gọi Layer 4:", error);
-      showToast("Lỗi khi đánh giá tiến bộ.", { type: "error" });
-    } finally {
-      setLoading(false);
+    if (!improvements || improvements.length === 0) {
+      showToast("Chưa có dữ liệu đánh giá tiến bộ.", { type: "warning" });
+      return;
     }
+
+    // Lấy đánh giá tiến bộ mới nhất
+    const latestImprovement = improvements[0];
+
+    navigation.navigate("Improvement", {
+      evaluation: latestImprovement,
+      quiz: {
+        subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
+        assignmentId: submission.assignmentId,
+      },
+      previousFeedback: aiResult?.detailedAnalysis?.feedback,
+    });
   };
 
   if (loading && !submission) {
@@ -269,6 +316,19 @@ export default function ExamReviewScreen({ route, navigation }) {
           <View style={styles.aiSummary}>
             <Text style={styles.aiScoreLabel}>Điểm của bạn</Text>
             <Text style={styles.aiScoreValue}>{submission.score ?? "-"}</Text>
+            {aiResult?.detailedAnalysis?.summary && (
+              <View style={{ marginTop: 12, width: "100%" }}>
+                <Text style={styles.summaryText}>
+                  Tổng số câu hỏi: {aiResult.detailedAnalysis.summary.total_questions || 0}
+                </Text>
+                <Text style={styles.summaryText}>
+                  Số câu đúng: {aiResult.detailedAnalysis.summary.correct_count || 0}
+                </Text>
+                <Text style={styles.summaryText}>
+                  Độ chính xác: {aiResult.detailedAnalysis.summary.accuracy_percentage?.toFixed(1) || 0}%
+                </Text>
+              </View>
+            )}
             <Text style={styles.aiRecommend}>
               {aiResult?.comment ?? "Không có nhận xét."}
             </Text>
@@ -319,15 +379,15 @@ export default function ExamReviewScreen({ route, navigation }) {
                     {a.isCorrect ? "ĐÚNG" : "SAI"}
                   </Text>
                 </View>
-                {/* {aiFb && (
+                {aiFb && (
                   <View
-                    style={[styles.feedbackBox, { backgroundColor: "#fff" }]}
+                    style={[styles.feedbackBox, { backgroundColor: "#f5f5f5" }]}
                   >
                     <Text style={styles.aiAnalysisComment}>
-                      Đáp án của bạn: {aiFb.student_answer || "Chưa trả lời"}
+                      📝 Đáp án của bạn: {aiFb.student_answer || "Chưa trả lời"}
                     </Text>
                     <Text style={styles.aiAnalysisComment}>
-                      Đáp án đúng: {aiFb.correct_answer || "Không có dữ liệu"}
+                      ✅ Đáp án đúng: {aiFb.correct_answer || "Không có dữ liệu"}
                     </Text>
                     <Text style={styles.aiAnalysisComment}>
                       <Ionicons name="sparkles" size={15} color="green" /> Giải
@@ -336,8 +396,19 @@ export default function ExamReviewScreen({ route, navigation }) {
                         aiFb.feedback ||
                         "Không có giải thích."}
                     </Text>
+                    {aiFb.topic && aiFb.topic !== "Không xác định" && (
+                      <Text style={styles.aiAnalysisComment}>
+                        📚 Chủ đề: {aiFb.topic}
+                        {aiFb.subtopic ? ` - ${aiFb.subtopic}` : ""}
+                      </Text>
+                    )}
+                    {aiFb.difficulty_level && (
+                      <Text style={styles.aiAnalysisComment}>
+                        📊 Độ khó: {aiFb.difficulty_level}
+                      </Text>
+                    )}
                   </View>
-                )} */}
+                )}
               </View>
             );
           })}
@@ -373,35 +444,64 @@ export default function ExamReviewScreen({ route, navigation }) {
         </ScrollView>
       ) : (
         <ScrollView style={{ flex: 1, padding: 12 }}>
-          {practiceSubmissions.length > 0 ? (
+          {practiceReviews.length > 0 ? (
             <>
-              {practiceSubmissions.map((prac, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.practiceCard}
-                  onPress={() => handleViewPractice(prac.submissionId)}
-                >
-                  <Text style={styles.pracTitle}>
-                    {prac.assignmentName || `Bài luyện tập ${idx + 1}`}
-                  </Text>
-                  <Text style={styles.pracDate}>
-                    Ngày nộp:{" "}
-                    {new Date(prac.submittedAt).toLocaleString("vi-VN")}
-                  </Text>
-                  <Text style={styles.pracScore}>
-                    Điểm: {prac.score ?? "-"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={styles.sectionTitle}>
+                Lịch sử bài luyện tập ({practiceReviews.length})
+              </Text>
+              {practiceReviews.map((review, idx) => {
+                const detailedAnalysis = review.detailedAnalysis || {};
+                const summary = detailedAnalysis.summary || {};
+                return (
+                  <TouchableOpacity
+                    key={review.resultId || idx}
+                    style={styles.practiceCard}
+                    onPress={() => handleViewPractice(review)}
+                  >
+                    <Text style={styles.pracTitle}>
+                      {detailedAnalysis.subject || "Bài luyện tập"} - Lần {idx + 1}
+                    </Text>
+                    <Text style={styles.pracDate}>
+                      Ngày:{" "}
+                      {detailedAnalysis.timestamp
+                        ? new Date(detailedAnalysis.timestamp).toLocaleString(
+                            "vi-VN"
+                          )
+                        : "N/A"}
+                    </Text>
+                    <View style={{ flexDirection: "row", marginTop: 4 }}>
+                      <Text style={styles.pracScore}>
+                        Tổng câu hỏi: {summary.total_questions || 0}
+                      </Text>
+                      <Text style={[styles.pracScore, { marginLeft: 16 }]}>
+                        Đúng: {summary.correct_count || 0}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.pracScore,
+                        { marginTop: 4, fontWeight: "700" },
+                      ]}
+                    >
+                      Độ chính xác:{" "}
+                      {summary.accuracy_percentage?.toFixed(1) || 0}%
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
               <TouchableOpacity
                 style={styles.actionBtn}
                 onPress={handleEvaluateProgress}
-                disabled={loading}
+                disabled={loading || improvements.length === 0}
               >
                 {loading ? (
                   <ActivityIndicator size="large" color="#fff" />
                 ) : (
-                  <Text style={styles.actionText}>Đánh giá tiến bộ</Text>
+                  <Text style={styles.actionText}>
+                    {improvements.length > 0
+                      ? "Xem đánh giá tiến bộ"
+                      : "Chưa có đánh giá tiến bộ"}
+                  </Text>
                 )}
               </TouchableOpacity>
             </>
@@ -486,6 +586,12 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     color: "#555",
     textAlign: "justify",
+  },
+  summaryText: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 4,
+    fontWeight: "500",
   },
   questionBlock: {
     padding: 16,

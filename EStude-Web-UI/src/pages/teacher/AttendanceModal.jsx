@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowLeft, CalendarDays, X, PlusCircle } from "lucide-react";
+import { ArrowLeft, CalendarDays, X, PlusCircle, Save } from "lucide-react";
 import attendanceService from "../../services/attendanceService";
 import studentService from "../../services/studentService";
 import classSubjectService from "../../services/classSubjectService";
@@ -348,7 +348,7 @@ export default function AttendanceModal({
                   className="w-full border border-gray-300 dark:border-gray-600 rounded px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                 />
               </div>
-              <div className="flex items-center gap-2">
+              {/* <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   checked={useGPS}
@@ -358,7 +358,7 @@ export default function AttendanceModal({
                 <label className="text-gray-900 dark:text-gray-100">
                   Bật GPS
                 </label>
-              </div>
+              </div> */}
               {useGPS && gps.lat && (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Vĩ độ: {gps.lat.toFixed(5)}, Kinh độ: {gps.lng.toFixed(5)}
@@ -367,12 +367,13 @@ export default function AttendanceModal({
               <button
                 onClick={() => setConfirmOpen(true)}
                 disabled={new Date(startTime) >= new Date(endTime)}
-                className={`px-8 py-2 rounded-lg transition ${
+                className={`px-4 py-3 rounded-lg transition text-sm flex justify-center items-center gap-2 ${
                   new Date(startTime) >= new Date(endTime)
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-green-600 hover:bg-green-700 dark:hover:bg-green-500 text-white"
                 }`}
               >
+                <Save size={16} />
                 Lưu
               </button>
             </div>

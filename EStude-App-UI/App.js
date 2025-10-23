@@ -29,6 +29,7 @@ import DetailStudyScreen from "./src/screens/DetailStudyScreen";
 import { SocketProvider } from "./src/contexts/SocketContext";
 import PracticeQuizScreen from "./src/screens/Assignment/PracticeQuizScreen";
 import ImprovementScreen from "./src/screens/Assignment/ImprovementScreen";
+import PracticeReviewDetailScreen from "./src/screens/Assignment/PracticeReviewDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -150,7 +151,13 @@ function AppNavigator() {
           <Stack.Screen
             name="Improvement"
             component={ImprovementScreen}
-            options={{ title: "Đánh giá tiến bộ", headerTitleAlign: "center" }}
+            options={{ title: " bộ", headerTitleAlign: "center" }}
+          />
+
+          <Stack.Screen
+            name="PracticeReviewDetail"
+            component={PracticeReviewDetailScreen}
+            options={{ title: "Chi tiết bài luyện tập", headerShown: false }}
           />
         </>
       )}
