@@ -30,6 +30,8 @@ import { SocketProvider } from "./src/contexts/SocketContext";
 import PracticeQuizScreen from "./src/screens/Assignment/PracticeQuizScreen";
 import ImprovementScreen from "./src/screens/Assignment/ImprovementScreen";
 import PracticeReviewDetailScreen from "./src/screens/Assignment/PracticeReviewDetailScreen";
+import CompetencyMapScreen from "./src/screens/CompetencyMapScreen";
+import SubjectCompetencyDetailScreen from "./src/screens/SubjectCompetencyDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -158,6 +160,18 @@ function AppNavigator() {
             name="PracticeReviewDetail"
             component={PracticeReviewDetailScreen}
             options={{ title: "Chi tiết bài luyện tập", headerShown: true }}
+          />
+
+          <Stack.Screen
+            name="CompetencyMap"
+            component={CompetencyMapScreen}
+            options={{ headerShown: false }}
+          />
+
+          <Stack.Screen
+            name="SubjectCompetencyDetail"
+            component={SubjectCompetencyDetailScreen}
+            options={{ headerShown: false }}
           />
         </>
       )}

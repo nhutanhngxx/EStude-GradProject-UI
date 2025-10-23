@@ -184,6 +184,17 @@ export default function ExamReviewScreen({ route, navigation }) {
   }, [submissionId, token]);
 
   const handleGeneratePractice = async (rawTopic) => {
+    // Kiểm tra aiResult có sẵn không
+    if (!aiResult || !aiResult.resultId) {
+      showToast("Đang tải dữ liệu phân tích. Vui lòng thử lại sau giây lát.", {
+        type: "warning",
+      });
+      console.warn("⚠️ aiResult not ready:", aiResult);
+      return;
+    }
+    
+    console.log("✅ aiResult available with resultId:", aiResult.resultId);
+    
     let topic = rawTopic;
     if (!topic) {
       showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {

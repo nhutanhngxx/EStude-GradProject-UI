@@ -185,34 +185,15 @@ export default function PracticeQuizScreen({ navigation, route }) {
   const buildAiPayloadFromQuiz = () => {
     const quizData = normalizedQuiz || quiz;
 
-    // Filter và chỉ gửi các câu hỏi có correct_answer hợp lệ
-    const validQuestions = (quizData.questions || []).filter((q) => {
-      const correctIndex = (q.options || []).findIndex(
-        (opt) => opt.isCorrect === true
-      );
-      const hasCorrectAnswer = correctIndex >= 0;
-
-      if (!hasCorrectAnswer) {
-        console.warn(
-          `⚠️ Question skipped - no correct answer found:`,
-          q.questionText
-        );
-      }
-
-      return hasCorrectAnswer;
-    });
-
     console.log(
-      `📊 Valid questions: ${validQuestions.length}/${
-        quizData.questions?.length || 0
-      }`
+      `📊 Building payload from ${quizData.questions?.length || 0} questions`
     );
 
     return {
       assignment_id: String(quizData.assignmentId || "practice"),
       student_name: user?.fullName || user?.name || "Học sinh",
       subject: quizData.subject || "Chưa xác định",
-      questions: validQuestions.map((q, idx) => {
+      questions: (quizData.questions || []).map((q, idx) => {
         const key = q.questionId;
         const selected = answers[key] || [];
         const chosenOpt = Array.isArray(selected) ? selected[0] : selected;
@@ -223,10 +204,27 @@ export default function PracticeQuizScreen({ navigation, route }) {
           (opt) => opt.isCorrect === true
         );
 
+        // Nếu không tìm thấy correct_answer từ isCorrect, thử lấy từ raw question
+        let correctAnswer = correctIndex >= 0 ? correctIndex + 1 : null;
+
+        if (correctAnswer === null && q.correct_answer) {
+          correctAnswer = Number(q.correct_answer);
+          console.log(
+            `📝 Using correct_answer from raw question ${idx + 1}: ${correctAnswer}`
+          );
+        }
+
+        if (correctAnswer === null) {
+          console.warn(
+            `⚠️ Question ${idx + 1} has no correct_answer, using 1 as default`
+          );
+          correctAnswer = 1; // Default fallback để tránh null
+        }
+
         return {
           question: q.questionText,
           options: optionsAsStrings,
-          correct_answer: correctIndex + 1, // 1-based, guaranteed >= 1 vì đã filter
+          correct_answer: correctAnswer, // 1-based, guaranteed number
           student_answer: chosenIndex >= 0 ? chosenIndex + 1 : null, // 1-based
         };
       }),
@@ -368,7 +366,9 @@ export default function PracticeQuizScreen({ navigation, route }) {
   };
 
   const handleEvaluateProgress = async () => {
-    console.log("layer1Result: ", aiResult);
+    console.log("🔍 handleEvaluateProgress called");
+    console.log("📊 aiResult (Layer 3.5):", JSON.stringify(aiResult, null, 2));
+    console.log("📊 previousFeedback (Layer 1):", JSON.stringify(previousFeedback, null, 2));
 
     if (!aiResult?.detailedAnalysis) {
       showToast("Chưa có dữ liệu bài luyện tập để đánh giá.", {
@@ -381,6 +381,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
     const layer35ResultId = aiResult.detailedAnalysis?.result_id;
 
     if (!layer35ResultId) {
+      console.error("❌ Missing layer35ResultId");
       showToast("Không tìm thấy result_id từ bài luyện tập.", {
         type: "error",
       });
@@ -391,7 +392,19 @@ export default function PracticeQuizScreen({ navigation, route }) {
     const layer1Feedback = previousFeedback; // Đây là object Layer 1 từ AssignmentReviewScreen
     const previousResultsId = layer1Feedback?.resultId;
 
+    console.log("🔑 layer35ResultId:", layer35ResultId);
+    console.log("🔑 previousResultsId:", previousResultsId);
+    console.log("📦 layer1Feedback structure:", {
+      hasResultId: !!layer1Feedback?.resultId,
+      hasDetailedAnalysis: !!layer1Feedback?.detailedAnalysis,
+      hasTopicBreakdown: !!layer1Feedback?.detailedAnalysis?.topic_breakdown,
+      hasFeedback: !!layer1Feedback?.detailedAnalysis?.feedback,
+    });
+
     if (!previousResultsId) {
+      console.error("❌ Missing previousResultsId from previousFeedback");
+      console.error("previousFeedback type:", typeof previousFeedback);
+      console.error("previousFeedback keys:", previousFeedback ? Object.keys(previousFeedback) : "null");
       showToast("Không tìm thấy dữ liệu bài làm gốc (Layer 1).", {
         type: "error",
       });

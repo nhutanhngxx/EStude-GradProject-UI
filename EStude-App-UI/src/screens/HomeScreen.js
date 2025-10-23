@@ -22,14 +22,16 @@ import ProgressBar from "../components/common/ProgressBar";
 import StudyOverviewCard from "../components/common/StudyOverviewCard";
 import TodayScheduleCard from "../components/common/TodayScheduleCard";
 import RecentAssignmentsCard from "../components/common/RecentAssignmentsCard";
+import CompetencyOverviewCard from "../components/common/CompetencyOverviewCard";
 import studentStudyService from "../services/studentStudyService";
 import scheduleService from "../services/scheduleService";
+import aiService from "../services/aiService";
 
 import bannerLight from "../assets/images/banner-light.png";
 import UserHeader from "../components/common/UserHeader";
 
 export default function HomeStudentScreen({ navigation }) {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const { showToast } = useToast();
   const [loadingAssignments, setLoadingAssignments] = useState(true);
   const [recentAssignments, setRecentAssignments] = useState([]);
@@ -44,6 +46,8 @@ export default function HomeStudentScreen({ navigation }) {
   const [todayPlan, setTodayPlan] = useState([]);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [competencyStats, setCompetencyStats] = useState(null);
+  const [loadingCompetency, setLoadingCompetency] = useState(true);
 
   const fetchAssignments = async () => {
     try {
@@ -235,6 +239,79 @@ export default function HomeStudentScreen({ navigation }) {
     }
   };
 
+  const fetchCompetencyStats = async () => {
+    try {
+      setLoadingCompetency(true);
+      const improvements = await aiService.getAllUserImprovements(token);
+      
+      if (Array.isArray(improvements) && improvements.length > 0) {
+        // Process similar to CompetencyMapScreen
+        const subjectMap = {};
+        
+        improvements.forEach((item) => {
+          const subject = item.detailedAnalysis?.subject || "Không rõ";
+          
+          if (!subjectMap[subject]) {
+            subjectMap[subject] = {
+              subject,
+              topics: {},
+            };
+          }
+          
+          const topics = item.detailedAnalysis?.topics || [];
+          topics.forEach((topic) => {
+            const topicName = topic.topic;
+            subjectMap[subject].topics[topicName] = {
+              latestAccuracy: topic.new_accuracy,
+              status: topic.status,
+            };
+          });
+        });
+        
+        const subjectStats = Object.values(subjectMap).map((subjectData) => {
+          const topicsList = Object.values(subjectData.topics);
+          const totalAccuracy = topicsList.reduce(
+            (sum, t) => sum + (t.latestAccuracy || 0),
+            0
+          );
+          const avgAccuracy = topicsList.length > 0 
+            ? totalAccuracy / topicsList.length 
+            : 0;
+          
+          const mastered = topicsList.filter(t => t.latestAccuracy >= 80).length;
+          const progressing = topicsList.filter(t => t.latestAccuracy >= 50 && t.latestAccuracy < 80).length;
+          const needsWork = topicsList.filter(t => t.latestAccuracy < 50).length;
+          
+          return {
+            avgAccuracy: Math.round(avgAccuracy * 10) / 10,
+            mastered,
+            progressing,
+            needsWork,
+            totalTopics: topicsList.length,
+          };
+        });
+        
+        const stats = {
+          totalSubjects: subjectStats.length,
+          totalTopics: subjectStats.reduce((sum, s) => sum + s.totalTopics, 0),
+          totalMastered: subjectStats.reduce((sum, s) => sum + s.mastered, 0),
+          totalProgressing: subjectStats.reduce((sum, s) => sum + s.progressing, 0),
+          totalNeedsWork: subjectStats.reduce((sum, s) => sum + s.needsWork, 0),
+          subjectStats,
+        };
+        
+        setCompetencyStats(stats);
+      } else {
+        setCompetencyStats(null);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải competency stats:", error);
+      setCompetencyStats(null);
+    } finally {
+      setLoadingCompetency(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -243,6 +320,7 @@ export default function HomeStudentScreen({ navigation }) {
         fetchAttendance(),
         fetchOverview(),
         fetchTodaySchedule(),
+        fetchCompetencyStats(),
       ]);
       showToast("Dữ liệu đã được làm mới!", { type: "success" });
     } catch (error) {
@@ -258,12 +336,14 @@ export default function HomeStudentScreen({ navigation }) {
     fetchAttendance();
     fetchOverview();
     fetchTodaySchedule();
+    fetchCompetencyStats();
   }, []);
 
   const quickActions = [
     { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
     { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
     { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
+    { id: "qa4", label: "Năng lực", iconName: "area-chart", color: "#9C27B0" },
   ];
 
   return (
@@ -286,7 +366,7 @@ export default function HomeStudentScreen({ navigation }) {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Các tác vụ nhanh</Text>
           <View style={styles.quickActionRow}>
-            {quickActions.slice(0, 3).map((action) => (
+            {quickActions.map((action) => (
               <TouchableOpacity
                 key={action.id}
                 style={styles.quickAction}
@@ -300,6 +380,9 @@ export default function HomeStudentScreen({ navigation }) {
                       break;
                     case "qa3":
                       navigation.navigate("ScheduleList");
+                      break;
+                    case "qa4":
+                      navigation.navigate("CompetencyMap");
                       break;
                   }
                 }}
@@ -348,6 +431,14 @@ export default function HomeStudentScreen({ navigation }) {
           />
         ) : (
           <Text style={styles.cardTitle}>Không có dữ liệu học tập</Text>
+        )}
+
+        {/* Bản đồ Năng lực */}
+        {!loadingCompetency && competencyStats && (
+          <CompetencyOverviewCard
+            stats={competencyStats}
+            onPress={() => navigation.navigate("CompetencyMap")}
+          />
         )}
 
         {loadingAssignments ? (
