@@ -79,21 +79,24 @@ export default function PracticeQuizScreen({ navigation, route }) {
   const safeGet = (v, fallback = null) =>
     v === undefined || v === null ? fallback : v;
 
-  const handleSelect = (q, optText) => {
+  const handleSelect = (q, selectedOption) => {
     if (submitted) return;
-    setAnswers((prev) => {
-      const key = q.questionId ?? q.question_id ?? q.id;
-      const prevAns = prev[key] || [];
-      const multi = Array.isArray(q.answers) ? q.answers.length > 1 : false;
-      if (multi) {
-        if (prevAns.includes(optText)) {
-          return { ...prev, [key]: prevAns.filter((o) => o !== optText) };
-        } else {
-          return { ...prev, [key]: [...prevAns, optText] };
-        }
-      }
-      return { ...prev, [key]: [optText] };
-    });
+
+    const key = q.questionId ?? q.question_id ?? q.id ?? q.question;
+    const optionText =
+      typeof selectedOption === "string"
+        ? selectedOption
+        : selectedOption.optionText;
+    const currentAnswers = { ...answers };
+
+    // Nếu đã chọn thì bỏ chọn
+    if (currentAnswers[key]?.includes(optionText)) {
+      currentAnswers[key] = currentAnswers[key].filter((o) => o !== optionText);
+    } else {
+      currentAnswers[key] = [optionText];
+    }
+
+    setAnswers(currentAnswers);
   };
 
   const toggleHint = (questionKey) => {
@@ -305,14 +308,16 @@ export default function PracticeQuizScreen({ navigation, route }) {
               </Text>
 
               {(q.options || []).map((opt, optIdx) => {
-                const optText = typeof opt === "string" ? opt : opt.optionText;
-                const selected = (answers[key] || []).includes(optText);
+                const optionText =
+                  typeof opt === "string" ? opt : opt.optionText;
+                const selected = (answers[key] || []).includes(optionText);
+
                 return (
                   <TouchableOpacity
-                    key={`opt_${index}_${optIdx}_${opt.optionText}`}
+                    key={`opt_${index}_${optIdx}`}
                     disabled={submitted}
                     style={[styles.option, selected && styles.optionSelected]}
-                    onPress={() => handleSelect(q, opt.optionText)}
+                    onPress={() => handleSelect(q, optionText)}
                   >
                     <Text
                       style={[
@@ -320,7 +325,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
                         selected && styles.optionTextSelected,
                       ]}
                     >
-                      {optText}
+                      {optionText}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -545,10 +550,24 @@ const styles = StyleSheet.create({
     backgroundColor: themeColors.primary,
     borderColor: themeColors.primary,
   },
-  optionText: { fontSize: 14, color: themeColors.text },
-  optionTextSelected: { color: "#fff", fontWeight: "bold" },
-  hintText: { color: themeColors.secondary, fontStyle: "italic", marginTop: 8 },
-  hintExplanation: { color: "#666", fontSize: 13, marginTop: 4 },
+  optionText: {
+    fontSize: 14,
+    color: themeColors.text,
+  },
+  optionTextSelected: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  hintText: {
+    color: themeColors.secondary,
+    fontStyle: "italic",
+    marginTop: 8,
+  },
+  hintExplanation: {
+    color: "#666",
+    fontSize: 13,
+    marginTop: 4,
+  },
   submitBtn: {
     backgroundColor: themeColors.secondary,
     padding: 16,
@@ -556,7 +575,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginVertical: 12,
   },
-  submitText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
+  submitText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
   evaluateBtn: {
     backgroundColor: themeColors.primary,
     padding: 16,
@@ -570,16 +593,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  loadingText: { marginTop: 10, fontSize: 16, color: themeColors.text },
-  resultContainer: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: themeColors.text,
+  },
+  resultContainer: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#fff",
+  },
   summaryBox: {
     backgroundColor: "#f1f8e9",
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
   },
-  subjectTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  summaryText: { fontSize: 15, color: "#333", marginVertical: 2 },
+  subjectTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  summaryText: {
+    fontSize: 15,
+    color: "#333",
+    marginVertical: 2,
+  },
   feedbackCard: {
     padding: 14,
     borderRadius: 12,
