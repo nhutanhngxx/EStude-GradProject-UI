@@ -375,6 +375,7 @@ export default function ExamReviewScreen({ route, navigation }) {
                     size={18}
                     color={themeColors.secondary}
                   />
+
                   <Text style={styles.summaryText}>
                     Số câu đúng:{" "}
                     <Text style={styles.summaryValue}>
@@ -385,7 +386,7 @@ export default function ExamReviewScreen({ route, navigation }) {
 
                 <View style={styles.summaryRow}>
                   <Ionicons
-                    name="bullseye-outline"
+                    name="eye-outline"
                     size={18}
                     color={themeColors.secondary}
                   />
