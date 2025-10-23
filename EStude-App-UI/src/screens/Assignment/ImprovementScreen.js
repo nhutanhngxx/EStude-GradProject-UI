@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useToast } from "../../contexts/ToastContext";
+import { AuthContext } from "../../contexts/AuthContext";
 import aiService from "../../services/aiService";
 
 const themeColors = {
@@ -22,7 +23,11 @@ const themeColors = {
 export default function ImprovementScreen({ navigation, route }) {
   const { evaluation, quiz, previousFeedback } = route.params; // evaluation từ Layer 4, quiz từ PracticeQuizScreen, previousFeedback từ ExamDoingScreen
   const { showToast } = useToast();
+  const { token } = useContext(AuthContext);
   const [showMotivation, setShowMotivation] = useState(false);
+
+  console.log("🎯 Improvement Screen - evaluation:", JSON.stringify(evaluation, null, 2));
+  console.log("🎯 Improvement Screen - quiz:", JSON.stringify(quiz, null, 2));
 
   useEffect(() => {
     navigation.setOptions({
@@ -37,37 +42,65 @@ export default function ImprovementScreen({ navigation, route }) {
       ),
     });
 
+    // Kiểm tra evaluation trước khi sử dụng
+    if (!evaluation) {
+      showToast("Không có dữ liệu đánh giá tiến bộ.", { type: "error" });
+      return;
+    }
+
     // Hiển thị thông báo động viên nếu cải thiện tổng thể > 20%
-    if (evaluation.overall_improvement > 20) {
+    if (evaluation?.overall_improvement?.improvement > 20) {
       setShowMotivation(true);
       setTimeout(() => setShowMotivation(false), 5000); // Tắt sau 5s
     }
   }, [navigation, evaluation]);
 
   const handleMorePractice = async () => {
+    if (!evaluation || !Array.isArray(evaluation.topics)) {
+      showToast("Không có dữ liệu để tạo bài luyện tập.", { type: "error" });
+      return;
+    }
+
     // Lấy các chủ đề yếu (new_accuracy < 70)
-    const weakTopics = evaluation.improvement
+    const weakTopics = evaluation.topics
       .filter((item) => item.new_accuracy < 70)
       .map((item) => item.topic);
 
     if (weakTopics.length === 0) {
       showToast("Bạn đã làm tốt! Hãy thử bài thi mới.", { type: "success" });
-      navigation.navigate("ExamDoing", { exam: quiz, submitted: false });
+      navigation.goBack();
       return;
     }
 
     const layer3Payload = {
-      subject: quiz.subject,
+      assignment_id: quiz?.assignmentId || "practice",
+      subject: evaluation?.subject || quiz?.subject || "Chưa xác định",
       topics: weakTopics,
-      difficulty: "MEDIUM",
+      difficulty: "medium",
       num_questions: 5,
     };
 
     try {
-      const layer3Result = await aiService.layer3(layer3Payload);
+      const layer3Result = await aiService.layer3(layer3Payload, token);
+      const quizData = layer3Result?.data || layer3Result;
+      
+      // Tạo previousFeedback object từ evaluation hiện tại để truyền cho lần practice tiếp theo
+      const newPreviousFeedback = {
+        resultId: evaluation?.result_id,
+        detailedAnalysis: {
+          subject: evaluation?.subject,
+          topic_breakdown: evaluation?.topics?.map(t => ({
+            topic: t.topic,
+            accuracy: t.new_accuracy / 100, // Convert về 0-1
+            correct: 0, // Không có thông tin chi tiết
+            total: 0,
+          })) || [],
+        }
+      };
+      
       navigation.navigate("PracticeQuiz", {
-        quiz: layer3Result,
-        previousFeedback: evaluation.improvement, // Truyền để dùng lại ở Layer 4 sau
+        quiz: { ...quizData, assignmentId: quiz?.assignmentId },
+        previousFeedback: newPreviousFeedback,
       });
     } catch (error) {
       console.error(error);
@@ -77,101 +110,160 @@ export default function ImprovementScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
-        {/* Thông báo động viên */}
-        {showMotivation && (
-          <View style={styles.motivationBox}>
-            <Text style={styles.motivationText}>
-              🎉 Tuyệt vời! Bạn đã cải thiện đáng kể!
-            </Text>
-          </View>
-        )}
-
-        {/* Tóm tắt */}
-        <View style={styles.summaryBox}>
-          <Text style={styles.subjectTitle}>
-            Đánh giá tiến bộ: {quiz.subject}
+      {!evaluation ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
+          <Text style={{ fontSize: 16, color: themeColors.text, textAlign: "center" }}>
+            Không có dữ liệu đánh giá tiến bộ.
           </Text>
-          <Text style={styles.summaryText}>
-            Cải thiện tổng thể: {evaluation.overall_improvement.toFixed(1)}%
-          </Text>
-          <Text style={styles.summaryComment}>
-            💬 {evaluation.comment || "Tốt lắm, tiếp tục cố gắng!"}
-          </Text>
-        </View>
-
-        {/* Thanh tiến trình cho từng chủ đề */}
-        {evaluation.improvement.map((item, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.improvementCard,
-              {
-                backgroundColor:
-                  item.new_accuracy >= item.previous_accuracy
-                    ? "#E8F5E9"
-                    : "#FFEBEE",
-              },
-            ]}
+          <TouchableOpacity
+            style={[styles.actionBtn, { marginTop: 20 }]}
+            onPress={() => navigation.goBack()}
           >
-            <Text style={styles.topicTitle}>{item.topic}</Text>
-            <Text style={styles.accuracyText}>
-              Trước: {item.previous_accuracy.toFixed(1)}%
-            </Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.min(item.previous_accuracy, 100)}%`,
-                    backgroundColor: themeColors.secondary,
-                  },
-                ]}
-              />
+            <Text style={styles.actionText}>Quay lại</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={{ flex: 1, padding: 16 }}>
+          {/* Thông báo động viên */}
+          {showMotivation && (
+            <View style={styles.motivationBox}>
+              <Text style={styles.motivationText}>
+                🎉 Tuyệt vời! Bạn đã cải thiện đáng kể!
+              </Text>
             </View>
-            <Text style={styles.accuracyText}>
-              Sau: {item.new_accuracy.toFixed(1)}%
+          )}
+
+          {/* Tóm tắt */}
+          <View style={styles.summaryBox}>
+            <Text style={styles.subjectTitle}>
+              Đánh giá tiến bộ: {evaluation?.subject || quiz?.subject || "Chưa xác định"}
             </Text>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${Math.min(item.new_accuracy, 100)}%`,
-                    backgroundColor: themeColors.primary,
-                  },
-                ]}
-              />
-            </View>
-            <Text
+            <Text style={styles.summaryText}>
+              Cải thiện tổng thể: {evaluation?.overall_improvement?.improvement?.toFixed(1) || 0}% 
+              ({evaluation?.overall_improvement?.direction || "N/A"})
+            </Text>
+            <Text style={styles.summaryText}>
+              Trước: {evaluation?.overall_improvement?.previous_average?.toFixed(1) || 0}% → 
+              Sau: {evaluation?.overall_improvement?.new_average?.toFixed(1) || 0}%
+            </Text>
+            <Text style={styles.summaryComment}>
+              💬 {evaluation?.summary || evaluation?.comment || "Tốt lắm, tiếp tục cố gắng!"}
+            </Text>
+            {evaluation?.next_action && (
+              <View style={{ marginTop: 12, padding: 10, backgroundColor: "#fff3e0", borderRadius: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: "600", marginBottom: 4 }}>
+                  🎯 Bước tiếp theo:
+                </Text>
+                <Text style={{ fontSize: 13, color: "#666" }}>
+                  {evaluation.next_action}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Thanh tiến trình cho từng chủ đề */}
+          {Array.isArray(evaluation?.topics) && evaluation.topics.map((item, idx) => (
+            <View
+              key={idx}
               style={[
-                styles.feedbackText,
+                styles.improvementCard,
                 {
-                  color:
-                    item.new_accuracy >= item.previous_accuracy
-                      ? "#2E7D32"
-                      : "#C62828",
+                  backgroundColor:
+                    (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
+                      ? "#E8F5E9"
+                      : "#FFEBEE",
                 },
               ]}
             >
-              {item.feedback}
-            </Text>
-          </View>
-        ))}
+              <Text style={styles.topicTitle}>{item?.topic || "Không xác định"}</Text>
+              
+              {item?.status && (
+                <View style={{ 
+                  backgroundColor: item.new_accuracy >= item.previous_accuracy ? "#4caf50" : "#ff9800",
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                  alignSelf: "flex-start",
+                  marginBottom: 8
+                }}>
+                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
+                    {item.status}
+                  </Text>
+                </View>
+              )}
+              
+              <Text style={styles.accuracyText}>
+                Trước: {(item?.previous_accuracy || 0).toFixed(1)}%
+              </Text>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(item?.previous_accuracy || 0, 100)}%`,
+                      backgroundColor: themeColors.secondary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.accuracyText}>
+                Sau: {(item?.new_accuracy || 0).toFixed(1)}%
+              </Text>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${Math.min(item?.new_accuracy || 0, 100)}%`,
+                      backgroundColor: themeColors.primary,
+                    },
+                  ]}
+                />
+              </View>
+              
+              {item?.improvement_percentage && (
+                <Text style={[
+                  styles.feedbackText,
+                  {
+                    color: (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
+                      ? "#2E7D32"
+                      : "#C62828",
+                    fontWeight: "700",
+                    fontSize: 14,
+                  },
+                ]}>
+                  {item.improvement_percentage}
+                </Text>
+              )}
+              
+              <Text
+                style={[
+                  styles.feedbackText,
+                  {
+                    color:
+                      (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
+                        ? "#2E7D32"
+                        : "#C62828",
+                  },
+                ]}
+              >
+                {item?.feedback || `Cải thiện: ${item?.improvement?.toFixed(1) || 0}%`}
+              </Text>
+            </View>
+          ))}
 
-        {/* Hành động */}
-        <TouchableOpacity style={styles.actionBtn} onPress={handleMorePractice}>
-          <Text style={styles.actionText}>Luyện tập thêm</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionBtn, { backgroundColor: themeColors.secondary }]}
-          onPress={() =>
-            navigation.navigate("ExamDoing", { exam: quiz, submitted: false })
-          }
-        >
-          <Text style={styles.actionText}>Quay lại bài thi gốc</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          {/* Hành động */}
+          <TouchableOpacity style={styles.actionBtn} onPress={handleMorePractice}>
+            <Text style={styles.actionText}>Luyện tập thêm</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: themeColors.secondary }]}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.actionText}>Quay lại</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
     </View>
   );
 }

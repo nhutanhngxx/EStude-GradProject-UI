@@ -37,11 +37,17 @@ const themeColors = {
 
 export default function PracticeQuizScreen({ navigation, route }) {
   const quiz = route?.params?.quiz;
+  const previousFeedback = route?.params?.previousFeedback; // Layer 1 feedback từ AssignmentReviewScreen
   const { user, token } = useContext(AuthContext);
   const { showToast } = useToast();
 
-  console.log("Layer3 raw result:", JSON.stringify(quiz, null, 2));
-  //   console.log("quiz: ", quiz);
+  console.log("🎯 Layer3 raw result:", JSON.stringify(quiz, null, 2));
+  console.log("📋 Quiz structure:", {
+    hasQuestions: !!quiz?.questions,
+    questionCount: quiz?.questions?.length,
+    firstQuestion: quiz?.questions?.[0],
+    firstQuestionOptions: quiz?.questions?.[0]?.options,
+  });
 
   useEffect(() => {
     if (!quiz) {
@@ -58,8 +64,63 @@ export default function PracticeQuizScreen({ navigation, route }) {
   const [submitting, setSubmitting] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [showHint, setShowHint] = useState({});
+  const [normalizedQuiz, setNormalizedQuiz] = useState(null);
 
   const totalQuestions = quiz?.questions?.length || 0;
+
+  // Normalize quiz data từ layer 3
+  useEffect(() => {
+    if (!quiz?.questions) return;
+    
+    console.log("🔍 Raw quiz from Layer 3:", JSON.stringify(quiz, null, 2));
+    
+    const normalized = {
+      ...quiz,
+      questions: quiz.questions.map((q, idx) => {
+        console.log(`📝 Question ${idx + 1}:`, {
+          hasCorrectAnswer: !!q.correct_answer,
+          correctAnswerValue: q.correct_answer,
+          optionsType: typeof q.options?.[0],
+          optionsCount: q.options?.length,
+        });
+
+        // Normalize options - convert all to objects with optionText
+        const normalizedOptions = (q.options || []).map((opt, optIdx) => {
+          let optionText, isCorrect;
+          
+          if (typeof opt === "string") {
+            optionText = opt;
+            // Nếu có correct_answer, so sánh với index (1-based)
+            isCorrect = q.correct_answer ? (optIdx + 1) === Number(q.correct_answer) : false;
+          } else {
+            optionText = opt.optionText || opt.text || String(opt);
+            // Ưu tiên isCorrect từ option, fallback về correct_answer
+            isCorrect = opt.isCorrect !== undefined 
+              ? opt.isCorrect 
+              : (q.correct_answer ? (optIdx + 1) === Number(q.correct_answer) : false);
+          }
+          
+          return { optionText, isCorrect };
+        });
+
+        // Kiểm tra xem có ít nhất 1 đáp án đúng không
+        const hasCorrectAnswer = normalizedOptions.some(opt => opt.isCorrect);
+        if (!hasCorrectAnswer) {
+          console.warn(`⚠️ Question ${idx + 1} has NO correct answer marked!`);
+        }
+
+        return {
+          ...q,
+          questionId: q.questionId || q.question_id || q.id || idx + 1,
+          questionText: q.questionText || q.question || q.text || `Câu hỏi ${idx + 1}`,
+          options: normalizedOptions,
+        };
+      }),
+    };
+
+    console.log("✅ Normalized quiz:", JSON.stringify(normalized, null, 2));
+    setNormalizedQuiz(normalized);
+  }, [quiz]);
 
   useEffect(() => {
     if (!quiz) return;
@@ -110,27 +171,40 @@ export default function PracticeQuizScreen({ navigation, route }) {
   };
 
   const buildAiPayloadFromQuiz = () => {
+    const quizData = normalizedQuiz || quiz;
+    
+    // Filter và chỉ gửi các câu hỏi có correct_answer hợp lệ
+    const validQuestions = (quizData.questions || []).filter((q) => {
+      const correctIndex = (q.options || []).findIndex((opt) => opt.isCorrect === true);
+      const hasCorrectAnswer = correctIndex >= 0;
+      
+      if (!hasCorrectAnswer) {
+        console.warn(`⚠️ Question skipped - no correct answer found:`, q.questionText);
+      }
+      
+      return hasCorrectAnswer;
+    });
+
+    console.log(`📊 Valid questions: ${validQuestions.length}/${quizData.questions?.length || 0}`);
+
     return {
-      assignment_id: quiz.assignmentId || "practice",
+      assignment_id: String(quizData.assignmentId || "practice"),
       student_name: user?.fullName || user?.name || "Học sinh",
-      subject: quiz.subject || "Chưa xác định",
-      questions: (quiz.questions || []).map((q, idx) => {
-        const key = q.questionId ?? q.question_id ?? q.id ?? idx + 1;
+      subject: quizData.subject || "Chưa xác định",
+      questions: validQuestions.map((q, idx) => {
+        const key = q.questionId;
         const selected = answers[key] || [];
         const chosenOpt = Array.isArray(selected) ? selected[0] : selected;
-        const chosenIndex = q.options.findIndex(
-          (opt) => opt.optionText === chosenOpt
-        );
-        const correctIndex = q.options.findIndex(
-          (opt) => opt.isCorrect === true
-        );
+
+        const optionsAsStrings = (q.options || []).map((opt) => opt.optionText);
+        const chosenIndex = optionsAsStrings.findIndex((t) => t === chosenOpt);
+        const correctIndex = (q.options || []).findIndex((opt) => opt.isCorrect === true);
 
         return {
-          question_id: Number(key),
           question: q.questionText,
-          options: q.options.map((o) => o.optionText),
-          correct_answer: correctIndex >= 0 ? correctIndex + 1 : null, // 1-based
-          student_answer: chosenIndex >= 0 ? chosenIndex + 1 : null,
+          options: optionsAsStrings,
+          correct_answer: correctIndex + 1, // 1-based, guaranteed >= 1 vì đã filter
+          student_answer: chosenIndex >= 0 ? chosenIndex + 1 : null, // 1-based
         };
       }),
     };
@@ -148,7 +222,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
 
   const handleSubmit = async () => {
     if (submitting || submitted) return;
-    if (!quiz || !totalQuestions) {
+    if (!normalizedQuiz || !totalQuestions) {
       showToast("Không có câu hỏi để nộp.", { type: "error" });
       return;
     }
@@ -158,8 +232,8 @@ export default function PracticeQuizScreen({ navigation, route }) {
 
     try {
       let correctCount = 0;
-      const feedback = (quiz.questions || []).map((q, idx) => {
-        const key = q.questionId ?? q.question_id ?? q.id ?? idx + 1;
+      const feedback = (normalizedQuiz.questions || []).map((q, idx) => {
+        const key = q.questionId;
         const selected = answers[key] || [];
         const correctOpts = (q.options || [])
           .filter((o) => o.isCorrect)
@@ -186,19 +260,37 @@ export default function PracticeQuizScreen({ navigation, route }) {
       setSubmitted(true);
       setSubmitting(false);
 
-      // Xây dựng tải trọng AI và gọi Layer1 (tùy chọn nhưng hữu ích)
+      // Xây dựng payload theo schema yêu cầu và gọi Layer 3.5
       const aiPayload = buildAiPayloadFromQuiz();
-
-      const aiResultRaw = await aiService.layer1(aiPayload, token);
+      console.log("📤 Submitting to Layer 3.5:", JSON.stringify(aiPayload, null, 2));
+      
+      // Kiểm tra payload có câu hỏi hợp lệ không
+      if (!aiPayload.questions || aiPayload.questions.length === 0) {
+        showToast("Không có câu hỏi hợp lệ để gửi. Vui lòng kiểm tra lại bài luyện tập.", {
+          type: "error",
+        });
+        setAiLoading(false);
+        setSubmitting(false);
+        return;
+      }
+      
+      const reviewRes = await aiService.submitPracticeReview(aiPayload, token);
       setAiLoading(false);
 
-      if (aiResultRaw) {
-        const processed = aiResultRaw?.data || aiResultRaw;
+      if (reviewRes) {
+        console.log("📥 Layer 3.5 Response:", JSON.stringify(reviewRes, null, 2));
+        
+        const processed = reviewRes?.data || reviewRes;
+        const detailed = processed?.detailedAnalysis || processed;
+        const sum = detailed?.summary;
+        const fb = detailed?.feedback || [];
+        const resultId = processed?.result_id; // Lấy result_id từ response
 
-        const aiFeedbackFromApi = Array.isArray(processed.feedback)
-          ? processed.feedback.map((f, idx) => ({
+        // Chuẩn hóa feedback: thêm is_correct nếu cần
+        const normalizedFb = Array.isArray(fb)
+          ? fb.map((f, i) => ({
               ...f,
-              question_id: Number(f.question_id ?? idx + 1),
+              question_id: Number(f.question_id ?? i + 1),
               is_correct:
                 f.student_answer != null && f.correct_answer != null
                   ? Number(f.student_answer) === Number(f.correct_answer)
@@ -208,25 +300,28 @@ export default function PracticeQuizScreen({ navigation, route }) {
 
         setAiResult({
           detailedAnalysis: {
-            subject: processed.subject || quiz.subject,
-            summary: processed.summary || {
-              total_questions: totalQuestions,
-              correct_count: correctCount,
-              accuracy_percentage: Math.round(
-                (correctCount / totalQuestions) * 100
-              ),
-            },
-            feedback: aiFeedbackFromApi.length ? aiFeedbackFromApi : feedback,
+            result_id: resultId, // Lưu result_id để dùng cho Layer 4
+            subject: detailed?.subject || normalizedQuiz.subject,
+            topic_breakdown: detailed?.topic_breakdown || [], // Lưu topic_breakdown
+            summary:
+              sum || {
+                total_questions: totalQuestions,
+                correct_count: correctCount,
+                accuracy_percentage: Math.round(
+                  (correctCount / totalQuestions) * 100
+                ),
+              },
+            feedback: normalizedFb.length ? normalizedFb : feedback,
           },
-          comment: processed.comment || "Phân tích hoàn tất!",
+          comment: processed?.comment || "Đánh giá luyện tập hoàn tất!",
         });
 
         setAiFeedback((prev) =>
-          aiFeedbackFromApi.length ? aiFeedbackFromApi : prev
+          normalizedFb.length ? normalizedFb : prev
         );
       } else {
         setAiLoading(false);
-        showToast("Không nhận được phản hồi từ AI. Hiển thị kết quả cục bộ.", {
+        showToast("Không gửi được kết quả lên máy chủ. Hiển thị kết quả cục bộ.", {
           type: "warning",
         });
       }
@@ -241,36 +336,119 @@ export default function PracticeQuizScreen({ navigation, route }) {
   };
 
   const handleEvaluateProgress = async () => {
-    const previousResults = (route.params?.previousFeedback || []).map((f) => ({
-      topic: f.topic,
-      accuracy: f.is_correct ? 100 : 0,
-    }));
-    const newResults = (aiFeedback || []).map((f) => ({
-      topic: f.topic,
-      accuracy: f.is_correct ? 100 : 0,
-    }));
+    if (!aiResult?.detailedAnalysis) {
+      showToast("Chưa có dữ liệu bài luyện tập để đánh giá.", { type: "warning" });
+      return;
+    }
+
+    // Lấy result_id từ Layer 3.5 response (reviewRes.data.result_id)
+    const layer35ResultId = aiResult.detailedAnalysis?.result_id;
+    
+    if (!layer35ResultId) {
+      showToast("Không tìm thấy result_id từ bài luyện tập.", { type: "error" });
+      return;
+    }
+
+    // Lấy previous_results_id và previous_results từ Layer 1 feedback
+    const layer1Feedback = previousFeedback; // Đây là object Layer 1 từ AssignmentReviewScreen
+    const previousResultsId = layer1Feedback?.resultId;
+    
+    if (!previousResultsId) {
+      showToast("Không tìm thấy dữ liệu bài làm gốc (Layer 1).", { type: "error" });
+      return;
+    }
+
+    // Tính previous_results từ Layer 1 topic_breakdown (nếu không có thì tính từ feedback)
+    let previousResults = [];
+    if (layer1Feedback?.detailedAnalysis?.topic_breakdown) {
+      previousResults = layer1Feedback.detailedAnalysis.topic_breakdown.map((tb) => ({
+        topic: tb.topic,
+        accuracy: tb.accuracy || 0,
+      }));
+    } else if (layer1Feedback?.detailedAnalysis?.feedback) {
+      // Fallback: group by topic và tính accuracy
+      const topicMap = {};
+      layer1Feedback.detailedAnalysis.feedback.forEach((f) => {
+        const topic = f.topic || "Không xác định";
+        if (!topicMap[topic]) {
+          topicMap[topic] = { correct: 0, total: 0 };
+        }
+        topicMap[topic].total += 1;
+        if (f.is_correct) topicMap[topic].correct += 1;
+      });
+      previousResults = Object.keys(topicMap).map((topic) => ({
+        topic,
+        accuracy: topicMap[topic].total > 0 
+          ? topicMap[topic].correct / topicMap[topic].total 
+          : 0,
+      }));
+    }
+
+    // Tính new_results từ Layer 3.5 topic_breakdown
+    let newResults = [];
+    if (aiResult.detailedAnalysis?.topic_breakdown) {
+      newResults = aiResult.detailedAnalysis.topic_breakdown.map((tb) => ({
+        topic: tb.topic,
+        accuracy: tb.accuracy || 0,
+      }));
+    } else {
+      // Fallback: group by topic từ feedback
+      const topicMap = {};
+      (aiFeedback || []).forEach((f) => {
+        const topic = f.topic || "Không xác định";
+        if (!topicMap[topic]) {
+          topicMap[topic] = { correct: 0, total: 0 };
+        }
+        topicMap[topic].total += 1;
+        if (f.is_correct) topicMap[topic].correct += 1;
+      });
+      newResults = Object.keys(topicMap).map((topic) => ({
+        topic,
+        accuracy: topicMap[topic].total > 0 
+          ? topicMap[topic].correct / topicMap[topic].total 
+          : 0,
+      }));
+    }
 
     const layer4Payload = {
-      subject: quiz.subject,
       student_id: user?.userId,
+      subject: aiResult.detailedAnalysis?.subject || quiz?.subject,
+      result_id: String(layer35ResultId),
+      previous_results_id: String(previousResultsId),
       previous_results: previousResults,
       new_results: newResults,
     };
+
+    console.log("📤 Layer 4 Payload:", JSON.stringify(layer4Payload, null, 2));
 
     try {
       setAiLoading(true);
       const layer4Raw = await aiService.layer4(layer4Payload, token);
       setAiLoading(false);
+      
+      console.log("📥 Layer 4 Response:", JSON.stringify(layer4Raw, null, 2));
+      
+      if (!layer4Raw) {
+        showToast("Không nhận được kết quả từ máy chủ (Layer 4).", { type: "error" });
+        return;
+      }
+
       const evaluation = layer4Raw?.data || layer4Raw;
+      
+      if (!evaluation) {
+        showToast("Dữ liệu đánh giá tiến bộ không hợp lệ.", { type: "error" });
+        return;
+      }
+
       navigation.navigate("Improvement", {
         evaluation,
         quiz,
         previousFeedback: aiFeedback,
       });
     } catch (error) {
-      console.error("layer4 error:", error);
+      console.error("❌ Layer 4 error:", error);
       setAiLoading(false);
-      showToast("Lỗi khi đánh giá tiến bộ.", { type: "error" });
+      showToast("Lỗi khi đánh giá tiến bộ: " + (error.message || "Unknown error"), { type: "error" });
     }
   };
 
@@ -281,192 +459,217 @@ export default function PracticeQuizScreen({ navigation, route }) {
     return q.options[idx]?.optionText ?? "-";
   };
 
-  const DoingView = () => (
-    <View style={{ flex: 1 }}>
-      <View style={styles.progressRow}>
-        <Text style={styles.progressText}>
-          {Object.keys(answers).length}/{totalQuestions} câu đã chọn
-        </Text>
-        <Text style={styles.progressText}>
-          {submitted ? "Đã nộp" : "Chưa nộp"}
-        </Text>
-      </View>
+  const DoingView = () => {
+    if (!normalizedQuiz) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={styles.loadingText}>Đang tải bài luyện tập...</Text>
+        </View>
+      );
+    }
 
+    return (
+      <View style={{ flex: 1 }}>
+        <View style={styles.progressRow}>
+          <Text style={styles.progressText}>
+            {Object.keys(answers).length}/{totalQuestions} câu đã chọn
+          </Text>
+          <Text style={styles.progressText}>
+            {submitted ? "Đã nộp" : "Chưa nộp"}
+          </Text>
+        </View>
+
+        <ScrollView contentContainerStyle={{ padding: 12 }}>
+          {(normalizedQuiz.questions || []).map((q, index) => {
+            const key = q.questionId;
+            const isMulti = Array.isArray(q.answers) && q.answers.length > 1;
+            return (
+              <View key={`q_${index}_${key}`} style={styles.questionBlock}>
+                <Text style={styles.questionText}>
+                  {index + 1}. {q.questionText} {isMulti ? "(Chọn nhiều)" : ""}
+                </Text>
+
+                {(q.options || []).map((opt, optIdx) => {
+                  const optText = opt.optionText;
+                  const selected = (answers[key] || []).includes(optText);
+                  
+                  console.log(`Question ${key}, Option ${optIdx}: "${optText}", Selected: ${selected}`);
+                  
+                  return (
+                    <TouchableOpacity
+                      key={`opt_${index}_${optIdx}_${optText}`}
+                      disabled={submitted}
+                      style={[styles.option, selected && styles.optionSelected]}
+                      onPress={() => {
+                        console.log(`🖱️ Clicked: Question ${key}, Option: "${optText}"`);
+                        handleSelect(q, optText);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
+                          selected && styles.optionTextSelected,
+                        ]}
+                      >
+                        {optText}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <TouchableOpacity onPress={() => toggleHint(key)}>
+                  <Text style={styles.hintText}>Gợi ý</Text>
+                </TouchableOpacity>
+
+                {showHint[key] && (
+                  <Text style={styles.hintExplanation}>
+                    {trimSnippet(
+                      (q.options || []).find((o) => o.explanation)?.explanation
+                    )}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+
+          {!submitted && (
+            <View style={{ paddingHorizontal: 16 }}>
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={() =>
+                  Alert.alert(
+                    "Xác nhận",
+                    "Bạn có chắc chắn muốn nộp bài luyện tập?",
+                    [
+                      { text: "Hủy", style: "cancel" },
+                      { text: "Nộp", onPress: handleSubmit },
+                    ]
+                  )
+                }
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.submitText}>Nộp bài luyện tập</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const OverviewView = () => {
+    if (!normalizedQuiz) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={themeColors.primary} />
+          <Text style={styles.loadingText}>Đang tải bài luyện tập...</Text>
+        </View>
+      );
+    }
+
+    return (
       <ScrollView contentContainerStyle={{ padding: 12 }}>
-        {(quiz.questions || []).map((q, index) => {
-          const key = q.questionId ?? q.question_id ?? q.id ?? index + 1;
-          const isMulti = Array.isArray(q.answers) && q.answers.length > 1;
+        {(normalizedQuiz.questions || []).map((q, idx) => {
+          const key = q.questionId;
+          const isAnswered =
+            Array.isArray(answers[key]) && answers[key].length > 0;
+          const fb = aiFeedback.find((f) => Number(f.question_id) === idx + 1);
+
           return (
-            <View key={`q_${index}_${key}`} style={styles.questionBlock}>
-              <Text style={styles.questionText}>
-                {index + 1}.{" "}
-                {q.questionText || q.question || "Câu hỏi không xác định"}{" "}
-                {isMulti ? "(Chọn nhiều)" : ""}
+            <View key={key} style={styles.questionBlock}>
+              <Text
+                style={[
+                  styles.questionText,
+                  submitted && fb && !fb.is_correct ? { color: "#C62828" } : null,
+                ]}
+              >
+                {idx + 1}. {q.questionText}
               </Text>
 
-              {(q.options || []).map((opt, optIdx) => {
-                const optText = typeof opt === "string" ? opt : opt.optionText;
-                const selected = (answers[key] || []).includes(optText);
-                return (
-                  <TouchableOpacity
-                    key={`opt_${index}_${optIdx}_${opt.optionText}`}
-                    disabled={submitted}
-                    style={[styles.option, selected && styles.optionSelected]}
-                    onPress={() => handleSelect(q, opt.optionText)}
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        selected && styles.optionTextSelected,
-                      ]}
-                    >
-                      {optText}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <TouchableOpacity onPress={() => toggleHint(key)}>
-                <Text style={styles.hintText}>Gợi ý</Text>
-              </TouchableOpacity>
-
-              {showHint[key] && (
-                <Text style={styles.hintExplanation}>
-                  {trimSnippet(
-                    (q.options || []).find((o) => o.explanation)?.explanation
-                  )}
+              <View
+                style={[
+                  styles.answerBox,
+                  {
+                    backgroundColor: isAnswered
+                      ? `${themeColors.primary}20`
+                      : "#f5f5f5",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.answerText,
+                    {
+                      color:
+                        submitted && fb
+                          ? fb.is_correct
+                            ? "#2e7d32"
+                            : "#c62828"
+                          : isAnswered
+                          ? themeColors.secondary
+                          : "#666",
+                    },
+                  ]}
+                >
+                  {isAnswered
+                    ? "Đã chọn: " + answers[key].join(", ")
+                    : "Bạn chưa chọn đáp án."}
                 </Text>
+
+                {submitted && fb && (
+                  <Text
+                    style={{
+                      color: fb.is_correct ? "#2e7d32" : "#c62828",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {fb.is_correct ? "Đúng" : "Sai"}
+                  </Text>
+                )}
+              </View>
+
+              {submitted && fb && (
+                <View
+                  style={[
+                    styles.feedbackBox,
+                    { backgroundColor: fb.is_correct ? "#e8f5e9" : "#ffebee" },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontStyle: "italic",
+                      color: fb.is_correct ? "#2e7d32" : "#c62828",
+                    }}
+                  >
+                    {fb.explanation || fb.feedback}
+                  </Text>
+                </View>
               )}
             </View>
           );
         })}
 
-        {!submitted && (
-          <View style={{ paddingHorizontal: 16 }}>
-            <TouchableOpacity
-              style={styles.submitBtn}
-              onPress={() =>
-                Alert.alert(
-                  "Xác nhận",
-                  "Bạn có chắc chắn muốn nộp bài luyện tập?",
-                  [
-                    { text: "Hủy", style: "cancel" },
-                    { text: "Nộp", onPress: handleSubmit },
-                  ]
-                )
-              }
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.submitText}>Nộp bài luyện tập</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-
-  const OverviewView = () => (
-    <ScrollView contentContainerStyle={{ padding: 12 }}>
-      {(quiz.questions || []).map((q, idx) => {
-        const key = q.questionId ?? q.question_id ?? q.id ?? idx + 1;
-        const isAnswered =
-          Array.isArray(answers[key]) && answers[key].length > 0;
-        const fb = aiFeedback.find((f) => Number(f.question_id) === idx + 1);
-
-        return (
-          <View key={key} style={styles.questionBlock}>
-            <Text
-              style={[
-                styles.questionText,
-                submitted && fb && !fb.is_correct ? { color: "#C62828" } : null,
-              ]}
-            >
-              {idx + 1}.{" "}
-              {q.questionText || q.question || "Câu hỏi không xác định"}
-            </Text>
-
-            <View
-              style={[
-                styles.answerBox,
-                {
-                  backgroundColor: isAnswered
-                    ? `${themeColors.primary}20`
-                    : "#f5f5f5",
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.answerText,
-                  {
-                    color:
-                      submitted && fb
-                        ? fb.is_correct
-                          ? "#2e7d32"
-                          : "#c62828"
-                        : isAnswered
-                        ? themeColors.secondary
-                        : "#666",
-                  },
-                ]}
-              >
-                {isAnswered
-                  ? "Đã chọn: " + answers[key].join(", ")
-                  : "Bạn chưa chọn đáp án."}
-              </Text>
-
-              {submitted && fb && (
-                <Text
-                  style={{
-                    color: fb.is_correct ? "#2e7d32" : "#c62828",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {fb.is_correct ? "Đúng" : "Sai"}
-                </Text>
-              )}
-            </View>
-
-            {submitted && fb && (
-              <View
-                style={[
-                  styles.feedbackBox,
-                  { backgroundColor: fb.is_correct ? "#e8f5e9" : "#ffebee" },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontStyle: "italic",
-                    color: fb.is_correct ? "#2e7d32" : "#c62828",
-                  }}
-                >
-                  {fb.explanation || fb.feedback}
-                </Text>
-              </View>
+        <View style={{ paddingHorizontal: 16 }}>
+          <TouchableOpacity
+            style={styles.evaluateBtn}
+            onPress={handleEvaluateProgress}
+            disabled={aiLoading}
+          >
+            {aiLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Đánh giá tiến bộ</Text>
             )}
-          </View>
-        );
-      })}
-
-      <View style={{ paddingHorizontal: 16 }}>
-        <TouchableOpacity
-          style={styles.evaluateBtn}
-          onPress={handleEvaluateProgress}
-          disabled={aiLoading}
-        >
-          {aiLoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.submitText}>Đánh giá tiến bộ</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
-  );
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
+  };
 
   // Main render
   return (

@@ -33,9 +33,29 @@ const endpoints = {
   layer3: "/api/ai/generate-practice-quiz",
 
   // Đánh giá tiện bộ sau luyện tập
-  layer4: "/api/ai/generate-practice-quiz",
+  layer4: "/api/ai/improvement-evaluation",
 
   getLayer1: "/api/ai/me/feedback/latest",
+
+  // Lấy TẤT CẢ Feedback layer 1 theo assignment_id
+  getAIFeedbackByAssignmentId: "/api/ai/me/feedback/assignment/{assignmentId}",
+
+  // Lấy TẤT CẢ Recommendation layer 2 theo assignment_id
+  getAIRecommendationByAssignmentId:
+    "/api/ai/me/recommendation/assignment/{assignmentId}",
+
+  // Lấy TẤT CẢ Practice Review layer 3.5 theo assignment_id
+  getAIPracticeReviewByAssignmentId:
+    "/api/ai/me/practice-review/assignment/{assignmentId}",
+  // Gửi kết quả bài luyện tập (Layer 3.5)
+  submitPracticeReview: "/api/ai/review-practice-results",
+
+  // Lấy TẤT CẢ Improvement layer 4 theo assignment_id
+  getAIImprovementByAssignmentId:
+    "/api/ai/me/improvement/assignment/{assignmentId}",
+  
+  // Lấy TẤT CẢ Improvement của user
+  getAllUserImprovements: "/api/ai/me/improvement",
 };
 
 const aiService = {
@@ -213,7 +233,10 @@ const aiService = {
     try {
       const response = await fetch(`${config.BASE_URL}${endpoints.layer2}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -235,7 +258,10 @@ const aiService = {
     try {
       const response = await fetch(`${config.BASE_URL}${endpoints.layer3}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -254,7 +280,10 @@ const aiService = {
     try {
       const response = await fetch(`${config.BASE_URL}${endpoints.layer4}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
@@ -276,7 +305,10 @@ const aiService = {
     try {
       const response = await fetch(`${config.BASE_URL}${endpoints.getLayer1}`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (!response.ok) {
         return null;
@@ -285,6 +317,172 @@ const aiService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy kết quả phân tích AI:", error);
+      return null;
+    }
+  },
+
+  // Lấy TẤT CẢ Feedback layer 1 theo assignment_id
+  getAIFeedbackByAssignmentId: async (assignmentId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAIFeedbackByAssignmentId.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get AI Feedback failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy feedback AI:", error);
+      return null;
+    }
+  },
+
+  // Lấy TẤT CẢ Recommendation layer 2 theo assignment_id
+  getAIRecommendationByAssignmentId: async (assignmentId, token) => {
+    console.log("Token Layer 2",token);
+    
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAIRecommendationByAssignmentId.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get AI Recommendation failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy recommendation AI:", error);
+      return null;
+    }
+  },
+
+  // Lấy TẤT CẢ Practice Review layer 3.5 theo assignment_id
+  getAIPracticeReviewByAssignmentId: async (assignmentId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAIPracticeReviewByAssignmentId.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get AI Practice Review failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy practice review AI:", error);
+      return null;
+    }
+  },
+
+  // Gửi kết quả bài luyện tập (Layer 3.5)
+  submitPracticeReview: async (payload, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.submitPracticeReview}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("Submit Practice Review failed:", response.status, text);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi gửi kết quả bài luyện tập (Layer 3.5):", error);
+      return null;
+    }
+  },
+
+  // Lấy TẤT CẢ Improvement layer 4 theo assignment_id
+  getAIImprovementByAssignmentId: async (assignmentId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAIImprovementByAssignmentId.replace(
+          "{assignmentId}",
+          assignmentId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get AI Improvement failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy improvement AI:", error);
+      return null;
+    }
+  },
+
+  // Lấy TẤT CẢ Improvement của user
+  getAllUserImprovements: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAllUserImprovements}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get All User Improvements failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy tất cả improvement của user:", error);
       return null;
     }
   },
