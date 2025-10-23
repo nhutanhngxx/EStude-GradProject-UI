@@ -24,7 +24,7 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
   const { token } = useContext(AuthContext);
   const [improvement, setImprovement] = useState(null);
   const [loadingImprovement, setLoadingImprovement] = useState(true);
-  
+
   if (!practiceReview) {
     return (
       <View style={styles.center}>
@@ -45,21 +45,29 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
       try {
         setLoadingImprovement(true);
         const allImprovements = await aiService.getAllUserImprovements(token);
-        
-        console.log("📊 All Improvements:", JSON.stringify(allImprovements, null, 2));
-        console.log("🔍 Looking for result_id:", practiceResultId);
-        
+
+        console.log(
+          "All Improvements:",
+          JSON.stringify(allImprovements, null, 2)
+        );
+        console.log("Looking for result_id:", practiceResultId);
+
         if (allImprovements && Array.isArray(allImprovements)) {
           // Tìm improvement có detailedAnalysis.result_id khớp với practiceResultId
           const matchedImprovement = allImprovements.find(
-            (imp) => String(imp.detailedAnalysis?.result_id) === String(practiceResultId)
+            (imp) =>
+              String(imp.detailedAnalysis?.result_id) ===
+              String(practiceResultId)
           );
-          
+
           if (matchedImprovement) {
-            console.log("✅ Found matching improvement:", matchedImprovement);
+            console.log("Found matching improvement:", matchedImprovement);
             setImprovement(matchedImprovement.detailedAnalysis);
           } else {
-            console.log("⚠️ No matching improvement found for resultId:", practiceResultId);
+            console.log(
+              "No matching improvement found for resultId:",
+              practiceResultId
+            );
           }
         }
       } catch (error) {
@@ -79,8 +87,11 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+      {/* <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -91,7 +102,7 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
             {detailedAnalysis.student_name || "Học sinh"}
           </Text>
         </View>
-      </View>
+      </View> */}
 
       <ScrollView style={{ flex: 1 }}>
         {/* Summary Section */}
@@ -100,25 +111,32 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Tổng số câu</Text>
-              <Text style={styles.summaryValue}>{summary.total_questions || 0}</Text>
+              <Text style={styles.summaryValue}>
+                {summary.total_questions || 0}
+              </Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Số câu đúng</Text>
-              <Text style={[styles.summaryValue, { color: themeColors.primary }]}>
+              <Text
+                style={[styles.summaryValue, { color: themeColors.primary }]}
+              >
                 {summary.correct_count || 0}
               </Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Độ chính xác</Text>
-              <Text style={[styles.summaryValue, { color: themeColors.secondary }]}>
+              <Text
+                style={[styles.summaryValue, { color: themeColors.secondary }]}
+              >
                 {summary.accuracy_percentage?.toFixed(1) || 0}%
               </Text>
             </View>
           </View>
-          
+
           {detailedAnalysis.timestamp && (
             <Text style={styles.timestampText}>
-              📅 Ngày làm: {new Date(detailedAnalysis.timestamp).toLocaleString("vi-VN")}
+              Ngày làm bài:{" "}
+              {new Date(detailedAnalysis.timestamp).toLocaleString("vi-VN")}
             </Text>
           )}
         </View>
@@ -129,15 +147,22 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
             <Text style={styles.sectionTitle}>Phân tích theo chủ đề</Text>
             {topicBreakdown.map((topic, idx) => (
               <View key={idx} style={styles.topicItem}>
-                <Text style={styles.topicName}>📚 {topic.topic}</Text>
+                <Text style={styles.topicName}>{topic.topic}</Text>
                 <View style={styles.topicStats}>
                   <Text style={styles.topicStat}>
                     Đúng: {topic.correct}/{topic.total}
                   </Text>
-                  <Text style={[
-                    styles.topicAccuracy,
-                    { color: topic.accuracy >= 0.7 ? themeColors.primary : themeColors.danger }
-                  ]}>
+                  <Text
+                    style={[
+                      styles.topicAccuracy,
+                      {
+                        color:
+                          topic.accuracy >= 0.7
+                            ? themeColors.primary
+                            : themeColors.danger,
+                      },
+                    ]}
+                  >
                     {(topic.accuracy * 100).toFixed(1)}%
                   </Text>
                 </View>
@@ -154,20 +179,41 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
               key={idx}
               style={[
                 styles.feedbackCard,
-                { borderLeftColor: fb.is_correct ? themeColors.primary : themeColors.danger }
+                {
+                  borderLeftColor: fb.is_correct
+                    ? themeColors.primary
+                    : themeColors.danger,
+                },
               ]}
             >
               <View style={styles.questionHeader}>
                 <Text style={styles.questionNumber}>Câu {idx + 1}</Text>
-                <View style={[
-                  styles.resultBadge,
-                  { backgroundColor: fb.is_correct ? "#e8f5e9" : "#ffebee" }
-                ]}>
-                  <Text style={[
-                    styles.resultText,
-                    { color: fb.is_correct ? themeColors.secondary : themeColors.danger }
-                  ]}>
-                    {fb.is_correct ? "✓ ĐÚNG" : "✗ SAI"}
+                <View
+                  style={[
+                    styles.resultBadge,
+                    {
+                      backgroundColor: fb.is_correct ? "#E8F5E9" : "#FFEBEE",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      fb.is_correct
+                        ? "checkmark-circle-outline"
+                        : "close-circle-outline"
+                    }
+                    size={16}
+                    color={fb.is_correct ? "#2E7D32" : "#C62828"}
+                  />
+                  <Text
+                    style={[
+                      styles.resultText,
+                      {
+                        color: fb.is_correct ? "#2E7D32" : "#C62828",
+                      },
+                    ]}
+                  >
+                    {fb.is_correct ? "ĐÚNG" : "SAI"}
                   </Text>
                 </View>
               </View>
@@ -176,12 +222,18 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
 
               <View style={styles.answerInfo}>
                 <Text style={styles.answerLabel}>
-                  📝 Đáp án của bạn: <Text style={styles.answerValue}>
-                    {fb.student_answer ? `Đáp án ${fb.student_answer}` : "Chưa trả lời"}
+                  Đáp án của bạn:{" "}
+                  <Text style={styles.answerValue}>
+                    {fb.student_answer
+                      ? `Đáp án ${fb.student_answer}`
+                      : "Chưa trả lời"}
                   </Text>
                 </Text>
                 <Text style={styles.answerLabel}>
-                  ✅ Đáp án đúng: <Text style={[styles.answerValue, { color: themeColors.primary }]}>
+                  Đáp án đúng:{" "}
+                  <Text
+                    style={[styles.answerValue, { color: themeColors.primary }]}
+                  >
                     {fb.correct_answer ? `Đáp án ${fb.correct_answer}` : "N/A"}
                   </Text>
                 </Text>
@@ -190,9 +242,18 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
               {fb.explanation && (
                 <View style={styles.explanationBox}>
                   <Text style={styles.explanationLabel}>
-                    <Ionicons name="bulb-outline" size={16} color={themeColors.secondary} /> Giải thích:
+                    <Ionicons
+                      name="bulb-outline"
+                      size={16}
+                      color={themeColors.secondary}
+                    />{" "}
+                    Giải thích:
                   </Text>
-                  <Text style={styles.explanationText}>{fb.explanation}</Text>
+                  <Text
+                    style={[styles.explanationText, { textAlign: "justify" }]}
+                  >
+                    {fb.explanation}
+                  </Text>
                 </View>
               )}
 
@@ -200,17 +261,47 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
                 <View style={styles.metaInfo}>
                   {fb.topic && (
                     <View style={styles.metaTag}>
-                      <Text style={styles.metaText}>📚 {fb.topic}</Text>
+                      <Ionicons
+                        name="book-outline"
+                        size={14}
+                        color="#2e7d32"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.metaText}>{fb.topic}</Text>
                     </View>
                   )}
                   {fb.subtopic && (
                     <View style={styles.metaTag}>
-                      <Text style={styles.metaText}>📖 {fb.subtopic}</Text>
+                      <Ionicons
+                        name="list-outline"
+                        size={14}
+                        color="#0277bd"
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.metaText}>{fb.subtopic}</Text>
                     </View>
                   )}
                   {fb.difficulty_level && (
                     <View style={styles.metaTag}>
-                      <Text style={styles.metaText}>📊 {fb.difficulty_level}</Text>
+                      <Ionicons
+                        name={
+                          fb.difficulty_level.toLowerCase() === "dễ"
+                            ? "leaf-outline"
+                            : fb.difficulty_level.toLowerCase() === "trung bình"
+                            ? "trending-up-outline"
+                            : "flame-outline"
+                        }
+                        size={14}
+                        color={
+                          fb.difficulty_level.toLowerCase() === "dễ"
+                            ? "#43a047"
+                            : fb.difficulty_level.toLowerCase() === "trung bình"
+                            ? "#f9a825"
+                            : "#e53935"
+                        }
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={styles.metaText}>{fb.difficulty_level}</Text>
                     </View>
                   )}
                 </View>
@@ -229,49 +320,63 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
           </View>
         ) : improvement ? (
           <View style={styles.improvementCard}>
-            <Text style={styles.sectionTitle}>📈 Đánh giá tiến bộ</Text>
-            
+            <Text style={styles.sectionTitle}>Đánh giá tiến bộ</Text>
+
             {/* Overall Summary */}
             <View style={styles.improvementSummary}>
-              <Text style={styles.improvementSubject}>
+              {/* <Text style={styles.improvementSubject}>
                 {improvement.subject || "Môn học"}
-              </Text>
-              <Text style={styles.improvementSummaryText}>
+              </Text> */}
+              <Text
+                style={[
+                  styles.improvementSummaryText,
+                  { textAlign: "justify" },
+                ]}
+              >
                 {improvement.summary}
               </Text>
-              
+
               {improvement.overall_improvement && (
                 <View style={styles.overallBox}>
                   <View style={styles.overallRow}>
-                    <Text style={styles.overallLabel}>Cải thiện:</Text>
-                    <Text style={[
-                      styles.overallValue,
-                      { color: improvement.overall_improvement.improvement >= 0 
-                        ? themeColors.primary 
-                        : themeColors.danger 
-                      }
-                    ]}>
+                    <Text style={styles.overallLabel}>Cải thiện</Text>
+                    <Text
+                      style={[
+                        styles.overallValue,
+                        {
+                          color:
+                            improvement.overall_improvement.improvement >= 0
+                              ? themeColors.primary
+                              : themeColors.danger,
+                        },
+                      ]}
+                    >
                       {improvement.overall_improvement.improvement_percentage}
                     </Text>
                   </View>
                   <View style={styles.overallRow}>
-                    <Text style={styles.overallLabel}>Trạng thái:</Text>
+                    <Text style={styles.overallLabel}>Trạng thái</Text>
                     <Text style={styles.overallValue}>
                       {improvement.overall_improvement.direction}
                     </Text>
                   </View>
                   <View style={styles.overallRow}>
-                    <Text style={styles.overallLabel}>Trước:</Text>
+                    <Text style={styles.overallLabel}>Trước</Text>
                     <Text style={styles.overallValue}>
-                      {improvement.overall_improvement.previous_average?.toFixed(1)}%
+                      {improvement.overall_improvement.previous_average?.toFixed(
+                        1
+                      )}
+                      %
                     </Text>
                   </View>
                   <View style={styles.overallRow}>
-                    <Text style={styles.overallLabel}>Sau:</Text>
-                    <Text style={[
-                      styles.overallValue,
-                      { color: themeColors.primary, fontWeight: "700" }
-                    ]}>
+                    <Text style={styles.overallLabel}>Sau</Text>
+                    <Text
+                      style={[
+                        styles.overallValue,
+                        { color: themeColors.primary, fontWeight: "700" },
+                      ]}
+                    >
                       {improvement.overall_improvement.new_average?.toFixed(1)}%
                     </Text>
                   </View>
@@ -280,91 +385,131 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
             </View>
 
             {/* Topics Breakdown */}
-            {Array.isArray(improvement.topics) && improvement.topics.length > 0 && (
-              <View style={{ marginTop: 16 }}>
-                <Text style={styles.improvementSubtitle}>Chi tiết theo chủ đề:</Text>
-                {improvement.topics.map((topic, idx) => (
-                  <View key={idx} style={styles.topicProgressCard}>
-                    <View style={styles.topicProgressHeader}>
-                      <Text style={styles.topicProgressName}>{topic.topic}</Text>
-                      <View style={[
-                        styles.statusBadge,
-                        { 
-                          backgroundColor: 
-                            topic.status === "Đã vững" || topic.status === "Tiến bộ vượt bậc"
-                              ? "#4caf50"
-                              : topic.status === "Cần luyện thêm"
-                              ? "#ff5722"
-                              : "#ff9800"
-                        }
-                      ]}>
-                        <Text style={styles.statusBadgeText}>{topic.status}</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.accuracyComparison}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.accuracyLabel}>Trước</Text>
-                        <View style={styles.progressBarSmall}>
-                          <View style={[
-                            styles.progressFillSmall,
-                            { 
-                              width: `${Math.min(topic.previous_accuracy, 100)}%`,
-                              backgroundColor: "#9e9e9e"
-                            }
-                          ]} />
-                        </View>
-                        <Text style={styles.accuracyValue}>
-                          {topic.previous_accuracy?.toFixed(1)}%
+            {Array.isArray(improvement.topics) &&
+              improvement.topics.length > 0 && (
+                <View style={{ marginTop: 16 }}>
+                  <Text style={styles.improvementSubtitle}>
+                    Chi tiết theo chủ đề:
+                  </Text>
+                  {improvement.topics.map((topic, idx) => (
+                    <View key={idx} style={styles.topicProgressCard}>
+                      <View style={styles.topicProgressHeader}>
+                        <Text style={styles.topicProgressName}>
+                          {topic.topic}
                         </Text>
-                      </View>
-                      
-                      <View style={styles.arrowContainer}>
-                        <Ionicons 
-                          name={topic.improvement >= 0 ? "arrow-forward" : "arrow-back"} 
-                          size={20} 
-                          color={topic.improvement >= 0 ? themeColors.primary : themeColors.danger} 
-                        />
-                      </View>
-                      
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.accuracyLabel}>Sau</Text>
-                        <View style={styles.progressBarSmall}>
-                          <View style={[
-                            styles.progressFillSmall,
-                            { 
-                              width: `${Math.min(topic.new_accuracy, 100)}%`,
-                              backgroundColor: themeColors.primary
-                            }
-                          ]} />
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            {
+                              backgroundColor:
+                                topic.status === "Đã vững" ||
+                                topic.status === "Tiến bộ vượt bậc"
+                                  ? "#4caf50"
+                                  : topic.status === "Cần luyện thêm"
+                                  ? "#ff5722"
+                                  : "#ff9800",
+                            },
+                          ]}
+                        >
+                          <Text style={styles.statusBadgeText}>
+                            {topic.status}
+                          </Text>
                         </View>
-                        <Text style={[
-                          styles.accuracyValue,
-                          { color: themeColors.primary, fontWeight: "700" }
-                        ]}>
-                          {topic.new_accuracy?.toFixed(1)}%
-                        </Text>
                       </View>
+
+                      <View style={styles.accuracyComparison}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.accuracyLabel}>Trước</Text>
+                          <View style={styles.progressBarSmall}>
+                            <View
+                              style={[
+                                styles.progressFillSmall,
+                                {
+                                  width: `${Math.min(
+                                    topic.previous_accuracy,
+                                    100
+                                  )}%`,
+                                  backgroundColor: "#9e9e9e",
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.accuracyValue}>
+                            {topic.previous_accuracy?.toFixed(1)}%
+                          </Text>
+                        </View>
+
+                        <View style={styles.arrowContainer}>
+                          <Ionicons
+                            name={
+                              topic.improvement >= 0
+                                ? "arrow-forward"
+                                : "arrow-back"
+                            }
+                            size={20}
+                            color={
+                              topic.improvement >= 0
+                                ? themeColors.primary
+                                : themeColors.danger
+                            }
+                          />
+                        </View>
+
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.accuracyLabel}>Sau</Text>
+                          <View style={styles.progressBarSmall}>
+                            <View
+                              style={[
+                                styles.progressFillSmall,
+                                {
+                                  width: `${Math.min(
+                                    topic.new_accuracy,
+                                    100
+                                  )}%`,
+                                  backgroundColor: themeColors.primary,
+                                },
+                              ]}
+                            />
+                          </View>
+                          <Text
+                            style={[
+                              styles.accuracyValue,
+                              { color: themeColors.primary, fontWeight: "700" },
+                            ]}
+                          >
+                            {topic.new_accuracy?.toFixed(1)}%
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text
+                        style={[
+                          styles.improvementPercentage,
+                          {
+                            color:
+                              topic.improvement >= 0
+                                ? themeColors.primary
+                                : themeColors.danger,
+                          },
+                        ]}
+                      >
+                        {topic.improvement_percentage}
+                      </Text>
                     </View>
-                    
-                    <Text style={[
-                      styles.improvementPercentage,
-                      { color: topic.improvement >= 0 ? themeColors.primary : themeColors.danger }
-                    ]}>
-                      {topic.improvement_percentage}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
+                  ))}
+                </View>
+              )}
 
             {/* Next Action */}
             {improvement.next_action && (
               <View style={styles.nextActionBox}>
                 <Text style={styles.nextActionLabel}>
-                  <Ionicons name="bulb" size={16} color="#f57c00" /> Gợi ý tiếp theo:
+                  <Ionicons name="bulb" size={16} color="#f57c00" /> Gợi ý tiếp
+                  theo:
                 </Text>
-                <Text style={styles.nextActionText}>{improvement.next_action}</Text>
+                <Text style={[styles.nextActionText, { textAlign: "justify" }]}>
+                  {improvement.next_action}
+                </Text>
               </View>
             )}
           </View>
@@ -374,25 +519,27 @@ export default function PracticeReviewDetailScreen({ route, navigation }) {
         {detailedAnalysis.next_steps && (
           <View style={styles.nextStepsCard}>
             <Text style={styles.sectionTitle}>Bước tiếp theo</Text>
-            <Text style={styles.nextStepsDescription}>
+            {/* <Text style={styles.nextStepsDescription}>
               {detailedAnalysis.next_steps.description}
-            </Text>
+            </Text> */}
             {detailedAnalysis.next_steps.weak_topics?.length > 0 && (
               <View style={styles.weakTopics}>
                 <Text style={styles.weakTopicsLabel}>Chủ đề cần ôn tập:</Text>
                 {detailedAnalysis.next_steps.weak_topics.map((topic, idx) => (
-                  <Text key={idx} style={styles.weakTopic}>• {topic}</Text>
+                  <Text key={idx} style={styles.weakTopic}>
+                    • {topic}
+                  </Text>
                 ))}
               </View>
             )}
           </View>
         )}
 
-        {practiceReview.comment && (
+        {/* {practiceReview.comment && (
           <View style={styles.commentCard}>
             <Text style={styles.commentText}>{practiceReview.comment}</Text>
           </View>
-        )}
+        )} */}
       </ScrollView>
     </View>
   );
@@ -521,18 +668,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   questionNumber: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    color: themeColors.secondary,
+    color: "#333",
   },
   resultBadge: {
-    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
     paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    marginLeft: 8,
   },
   resultText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
+    marginLeft: 4,
   },
   questionText: {
     fontSize: 15,
@@ -575,17 +727,21 @@ const styles = StyleSheet.create({
   metaInfo: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    marginTop: 6,
+    gap: 6,
   },
   metaTag: {
-    backgroundColor: "#f0f0f0",
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f8e9",
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   metaText: {
-    fontSize: 12,
-    color: "#666",
+    fontSize: 13,
+    color: "#333",
+    fontWeight: "500",
   },
   nextStepsCard: {
     backgroundColor: "#fff3e0",

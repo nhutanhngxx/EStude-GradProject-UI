@@ -14,6 +14,8 @@ import { AuthContext } from "../../contexts/AuthContext";
 import aiService from "../../services/aiService";
 import classSubjectService from "../../services/classSubjectService";
 import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/common/ConfirmModal";
+import { Ionicons } from "@expo/vector-icons";
 
 const themeColors = {
   primary: "#2ecc71",
@@ -29,7 +31,9 @@ export default function ExamDoingScreen({ navigation, route }) {
   const { user, token } = useContext(AuthContext);
   const { showToast } = useToast();
 
+  const [isSubmitModalVisible, setSubmitModalVisible] = useState(false);
   const [submittedScore, setSubmittedScore] = useState(null);
+  const [submittedResult, setSubmittedResult] = useState(null);
   const initialSeconds = (exam?.timeLimit ?? 15) * 60;
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [answers, setAnswers] = useState({});
@@ -138,6 +142,7 @@ export default function ExamDoingScreen({ navigation, route }) {
 
       if (result) {
         showToast("Bài tập của bạn đã được nộp!", { type: "success" });
+        setSubmittedResult(result);
         setSubmitted(true);
         setSubmitting(false);
 
@@ -173,6 +178,7 @@ export default function ExamDoingScreen({ navigation, route }) {
         };
 
         const aiResult = await aiService.layer1(aiPayload, token);
+        console.log("layer1Result: ", aiResult);
         setAiLoading(false);
 
         if (aiResult) {
@@ -276,8 +282,15 @@ export default function ExamDoingScreen({ navigation, route }) {
       // (bạn có thể chuẩn hoá/casting ở đây nếu backend trả khác)
       navigation.navigate("PracticeQuiz", {
         quiz: quizData,
-        previousFeedback: aiFeedback,
+        previousFeedback: {
+          resultId:
+            submittedResult?.data?.result_id ||
+            submittedResult?.result_id ||
+            "local-layer1",
+          detailedAnalysis: aiResult?.detailedAnalysis || null,
+        },
       });
+
       setAiLoading(false);
     } catch (error) {
       console.error("Lỗi gọi Layer 3:", error);
@@ -306,7 +319,7 @@ export default function ExamDoingScreen({ navigation, route }) {
               activeTab === "Doing" && styles.tabTextActive,
             ]}
           >
-            Làm bài
+            {submitted ? "Xem bài làm" : "Làm bài"}
           </Text>
         </TouchableOpacity>
 
@@ -320,26 +333,25 @@ export default function ExamDoingScreen({ navigation, route }) {
               activeTab === "Overview" && styles.tabTextActive,
             ]}
           >
-            Danh sách câu hỏi
+            Câu hỏi
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.tabBtn,
-            activeTab === "Recommendations" && styles.tabActive,
-          ]}
-          onPress={() => setActiveTab("Recommendations")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Recommendations" && styles.tabTextActive,
-            ]}
+        {submitted ? (
+          <TouchableOpacity
+            style={[styles.tabBtn, activeTab === "Review" && styles.tabActive]}
+            onPress={() => setActiveTab("Review")}
           >
-            Gợi ý học tập
-          </Text>
-        </TouchableOpacity>
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "Review" && styles.tabTextActive,
+              ]}
+            >
+              Gợi ý
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Body */}
@@ -356,9 +368,9 @@ export default function ExamDoingScreen({ navigation, route }) {
             ) : aiResult?.detailedAnalysis ? (
               <ScrollView style={styles.resultContainer}>
                 <View style={styles.summaryBox}>
-                  <Text style={styles.subjectTitle}>
+                  {/* <Text style={styles.subjectTitle}>
                     Môn học: {aiResult.detailedAnalysis.subject}
-                  </Text>
+                  </Text> */}
                   <Text style={styles.summaryText}>
                     Tổng số câu:{" "}
                     {aiResult.detailedAnalysis.summary.total_questions}
@@ -378,7 +390,10 @@ export default function ExamDoingScreen({ navigation, route }) {
                     key={idx}
                     style={[
                       styles.feedbackCard,
-                      { backgroundColor: f.is_correct ? "#E8F5E9" : "#FFEBEE" },
+                      {
+                        backgroundColor: f.is_correct ? "#E8F5E9" : "#FFEBEE",
+                        gap: 5,
+                      },
                     ]}
                   >
                     <Text style={styles.questionIndex}>Câu {idx + 1}</Text>
@@ -400,7 +415,8 @@ export default function ExamDoingScreen({ navigation, route }) {
                         { color: f.is_correct ? "#2E7D32" : "#C62828" },
                       ]}
                     >
-                      Giải thích: {f.explanation}
+                      <Ionicons name="sparkles" size={15} color="green" /> Giải
+                      thích: {f.explanation}
                     </Text>
                     <Text style={styles.metaInfo}>
                       Chủ đề: {f.topic} • Mức độ: {f.difficulty_level}
@@ -414,12 +430,14 @@ export default function ExamDoingScreen({ navigation, route }) {
               </View>
             )
           ) : (
-            exam.questions.map((q) => (
+            exam.questions.map((q, idx) => (
               <View key={q.questionId} style={styles.questionBlock}>
                 <Text style={styles.questionText}>
+                  <Text style={styles.questionNumber}>Câu {idx + 1}:</Text>{" "}
                   {q.questionText}{" "}
                   {q.answers && q.answers.length > 1 && "(Chọn nhiều)"}
                 </Text>
+
                 {q.options.map((opt) => {
                   const selected = answers[q.questionId]?.includes(
                     opt.optionText
@@ -448,12 +466,12 @@ export default function ExamDoingScreen({ navigation, route }) {
         </ScrollView>
       ) : activeTab === "Overview" ? (
         <ScrollView style={{ flex: 1, padding: 12 }}>
-          {exam.questions.map((q) => {
+          {exam.questions.map((q, idx) => {
             const isAnswered =
               Array.isArray(answers[q.questionId]) &&
               answers[q.questionId].length > 0;
             const fb = aiFeedback.find(
-              (f) => Number(f.question_id) === exam.questions.indexOf(q) + 1
+              (f) => Number(f.question_id) === idx + 1
             );
 
             return (
@@ -464,8 +482,10 @@ export default function ExamDoingScreen({ navigation, route }) {
                     submitted && fb && !fb.is_correct && { color: "#C62828" },
                   ]}
                 >
+                  <Text style={styles.questionNumber}>Câu {idx + 1}:</Text>{" "}
                   {q.questionText}
                 </Text>
+
                 <View
                   style={[
                     styles.answerBox,
@@ -500,6 +520,7 @@ export default function ExamDoingScreen({ navigation, route }) {
                       ? "Đã chọn: " + answers[q.questionId].join(", ")
                       : "Bạn chưa có đáp án nào."}
                   </Text>
+
                   {submitted && fb && (
                     <Text
                       style={{
@@ -512,6 +533,7 @@ export default function ExamDoingScreen({ navigation, route }) {
                     </Text>
                   )}
                 </View>
+
                 {submitted && fb && (
                   <View
                     style={[
@@ -537,7 +559,7 @@ export default function ExamDoingScreen({ navigation, route }) {
           })}
         </ScrollView>
       ) : (
-        <ScrollView style={{ flex: 1, padding: 12 }}>
+        <ScrollView style={{ flex: 1 }}>
           {aiLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={themeColors.primary} />
@@ -545,46 +567,91 @@ export default function ExamDoingScreen({ navigation, route }) {
             </View>
           ) : recommendations ? (
             <>
-              <Text>{recommendations.overall_advice}</Text>
+              {/* Tổng kết */}
+              <View style={styles.aiSummaryCard}>
+                <View style={styles.aiSummaryHeader}>
+                  <Ionicons
+                    name="bulb-outline"
+                    size={22}
+                    color={themeColors.secondary}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text style={styles.sectionTitle}>Tổng kết gợi ý</Text>
+                </View>
+                <Text style={[styles.aiSummaryText, { textAlign: "justify" }]}>
+                  {recommendations.overall_advice}
+                </Text>
+              </View>
 
-              <Text style={styles.sectionTitle}>Chủ đề yếu</Text>
-              {recommendations.weak_topics?.map((t, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  onPress={() => handleGeneratePractice(t.topic)}
-                >
-                  <Text style={styles.actionText}>Ôn tập {t.topic}</Text>
-                </TouchableOpacity>
-              ))}
+              {/* Chủ đề yếu */}
+              {recommendations.weak_topics?.length > 0 && (
+                <View style={styles.aiWeakCard}>
+                  <View style={styles.aiSummaryHeader}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={22}
+                      color={themeColors.danger}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.sectionTitle}>Chủ đề yếu</Text>
+                  </View>
+                  {recommendations.weak_topics.map((t, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => handleGeneratePractice(t.topic)}
+                      style={styles.actionButton}
+                    >
+                      <Ionicons
+                        name="book-outline"
+                        size={18}
+                        color={themeColors.primary}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.actionText}>Ôn tập {t.topic}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </>
           ) : (
             <View style={styles.aiSummary}>
-              <Text>Không có gợi ý học tập nào hiện tại.</Text>
+              <Ionicons name="cloud-offline-outline" size={20} color="#888" />
+              <Text style={{ marginLeft: 6 }}>
+                Không có gợi ý học tập nào hiện tại.
+              </Text>
             </View>
           )}
         </ScrollView>
       )}
 
       {!submitted && (
-        <View style={{ paddingHorizontal: 16 }}>
+        <View style={styles.fixedSubmitContainer}>
           <TouchableOpacity
             style={styles.submitBtn}
-            onPress={() =>
-              Alert.alert("Xác nhận", "Bạn có chắc chắn muốn nộp bài?", [
-                { text: "Hủy", style: "cancel" },
-                { text: "Nộp", onPress: handleSubmit },
-              ])
-            }
+            onPress={() => setSubmitModalVisible(true)}
             disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator size="large" color="#2ecc71" />
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text style={styles.submitText}>Nộp bài</Text>
             )}
           </TouchableOpacity>
         </View>
       )}
+
+      <ConfirmModal
+        visible={isSubmitModalVisible}
+        title="Xác nhận nộp bài"
+        message="Bạn có chắc chắn muốn nộp bài làm này không?"
+        confirmText="Nộp bài"
+        cancelText="Hủy"
+        onConfirm={() => {
+          setSubmitModalVisible(false);
+          handleSubmit();
+        }}
+        onCancel={() => setSubmitModalVisible(false)}
+      />
     </View>
   );
 }
@@ -650,6 +717,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 6,
     color: "#000",
+  },
+  questionNumber: {
+    fontWeight: "bold",
+    color: "#2c3e50",
   },
   answerBox: {
     marginTop: 6,
@@ -761,5 +832,50 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textDecorationLine: "underline",
     marginTop: 8,
+  },
+  fixedSubmitContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderColor: "#eee",
+  },
+  aiSummaryCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  aiWeakCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  aiSummaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  aiSummaryText: {
+    fontSize: 14,
+    color: themeColors.text,
+    lineHeight: 20,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
   },
 });

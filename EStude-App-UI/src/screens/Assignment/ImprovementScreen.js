@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useToast } from "../../contexts/ToastContext";
 import { AuthContext } from "../../contexts/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 import aiService from "../../services/aiService";
 
 const themeColors = {
@@ -26,7 +27,10 @@ export default function ImprovementScreen({ navigation, route }) {
   const { token } = useContext(AuthContext);
   const [showMotivation, setShowMotivation] = useState(false);
 
-  console.log("🎯 Improvement Screen - evaluation:", JSON.stringify(evaluation, null, 2));
+  console.log(
+    "🎯 Improvement Screen - evaluation:",
+    JSON.stringify(evaluation, null, 2)
+  );
   console.log("🎯 Improvement Screen - quiz:", JSON.stringify(quiz, null, 2));
 
   useEffect(() => {
@@ -83,21 +87,22 @@ export default function ImprovementScreen({ navigation, route }) {
     try {
       const layer3Result = await aiService.layer3(layer3Payload, token);
       const quizData = layer3Result?.data || layer3Result;
-      
+
       // Tạo previousFeedback object từ evaluation hiện tại để truyền cho lần practice tiếp theo
       const newPreviousFeedback = {
         resultId: evaluation?.result_id,
         detailedAnalysis: {
           subject: evaluation?.subject,
-          topic_breakdown: evaluation?.topics?.map(t => ({
-            topic: t.topic,
-            accuracy: t.new_accuracy / 100, // Convert về 0-1
-            correct: 0, // Không có thông tin chi tiết
-            total: 0,
-          })) || [],
-        }
+          topic_breakdown:
+            evaluation?.topics?.map((t) => ({
+              topic: t.topic,
+              accuracy: t.new_accuracy / 100, // Convert về 0-1
+              correct: 0, // Không có thông tin chi tiết
+              total: 0,
+            })) || [],
+        },
       };
-      
+
       navigation.navigate("PracticeQuiz", {
         quiz: { ...quizData, assignmentId: quiz?.assignmentId },
         previousFeedback: newPreviousFeedback,
@@ -111,8 +116,21 @@ export default function ImprovementScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       {!evaluation ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 20 }}>
-          <Text style={{ fontSize: 16, color: themeColors.text, textAlign: "center" }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 16,
+              color: themeColors.text,
+              textAlign: "center",
+            }}
+          >
             Không có dữ liệu đánh giá tiến bộ.
           </Text>
           <TouchableOpacity
@@ -135,26 +153,126 @@ export default function ImprovementScreen({ navigation, route }) {
 
           {/* Tóm tắt */}
           <View style={styles.summaryBox}>
-            <Text style={styles.subjectTitle}>
-              Đánh giá tiến bộ: {evaluation?.subject || quiz?.subject || "Chưa xác định"}
-            </Text>
-            <Text style={styles.summaryText}>
-              Cải thiện tổng thể: {evaluation?.overall_improvement?.improvement?.toFixed(1) || 0}% 
-              ({evaluation?.overall_improvement?.direction || "N/A"})
-            </Text>
-            <Text style={styles.summaryText}>
-              Trước: {evaluation?.overall_improvement?.previous_average?.toFixed(1) || 0}% → 
-              Sau: {evaluation?.overall_improvement?.new_average?.toFixed(1) || 0}%
-            </Text>
+            {/* <Text style={styles.subjectTitle}>
+              Đánh giá tiến bộ:{" "}
+              {evaluation?.subject || quiz?.subject || "Chưa xác định"}
+            </Text> */}
+
+            <View style={{ alignItems: "center", marginVertical: 10 }}>
+              <Text
+                style={[styles.summaryText, { fontSize: 16, color: "#555" }]}
+              >
+                Cải thiện tổng thể
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: 30,
+                  fontWeight: "bold",
+                  color:
+                    (evaluation?.overall_improvement?.improvement || 0) >= 0
+                      ? "#2E7D32"
+                      : "#C62828",
+                  marginVertical: 4,
+                }}
+              >
+                {Math.abs(
+                  evaluation?.overall_improvement?.improvement || 0
+                ).toFixed(2)}
+                %
+              </Text>
+
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color:
+                    (evaluation?.overall_improvement?.improvement || 0) >= 0
+                      ? "#2E7D32"
+                      : "#C62828",
+                  textTransform: "capitalize",
+                }}
+              >
+                {evaluation?.overall_improvement?.direction || "N/A"}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginVertical: 6,
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: "#ff9800",
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  minWidth: 100,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
+                >
+                  Trước:{" "}
+                  <Text style={{ fontWeight: "bold" }}>
+                    {evaluation?.overall_improvement?.previous_average?.toFixed(
+                      2
+                    ) || 0}
+                    %
+                  </Text>
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  backgroundColor: "#4caf50",
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                  minWidth: 100,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{ color: "#fff", fontSize: 13, fontWeight: "600" }}
+                >
+                  Sau:{" "}
+                  <Text style={{ fontWeight: "bold" }}>
+                    {evaluation?.overall_improvement?.new_average?.toFixed(2) ||
+                      0}
+                    %
+                  </Text>
+                </Text>
+              </View>
+            </View>
+
             <Text style={styles.summaryComment}>
-              💬 {evaluation?.summary || evaluation?.comment || "Tốt lắm, tiếp tục cố gắng!"}
+              {evaluation?.summary ||
+                evaluation?.comment ||
+                "Tốt lắm, tiếp tục cố gắng!"}
             </Text>
             {evaluation?.next_action && (
-              <View style={{ marginTop: 12, padding: 10, backgroundColor: "#fff3e0", borderRadius: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: "600", marginBottom: 4 }}>
-                  🎯 Bước tiếp theo:
+              <View
+                style={{
+                  marginTop: 12,
+                  padding: 10,
+                  backgroundColor: "#fff3e0",
+                  borderRadius: 8,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 14, fontWeight: "600", marginBottom: 4 }}
+                >
+                  Bước tiếp theo:
                 </Text>
-                <Text style={{ fontSize: 13, color: "#666" }}>
+                <Text
+                  style={{ fontSize: 13, color: "#666", textAlign: "justify" }}
+                >
                   {evaluation.next_action}
                 </Text>
               </View>
@@ -162,105 +280,185 @@ export default function ImprovementScreen({ navigation, route }) {
           </View>
 
           {/* Thanh tiến trình cho từng chủ đề */}
-          {Array.isArray(evaluation?.topics) && evaluation.topics.map((item, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.improvementCard,
-                {
-                  backgroundColor:
-                    (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
-                      ? "#E8F5E9"
-                      : "#FFEBEE",
-                },
-              ]}
-            >
-              <Text style={styles.topicTitle}>{item?.topic || "Không xác định"}</Text>
-              
-              {item?.status && (
-                <View style={{ 
-                  backgroundColor: item.new_accuracy >= item.previous_accuracy ? "#4caf50" : "#ff9800",
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 12,
-                  alignSelf: "flex-start",
-                  marginBottom: 8
-                }}>
-                  <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>
-                    {item.status}
-                  </Text>
-                </View>
-              )}
-              
-              <Text style={styles.accuracyText}>
-                Trước: {(item?.previous_accuracy || 0).toFixed(1)}%
-              </Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.min(item?.previous_accuracy || 0, 100)}%`,
-                      backgroundColor: themeColors.secondary,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={styles.accuracyText}>
-                Sau: {(item?.new_accuracy || 0).toFixed(1)}%
-              </Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${Math.min(item?.new_accuracy || 0, 100)}%`,
-                      backgroundColor: themeColors.primary,
-                    },
-                  ]}
-                />
-              </View>
-              
-              {item?.improvement_percentage && (
-                <Text style={[
-                  styles.feedbackText,
-                  {
-                    color: (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
-                      ? "#2E7D32"
-                      : "#C62828",
-                    fontWeight: "700",
-                    fontSize: 14,
-                  },
-                ]}>
-                  {item.improvement_percentage}
-                </Text>
-              )}
-              
-              <Text
+          {Array.isArray(evaluation?.topics) &&
+            evaluation.topics.map((item, idx) => (
+              <View
+                key={idx}
                 style={[
-                  styles.feedbackText,
+                  styles.improvementCard,
                   {
-                    color:
-                      (item?.new_accuracy || 0) >= (item?.previous_accuracy || 0)
-                        ? "#2E7D32"
-                        : "#C62828",
+                    backgroundColor:
+                      (item?.new_accuracy || 0) >=
+                      (item?.previous_accuracy || 0)
+                        ? "#E8F5E9"
+                        : "#FFEBEE",
                   },
                 ]}
               >
-                {item?.feedback || `Cải thiện: ${item?.improvement?.toFixed(1) || 0}%`}
-              </Text>
-            </View>
-          ))}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between", // hoặc "flex-start" nếu muốn sát nhau
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={styles.topicTitle}>
+                    {item?.topic || "Không xác định"}
+                  </Text>
+
+                  {item?.status && (
+                    <View
+                      style={{
+                        backgroundColor:
+                          item.new_accuracy >= item.previous_accuracy
+                            ? "#4caf50"
+                            : "#ff9800",
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 2,
+                        marginLeft: 8,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {item.status}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.accuracyText}>
+                  Trước: {(item?.previous_accuracy || 0).toFixed(2)}%
+                </Text>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${Math.min(
+                          item?.previous_accuracy || 0,
+                          100
+                        )}%`,
+                        backgroundColor: themeColors.secondary,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.accuracyText}>
+                  Sau: {(item?.new_accuracy || 0).toFixed(2)}%
+                </Text>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${Math.min(item?.new_accuracy || 0, 100)}%`,
+                        backgroundColor: themeColors.primary,
+                      },
+                    ]}
+                  />
+                </View>
+
+                {/* {item?.improvement_percentage && (
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      {
+                        color:
+                          (item?.new_accuracy || 0) >=
+                          (item?.previous_accuracy || 0)
+                            ? "#2E7D32"
+                            : "#C62828",
+                        fontWeight: "700",
+                        fontSize: 14,
+                      },
+                    ]}
+                  >
+                    {item.improvement_percentage}
+                  </Text>
+                )} */}
+
+                {item?.feedback ? (
+                  <Text
+                    style={[
+                      styles.feedbackText,
+                      {
+                        color:
+                          (item?.new_accuracy || 0) >=
+                          (item?.previous_accuracy || 0)
+                            ? "#2E7D32"
+                            : "#C62828",
+                      },
+                    ]}
+                  >
+                    {item.feedback}
+                  </Text>
+                ) : (
+                  item?.improvement !== 0 && (
+                    <View
+                      style={{
+                        alignSelf: "flex-end", // căn phải
+                        backgroundColor:
+                          item.improvement > 0
+                            ? "rgba(46, 125, 50, 0.9)" // xanh lá nhạt
+                            : "rgba(198, 40, 40, 0.9)", // đỏ nhạt
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        borderRadius: 2,
+                        marginTop: 6,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: "700",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {item.improvement < 0 ? "Giảm" : "Cải thiện"}
+                      </Text>
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 12,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {`${Math.abs(item.improvement).toFixed(2)}%`}
+                      </Text>
+                    </View>
+                  )
+                )}
+              </View>
+            ))}
 
           {/* Hành động */}
-          <TouchableOpacity style={styles.actionBtn} onPress={handleMorePractice}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={handleMorePractice}
+          >
             <Text style={styles.actionText}>Luyện tập thêm</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: themeColors.secondary }]}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: "transparent", marginBottom: 20 },
+            ]}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.actionText}>Quay lại</Text>
+            <Text style={[styles.actionText, { color: themeColors.primary }]}>
+              Quay lại
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -305,6 +503,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontStyle: "italic",
     color: "#2E7D32",
+    textAlign: "justify",
   },
   improvementCard: {
     padding: 14,

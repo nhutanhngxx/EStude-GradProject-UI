@@ -157,7 +157,7 @@ function AppNavigator() {
           <Stack.Screen
             name="PracticeReviewDetail"
             component={PracticeReviewDetailScreen}
-            options={{ title: "Chi tiết bài luyện tập", headerShown: false }}
+            options={{ title: "Chi tiết bài luyện tập", headerShown: true }}
           />
         </>
       )}

@@ -14,6 +14,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import aiService from "../../services/aiService";
 import classSubjectService from "../../services/classSubjectService";
 import { useToast } from "../../contexts/ToastContext";
+import ConfirmModal from "../../components/common/ConfirmModal";
 
 /*
 PracticeQuizScreen
@@ -65,6 +66,8 @@ export default function PracticeQuizScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [showHint, setShowHint] = useState({});
   const [normalizedQuiz, setNormalizedQuiz] = useState(null);
+  const [isPracticeSubmitModalVisible, setPracticeSubmitModalVisible] =
+    useState(false);
 
   const totalQuestions = quiz?.questions?.length || 0;
 
@@ -365,6 +368,8 @@ export default function PracticeQuizScreen({ navigation, route }) {
   };
 
   const handleEvaluateProgress = async () => {
+    console.log("layer1Result: ", aiResult);
+
     if (!aiResult?.detailedAnalysis) {
       showToast("Chưa có dữ liệu bài luyện tập để đánh giá.", {
         type: "warning",
@@ -577,16 +582,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
             <View style={{ paddingHorizontal: 16 }}>
               <TouchableOpacity
                 style={styles.submitBtn}
-                onPress={() =>
-                  Alert.alert(
-                    "Xác nhận",
-                    "Bạn có chắc chắn muốn nộp bài luyện tập?",
-                    [
-                      { text: "Hủy", style: "cancel" },
-                      { text: "Nộp", onPress: handleSubmit },
-                    ]
-                  )
-                }
+                onPress={() => setPracticeSubmitModalVisible(true)}
                 disabled={submitting}
               >
                 {submitting ? (
@@ -597,6 +593,19 @@ export default function PracticeQuizScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           )}
+
+          <ConfirmModal
+            visible={isPracticeSubmitModalVisible}
+            title="Xác nhận nộp bài"
+            message="Bạn có chắc chắn muốn nộp bài luyện tập không?"
+            confirmText="Nộp"
+            cancelText="Hủy"
+            onConfirm={() => {
+              setPracticeSubmitModalVisible(false);
+              handleSubmit();
+            }}
+            onCancel={() => setPracticeSubmitModalVisible(false)}
+          />
         </ScrollView>
       </View>
     );

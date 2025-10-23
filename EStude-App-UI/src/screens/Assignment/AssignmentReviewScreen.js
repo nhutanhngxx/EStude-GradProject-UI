@@ -40,7 +40,7 @@ export default function ExamReviewScreen({ route, navigation }) {
     const matchById = aiResult.detailedAnalysis.feedback.find(
       (f) => Number(f.question_id) === Number(question.questionId)
     );
-    
+
     if (matchById) {
       // console.log(`✅ Matched by ID - Question ${question.questionId}:`, matchById);
       return matchById;
@@ -52,13 +52,19 @@ export default function ExamReviewScreen({ route, navigation }) {
         f.question?.trim()?.toLowerCase() ===
         question.questionText?.trim()?.toLowerCase()
     );
-    
+
     if (matchByText) {
-      console.log(`⚠️ Matched by text - Question ${question.questionId}:`, matchByText);
+      console.log(
+        `⚠️ Matched by text - Question ${question.questionId}:`,
+        matchByText
+      );
       return matchByText;
     }
 
-    console.log(`❌ No match found for Question ${question.questionId}:`, question.questionText);
+    console.log(
+      `❌ No match found for Question ${question.questionId}:`,
+      question.questionText
+    );
     return null;
   };
 
@@ -77,19 +83,30 @@ export default function ExamReviewScreen({ route, navigation }) {
             assignmentId,
             token
           );
-          console.log("📊 Feedback Results:", feedbackResults);
-          
-          if (feedbackResults && Array.isArray(feedbackResults) && feedbackResults.length > 0) {
+          // console.log("Feedback Results:", feedbackResults);
+
+          if (
+            feedbackResults &&
+            Array.isArray(feedbackResults) &&
+            feedbackResults.length > 0
+          ) {
             // Lấy kết quả mới nhất (resultId lớn nhất hoặc generatedAt gần nhất)
             const latestFeedback = feedbackResults.reduce((latest, current) => {
               return current.resultId > latest.resultId ? current : latest;
             }, feedbackResults[0]);
-            
-            console.log("✅ Latest Feedback:", latestFeedback);
-            console.log("📝 Feedback List:", latestFeedback?.detailedAnalysis?.feedback);
-            
+
+            // console.log("Latest Feedback:", latestFeedback);
+
+            // console.log(
+            //   "Feedback List:",
+            //   latestFeedback?.detailedAnalysis?.feedback
+            // );
+
             // Tính topic_breakdown nếu chưa có
-            if (!latestFeedback?.detailedAnalysis?.topic_breakdown && latestFeedback?.detailedAnalysis?.feedback) {
+            if (
+              !latestFeedback?.detailedAnalysis?.topic_breakdown &&
+              latestFeedback?.detailedAnalysis?.feedback
+            ) {
               const topicMap = {};
               latestFeedback.detailedAnalysis.feedback.forEach((f) => {
                 const topic = f.topic || "Không xác định";
@@ -99,17 +116,20 @@ export default function ExamReviewScreen({ route, navigation }) {
                 topicMap[topic].total += 1;
                 if (f.is_correct) topicMap[topic].correct += 1;
               });
-              
-              latestFeedback.detailedAnalysis.topic_breakdown = Object.keys(topicMap).map((topic) => ({
+
+              latestFeedback.detailedAnalysis.topic_breakdown = Object.keys(
+                topicMap
+              ).map((topic) => ({
                 topic,
                 correct: topicMap[topic].correct,
                 total: topicMap[topic].total,
-                accuracy: topicMap[topic].total > 0 
-                  ? topicMap[topic].correct / topicMap[topic].total 
-                  : 0,
+                accuracy:
+                  topicMap[topic].total > 0
+                    ? topicMap[topic].correct / topicMap[topic].total
+                    : 0,
               }));
             }
-            
+
             setAiResult(latestFeedback);
           }
 
@@ -119,11 +139,18 @@ export default function ExamReviewScreen({ route, navigation }) {
               assignmentId,
               token
             );
-          if (recommendationResults && Array.isArray(recommendationResults) && recommendationResults.length > 0) {
+          if (
+            recommendationResults &&
+            Array.isArray(recommendationResults) &&
+            recommendationResults.length > 0
+          ) {
             // Lấy kết quả mới nhất
-            const latestRecommendation = recommendationResults.reduce((latest, current) => {
-              return current.resultId > latest.resultId ? current : latest;
-            }, recommendationResults[0]);
+            const latestRecommendation = recommendationResults.reduce(
+              (latest, current) => {
+                return current.resultId > latest.resultId ? current : latest;
+              },
+              recommendationResults[0]
+            );
             setRecommendations(
               latestRecommendation.detailedAnalysis || latestRecommendation
             );
@@ -215,7 +242,9 @@ export default function ExamReviewScreen({ route, navigation }) {
 
   const handleViewPractice = (practiceReviewData) => {
     // Hiển thị chi tiết của practice review
-    navigation.navigate("PracticeReviewDetail", { practiceReview: practiceReviewData });
+    navigation.navigate("PracticeReviewDetail", {
+      practiceReview: practiceReviewData,
+    });
   };
 
   const handleEvaluateProgress = async () => {
@@ -230,7 +259,8 @@ export default function ExamReviewScreen({ route, navigation }) {
     navigation.navigate("Improvement", {
       evaluation: latestImprovement,
       quiz: {
-        subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
+        subject:
+          aiResult?.detailedAnalysis?.subject || submission.assignmentName,
         assignmentId: submission.assignmentId,
       },
       previousFeedback: aiResult?.detailedAnalysis?.feedback,
@@ -313,99 +343,212 @@ export default function ExamReviewScreen({ route, navigation }) {
       {/* Body */}
       {activeTab === "Details" ? (
         <ScrollView style={{ flex: 1, padding: 12 }}>
+          {/* Tóm tắt AI */}
           <View style={styles.aiSummary}>
+            <Ionicons
+              name="stats-chart-outline"
+              size={26}
+              color={themeColors.primary}
+            />
             <Text style={styles.aiScoreLabel}>Điểm của bạn</Text>
             <Text style={styles.aiScoreValue}>{submission.score ?? "-"}</Text>
+
             {aiResult?.detailedAnalysis?.summary && (
-              <View style={{ marginTop: 12, width: "100%" }}>
-                <Text style={styles.summaryText}>
-                  Tổng số câu hỏi: {aiResult.detailedAnalysis.summary.total_questions || 0}
-                </Text>
-                <Text style={styles.summaryText}>
-                  Số câu đúng: {aiResult.detailedAnalysis.summary.correct_count || 0}
-                </Text>
-                <Text style={styles.summaryText}>
-                  Độ chính xác: {aiResult.detailedAnalysis.summary.accuracy_percentage?.toFixed(1) || 0}%
-                </Text>
+              <View style={styles.summaryBox}>
+                <View style={styles.summaryRow}>
+                  <Ionicons
+                    name="layers-outline"
+                    size={18}
+                    color={themeColors.secondary}
+                  />
+                  <Text style={styles.summaryText}>
+                    Tổng số câu hỏi:{" "}
+                    <Text style={styles.summaryValue}>
+                      {aiResult.detailedAnalysis.summary.total_questions || 0}
+                    </Text>
+                  </Text>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Ionicons
+                    name="checkmark-circle-outline"
+                    size={18}
+                    color={themeColors.secondary}
+                  />
+                  <Text style={styles.summaryText}>
+                    Số câu đúng:{" "}
+                    <Text style={styles.summaryValue}>
+                      {aiResult.detailedAnalysis.summary.correct_count || 0}
+                    </Text>
+                  </Text>
+                </View>
+
+                <View style={styles.summaryRow}>
+                  <Ionicons
+                    name="bullseye-outline"
+                    size={18}
+                    color={themeColors.secondary}
+                  />
+                  <Text style={styles.summaryText}>
+                    Độ chính xác:{" "}
+                    <Text style={styles.summaryValue}>
+                      {aiResult.detailedAnalysis.summary.accuracy_percentage?.toFixed(
+                        1
+                      ) || 0}
+                      %
+                    </Text>
+                  </Text>
+                </View>
               </View>
             )}
-            <Text style={styles.aiRecommend}>
+
+            {/* <Text style={styles.aiRecommend}>
+              <Ionicons
+                name="chatbubble-ellipses-outline"
+                size={16}
+                color="#555"
+              />{" "}
               {aiResult?.comment ?? "Không có nhận xét."}
-            </Text>
+            </Text> */}
           </View>
+
+          {/* Danh sách câu hỏi */}
           {submission.answers?.map((a, idx) => {
             const aiFb = getAIQuestionFeedback(a.question);
             return (
               <View key={a.answerId} style={styles.questionBlock}>
+                {/* Câu hỏi */}
                 <Text style={styles.questionText}>
                   Câu {idx + 1}: {a.question.questionText}
                 </Text>
+
+                {/* Đáp án người dùng chọn */}
                 {a.chosenOption ? (
-                  <Text style={styles.answerText}>
-                    Đáp án bạn chọn:{" "}
-                    <Text
-                      style={{
-                        color: a.chosenOption.isCorrect
-                          ? themeColors.secondary
-                          : themeColors.danger,
-                        fontWeight: "600",
-                      }}
-                    >
-                      {a.chosenOption.optionText}
+                  <View style={styles.answerRow}>
+                    <Text style={styles.answerText}>
+                      Đáp án bạn chọn:{" "}
+                      <Text
+                        style={{
+                          color: a.chosenOption.isCorrect
+                            ? themeColors.secondary
+                            : themeColors.danger,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {a.chosenOption.optionText}
+                      </Text>
                     </Text>
-                  </Text>
+                  </View>
                 ) : (
-                  <Text style={styles.answerText}>
-                    Đáp án bạn chọn:{" "}
-                    <Text style={{ color: "#999" }}>Chưa trả lời</Text>
-                  </Text>
+                  <View style={styles.answerRow}>
+                    <Ionicons name="pencil-outline" size={16} color="#999" />
+                    <Text style={styles.answerText}>
+                      {" "}
+                      Đáp án bạn chọn:{" "}
+                      <Text style={{ color: "#999" }}>Chưa trả lời</Text>
+                    </Text>
+                  </View>
                 )}
+
+                {/* Trạng thái đúng / sai */}
                 <View
                   style={[
-                    styles.feedbackBox,
-                    { backgroundColor: a.isCorrect ? "#e8f5e9" : "#ffebee" },
+                    styles.statusBadge,
+                    {
+                      backgroundColor: a.isCorrect ? "#e8f5e9" : "#ffebee",
+                    },
                   ]}
                 >
+                  <Ionicons
+                    name={a.isCorrect ? "checkmark-circle" : "close-circle"}
+                    size={16}
+                    color={
+                      a.isCorrect ? themeColors.secondary : themeColors.danger
+                    }
+                  />
                   <Text
-                    style={{
-                      color: a.isCorrect
-                        ? themeColors.secondary
-                        : themeColors.danger,
-                      fontStyle: "italic",
-                      fontSize: 14,
-                      fontWeight: "600",
-                    }}
+                    style={[
+                      styles.statusText,
+                      {
+                        color: a.isCorrect
+                          ? themeColors.secondary
+                          : themeColors.danger,
+                      },
+                    ]}
                   >
                     {a.isCorrect ? "ĐÚNG" : "SAI"}
                   </Text>
                 </View>
+
+                {/* Phân tích AI */}
                 {aiFb && (
                   <View
-                    style={[styles.feedbackBox, { backgroundColor: "#f5f5f5" }]}
+                    style={[styles.feedbackBox, { backgroundColor: "#f9f9f9" }]}
                   >
-                    <Text style={styles.aiAnalysisComment}>
-                      📝 Đáp án của bạn: {aiFb.student_answer || "Chưa trả lời"}
-                    </Text>
-                    <Text style={styles.aiAnalysisComment}>
-                      ✅ Đáp án đúng: {aiFb.correct_answer || "Không có dữ liệu"}
-                    </Text>
-                    <Text style={styles.aiAnalysisComment}>
-                      <Ionicons name="sparkles" size={15} color="green" /> Giải
-                      thích:{" "}
-                      {aiFb.explanation ||
-                        aiFb.feedback ||
-                        "Không có giải thích."}
-                    </Text>
-                    {aiFb.topic && aiFb.topic !== "Không xác định" && (
+                    <View style={styles.feedbackRow}>
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={14}
+                        color="#333"
+                      />
                       <Text style={styles.aiAnalysisComment}>
-                        📚 Chủ đề: {aiFb.topic}
-                        {aiFb.subtopic ? ` - ${aiFb.subtopic}` : ""}
+                        {" "}
+                        <Text style={styles.label}>Đáp án của bạn:</Text>{" "}
+                        {aiFb.student_answer || "Chưa trả lời"}
                       </Text>
+                    </View>
+
+                    <View style={styles.feedbackRow}>
+                      <Ionicons
+                        name="checkmark-done-outline"
+                        size={14}
+                        color="#2E7D32"
+                      />
+                      <Text style={styles.aiAnalysisComment}>
+                        {" "}
+                        <Text style={styles.label}>Đáp án đúng:</Text>{" "}
+                        {aiFb.correct_answer || "Không có dữ liệu"}
+                      </Text>
+                    </View>
+
+                    <View style={styles.feedbackRow}>
+                      <Ionicons
+                        name="sparkles-outline"
+                        size={14}
+                        color="#2E7D32"
+                      />
+                      <Text style={styles.aiAnalysisComment}>
+                        <Text style={styles.label}>Giải thích:</Text>{" "}
+                        {aiFb.explanation ||
+                          aiFb.feedback ||
+                          "Không có giải thích."}
+                      </Text>
+                    </View>
+
+                    {(aiFb.topic || aiFb.subtopic) && (
+                      <View style={styles.feedbackRow}>
+                        <Ionicons name="book-outline" size={14} color="#333" />
+                        <Text style={styles.aiAnalysisComment}>
+                          {" "}
+                          <Text style={styles.label}>Chủ đề:</Text> {aiFb.topic}
+                          {aiFb.subtopic ? ` - ${aiFb.subtopic}` : ""}
+                        </Text>
+                      </View>
                     )}
+
                     {aiFb.difficulty_level && (
-                      <Text style={styles.aiAnalysisComment}>
-                        📊 Độ khó: {aiFb.difficulty_level}
-                      </Text>
+                      <View style={styles.feedbackRow}>
+                        <Ionicons
+                          name="bar-chart-outline"
+                          size={14}
+                          color="#333"
+                        />
+                        <Text style={styles.aiAnalysisComment}>
+                          {" "}
+                          <Text style={styles.label}>Độ khó:</Text>{" "}
+                          {aiFb.difficulty_level}
+                        </Text>
+                      </View>
                     )}
                   </View>
                 )}
@@ -418,27 +561,75 @@ export default function ExamReviewScreen({ route, navigation }) {
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={themeColors.primary} />
-              <Text style={styles.loadingText}>Đang tải gợi ý học tập...</Text>
+              <Text style={styles.loadingText}>
+                <Ionicons
+                  name="sparkles-outline"
+                  size={16}
+                  color={themeColors.primary}
+                />{" "}
+                Đang tải gợi ý học tập...
+              </Text>
             </View>
           ) : recommendations ? (
             <>
-              <Text style={styles.sectionTitle}>Gợi ý học tập</Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons
+                  name="bulb-outline"
+                  size={22}
+                  color={themeColors.primary}
+                />
+                <Text style={styles.sectionTitle}>Gợi ý học tập</Text>
+              </View>
+
               <Text style={styles.overallAdvice}>
                 {recommendations.overall_advice}
               </Text>
-              <Text style={styles.subSectionTitle}>Chủ đề yếu</Text>
+
+              <View style={styles.subHeader}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={18}
+                  color="#f57c00"
+                />
+                <Text style={styles.subSectionTitle}>Chủ đề yếu</Text>
+              </View>
+
               {recommendations.weak_topics?.map((t, idx) => (
                 <View key={idx} style={styles.recommendationCard}>
-                  <Text style={styles.recTitle}>{t.topic}</Text>
-                  <TouchableOpacity onPress={() => handleGeneratePractice(t)}>
-                    <Text style={styles.actionText}>Ôn tập {t.topic}</Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Ionicons
+                      name="book-outline"
+                      size={18}
+                      color="#333"
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.recTitle}>{t.topic}</Text>
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.recButton}
+                    onPress={() => handleGeneratePractice(t)}
+                  >
+                    <Ionicons
+                      name="reload-circle-outline"
+                      size={18}
+                      color="#fff"
+                    />
+                    <Text style={styles.recButtonText}>Ôn tập {t.topic}</Text>
                   </TouchableOpacity>
                 </View>
               ))}
             </>
           ) : (
             <View style={styles.aiSummary}>
-              <Text>Không có gợi ý học tập nào hiện tại.</Text>
+              <Ionicons
+                name="information-circle-outline"
+                size={20}
+                color="#777"
+              />
+              <Text style={{ marginLeft: 6, color: "#777" }}>
+                Không có gợi ý học tập nào hiện tại.
+              </Text>
             </View>
           )}
         </ScrollView>
@@ -446,9 +637,17 @@ export default function ExamReviewScreen({ route, navigation }) {
         <ScrollView style={{ flex: 1, padding: 12 }}>
           {practiceReviews.length > 0 ? (
             <>
-              <Text style={styles.sectionTitle}>
-                Lịch sử bài luyện tập ({practiceReviews.length})
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons
+                  name="time-outline"
+                  size={22}
+                  color={themeColors.primary}
+                />
+                <Text style={styles.sectionTitle}>
+                  Lịch sử bài luyện tập ({practiceReviews.length})
+                </Text>
+              </View>
+
               {practiceReviews.map((review, idx) => {
                 const detailedAnalysis = review.detailedAnalysis || {};
                 const summary = detailedAnalysis.summary || {};
@@ -459,7 +658,8 @@ export default function ExamReviewScreen({ route, navigation }) {
                     onPress={() => handleViewPractice(review)}
                   >
                     <Text style={styles.pracTitle}>
-                      {detailedAnalysis.subject || "Bài luyện tập"} - Lần {idx + 1}
+                      {detailedAnalysis.subject || "Bài luyện tập"} - Lần{" "}
+                      {idx + 1}
                     </Text>
                     <Text style={styles.pracDate}>
                       Ngày:{" "}
@@ -489,21 +689,28 @@ export default function ExamReviewScreen({ route, navigation }) {
                   </TouchableOpacity>
                 );
               })}
-              <TouchableOpacity
-                style={styles.actionBtn}
+              {/* <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  improvements.length === 0
+                    ? { backgroundColor: "#ccc" } // xám nếu chưa có dữ liệu
+                    : loading
+                    ? { backgroundColor: "#66bb6a" } // nhạt hơn khi đang loading
+                    : { backgroundColor: "#2e7d32" }, // xanh chính khi sẵn sàng
+                ]}
                 onPress={handleEvaluateProgress}
                 disabled={loading || improvements.length === 0}
               >
                 {loading ? (
-                  <ActivityIndicator size="large" color="#fff" />
+                  <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.actionText}>
+                  <Text style={[styles.actionText, { color: "#fff" }]}>
                     {improvements.length > 0
                       ? "Xem đánh giá tiến bộ"
                       : "Chưa có đánh giá tiến bộ"}
                   </Text>
                 )}
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </>
           ) : (
             <View style={styles.aiSummary}>
@@ -517,28 +724,36 @@ export default function ExamReviewScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: themeColors.background },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
   header: {
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     backgroundColor: themeColors.secondary,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 3,
   },
   examTitle: {
     fontSize: 18,
     fontWeight: "700",
     color: "#fff",
-    marginTop: 4,
   },
   submittedAt: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#d0f0c0",
     marginTop: 6,
-    textAlign: "right",
   },
+
   tabRow: {
     flexDirection: "row",
     marginVertical: 8,
@@ -547,45 +762,58 @@ const styles = StyleSheet.create({
   tabBtn: {
     flex: 1,
     paddingVertical: 10,
-    alignItems: "center",
-    backgroundColor: "#eee",
-    marginHorizontal: 4,
     borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ECEFF1",
+    marginHorizontal: 4,
   },
   tabActive: {
     backgroundColor: themeColors.secondary,
   },
   tabText: {
     fontWeight: "600",
-    color: themeColors.text,
+    color: "#444",
+    fontSize: 14,
   },
   tabTextActive: {
     color: "#fff",
   },
+
   aiSummary: {
-    backgroundColor: "#e8fce8",
-    padding: 20,
-    borderRadius: 12,
-    margin: 16,
     alignItems: "center",
-    elevation: 3,
+    backgroundColor: "#E8F5E9",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    marginHorizontal: 12,
+    elevation: 2,
   },
   aiScoreLabel: {
     fontSize: 16,
     fontWeight: "600",
     color: themeColors.secondary,
+    marginTop: 8,
   },
   aiScoreValue: {
     fontSize: 40,
     fontWeight: "800",
-    color: "#000",
+    color: "#1B5E20",
+    marginVertical: 4,
   },
   aiRecommend: {
     marginTop: 12,
     fontSize: 15,
     fontStyle: "italic",
-    color: "#555",
+    color: "#444",
     textAlign: "justify",
+  },
+  summaryBox: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 10,
+    width: "100%",
   },
   summaryText: {
     fontSize: 14,
@@ -593,119 +821,220 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: "500",
   },
+
   questionBlock: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
-    backgroundColor: themeColors.card,
-    borderRadius: 10,
-    marginHorizontal: 16,
+    marginBottom: 14,
+    marginHorizontal: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
     elevation: 2,
   },
   questionText: {
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 6,
-    color: "#000",
+    marginBottom: 8,
+    color: "#222",
   },
   answerText: {
     fontSize: 14,
     color: "#444",
     marginBottom: 8,
   },
+
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    marginBottom: 8,
+  },
+  statusText: {
+    fontWeight: "700",
+    fontSize: 13,
+    marginLeft: 4,
+  },
+
   feedbackBox: {
     marginTop: 8,
     padding: 10,
     borderRadius: 8,
+    backgroundColor: "#F9F9F9",
+    borderWidth: 1,
+    borderColor: "#EEE",
   },
   aiAnalysisComment: {
+    flex: 1,
     fontSize: 14,
-    marginTop: 4,
-    color: themeColors.text,
+    color: "#333",
+    lineHeight: 20,
+    marginLeft: 6,
     textAlign: "justify",
+    flexShrink: 1,
   },
-  recommendationCard: {
-    backgroundColor: "#E8F5E9",
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    marginHorizontal: 16,
-  },
-  recTitle: {
-    fontSize: 16,
+  label: {
     fontWeight: "600",
-    marginBottom: 4,
+    color: "#222",
   },
-  overallAdvice: {
-    fontSize: 14,
-    color: themeColors.text,
-    marginBottom: 12,
-    marginHorizontal: 16,
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginLeft: 8,
+    color: "#2E7D32",
+    marginBottom: 8,
+  },
+  subHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 8,
   },
   subSectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 8,
-    marginHorizontal: 16,
-    color: themeColors.text,
+    marginLeft: 6,
+    color: "#f57c00",
   },
-  practiceCard: {
-    backgroundColor: themeColors.card,
-    padding: 16,
+  overallAdvice: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#333",
+    backgroundColor: "#F1F8E9",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  recommendationCard: {
+    backgroundColor: "#fff",
     borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  recTitle: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#333",
+  },
+  recButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#2E7D32",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  recButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+
+  practiceCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 12,
-    marginHorizontal: 16,
+    marginHorizontal: 10,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 3,
     elevation: 2,
   },
   pracTitle: {
     fontSize: 16,
     fontWeight: "600",
-    marginBottom: 4,
+    color: "#222",
   },
   pracDate: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#666",
-    marginBottom: 4,
+    marginTop: 4,
   },
   pracScore: {
     fontSize: 14,
     color: themeColors.primary,
     fontWeight: "600",
   },
-  noDataText: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginVertical: 12,
-    marginHorizontal: 16,
-  },
-  actionBtn: {
-    backgroundColor: themeColors.primary,
-    padding: 16,
-    alignItems: "center",
-    borderRadius: 12,
-    marginVertical: 12,
-    marginHorizontal: 16,
-  },
-  actionText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+
   loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    justifyContent: "center",
+    marginVertical: 24,
   },
   loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: themeColors.text,
+    color: "#555",
+    fontSize: 14,
+    marginTop: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
+  noDataText: {
+    fontSize: 14,
+    color: "#777",
+    textAlign: "center",
+    marginVertical: 20,
+  },
+  summaryBox: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  summaryText: {
+    fontSize: 14,
+    color: "#333",
+    marginLeft: 6,
+    fontWeight: "500",
+  },
+  summaryValue: {
     fontWeight: "700",
-    marginBottom: 12,
-    color: themeColors.text,
+    color: themeColors.secondary,
+  },
+  answerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+
+  feedbackRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 6,
+    flexWrap: "wrap",
+  },
+
+  label: {
+    fontWeight: "600",
+    color: "#000",
   },
 });
