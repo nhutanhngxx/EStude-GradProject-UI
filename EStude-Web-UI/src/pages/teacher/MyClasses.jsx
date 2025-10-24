@@ -52,7 +52,6 @@ export default function MyClasses() {
     []
   );
 
-  // Fetch dữ liệu lớp dạy
   useEffect(() => {
     const fetchMyClasses = async () => {
       setIsLoading(true);
@@ -63,11 +62,13 @@ export default function MyClasses() {
         );
         if (result) setClasses(result);
       } catch (err) {
+        console.error(err);
         setError("Không thể tải danh sách lớp học. Vui lòng thử lại.");
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchMyClasses();
   }, [user.userId]);
 
@@ -206,11 +207,12 @@ export default function MyClasses() {
         {/* Học kỳ */}
         <div className="flex items-center gap-2">
           <select
+            required
             value={filterTerm}
             onChange={(e) => setFilterTerm(e.target.value)}
             className="px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
           >
-            <option value="all">Tất cả học kỳ</option>
+            <option value="all">Chọn học kỳ</option>
             {uniqueTerms.map((term) => (
               <option key={term} value={term}>
                 {term}
@@ -249,13 +251,17 @@ export default function MyClasses() {
       </div>
 
       {/* Danh sách */}
-      {isLoading ? (
+      {!filterTerm || filterTerm === "all" ? (
+        <p className="text-gray-500 dark:text-gray-400 mt-4">
+          Vui lòng chọn học kỳ để xem danh sách lớp học.
+        </p>
+      ) : isLoading ? (
         <p className="text-gray-500 dark:text-gray-400 mt-4">Đang tải...</p>
       ) : error ? (
         <p className="text-red-500 dark:text-red-400 mt-4">{error}</p>
       ) : filteredClasses.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 mt-4">
-          Không có lớp nào phù hợp.
+          Không có lớp nào trong học kỳ này.
         </p>
       ) : (
         <>
