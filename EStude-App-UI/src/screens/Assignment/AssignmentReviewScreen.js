@@ -606,31 +606,47 @@ export default function ExamReviewScreen({ route, navigation }) {
                 <Text style={styles.subSectionTitle}>Chủ đề yếu</Text>
               </View>
 
-              {recommendations.weak_topics?.map((t, idx) => (
-                <View key={idx} style={styles.recommendationCard}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons
-                      name="book-outline"
-                      size={18}
-                      color="#333"
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.recTitle}>{t.topic}</Text>
-                  </View>
+              {(() => {
+                // Loại bỏ duplicate topics (chỉ giữ lại topic đầu tiên)
+                const uniqueTopics = [];
+                const seenTopics = new Set();
+                
+                recommendations.weak_topics?.forEach((t) => {
+                  const topicName = (t.topic || "").trim().toLowerCase();
+                  if (!seenTopics.has(topicName)) {
+                    seenTopics.add(topicName);
+                    uniqueTopics.push(t);
+                  }
+                });
 
-                  <TouchableOpacity
-                    style={styles.recButton}
-                    onPress={() => handleGeneratePractice(t)}
-                  >
-                    <Ionicons
-                      name="reload-circle-outline"
-                      size={18}
-                      color="#fff"
-                    />
-                    <Text style={styles.recButtonText}>Ôn tập {t.topic}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
+                return uniqueTopics.map((t, idx) => (
+                  <View key={idx} style={styles.recommendationCard}>
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                      <Ionicons
+                        name="book-outline"
+                        size={18}
+                        color="#333"
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={styles.recTitle} numberOfLines={2}>
+                        {t.topic}
+                      </Text>
+                    </View>
+
+                    <TouchableOpacity
+                      style={styles.recButton}
+                      onPress={() => handleGeneratePractice(t)}
+                    >
+                      <Ionicons
+                        name="reload-circle-outline"
+                        size={18}
+                        color="#fff"
+                      />
+                      <Text style={styles.recButtonText}>Ôn tập</Text>
+                    </TouchableOpacity>
+                  </View>
+                ));
+              })()}
             </>
           ) : (
             <View style={styles.aiSummary}>

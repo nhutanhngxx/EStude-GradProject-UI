@@ -259,33 +259,69 @@ export default function HomeStudentScreen({ navigation }) {
             };
           }
 
+          // Lấy overall_improvement của evaluation này
+          const overallImprovement = item.detailedAnalysis?.overall_improvement;
+          const improvementValue = overallImprovement?.improvement || 0;
+          const newAverage = overallImprovement?.new_average || 0;
+
           const topics = item.detailedAnalysis?.topics || [];
           topics.forEach((topic) => {
             const topicName = topic.topic;
-            subjectMap[subject].topics[topicName] = {
-              latestAccuracy: topic.new_accuracy,
-              status: topic.status,
-            };
+            // Normalize topic name để nhóm topics giống nhau
+            const normalizedTopicName = topicName.trim().toLowerCase();
+
+            if (!subjectMap[subject].topics[normalizedTopicName]) {
+              subjectMap[subject].topics[normalizedTopicName] = {
+                accuracyHistory: [],
+                improvementHistory: [],
+                count: 0,
+              };
+            }
+
+            // Lưu tất cả accuracy và improvement để tính trung bình
+            subjectMap[subject].topics[normalizedTopicName].accuracyHistory.push(
+              topic.new_accuracy
+            );
+            subjectMap[subject].topics[normalizedTopicName].improvementHistory.push(
+              topic.improvement
+            );
+            subjectMap[subject].topics[normalizedTopicName].count++;
           });
         });
 
         const subjectStats = Object.values(subjectMap).map((subjectData) => {
-          const topicsList = Object.values(subjectData.topics);
-          const totalAccuracy = topicsList.reduce(
-            (sum, t) => sum + (t.latestAccuracy || 0),
+          const topicsList = Object.values(subjectData.topics).map((topic) => {
+            // Tính trung bình accuracy và improvement
+            const avgAccuracy =
+              topic.accuracyHistory.reduce((sum, val) => sum + val, 0) /
+              topic.count;
+            const avgImprovement =
+              topic.improvementHistory.reduce((sum, val) => sum + val, 0) /
+              topic.count;
+
+            return {
+              avgAccuracy: Math.round(avgAccuracy * 10) / 10,
+              avgImprovement: Math.round(avgImprovement * 10) / 10,
+            };
+          });
+          
+          // Tính tỷ lệ đạt trung bình
+          const totalAvgAccuracy = topicsList.reduce(
+            (sum, t) => sum + t.avgAccuracy,
             0
           );
           const avgAccuracy =
-            topicsList.length > 0 ? totalAccuracy / topicsList.length : 0;
+            topicsList.length > 0 ? totalAvgAccuracy / topicsList.length : 0;
 
+          // Đếm topics theo avgAccuracy
           const mastered = topicsList.filter(
-            (t) => t.latestAccuracy >= 80
+            (t) => t.avgAccuracy >= 80
           ).length;
-          const progressing = topicsList.filter(
-            (t) => t.latestAccuracy >= 50 && t.latestAccuracy < 80
-          ).length;
+          const progressing = topicsList.filter((t) => {
+            return t.avgAccuracy >= 50 && t.avgAccuracy < 80;
+          }).length;
           const needsWork = topicsList.filter(
-            (t) => t.latestAccuracy < 50
+            (t) => t.avgAccuracy < 50
           ).length;
 
           return {

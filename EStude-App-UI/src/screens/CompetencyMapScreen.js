@@ -62,62 +62,94 @@ export default function CompetencyMapScreen({ navigation }) {
       subjectMap[subject].evaluations.push(item);
       subjectMap[subject].totalEvaluations++;
 
-      // Tổng hợp topics
+      // Lấy overall_improvement của evaluation này
+      const overallImprovement = item.detailedAnalysis?.overall_improvement;
+      const improvementValue = overallImprovement?.improvement || 0;
+      const newAverage = overallImprovement?.new_average || 0;
+
+      // Tổng hợp topics - TÍNH TRUNG BÌNH
       const topics = item.detailedAnalysis?.topics || [];
       topics.forEach((topic) => {
         const topicName = topic.topic;
+        
+        // Normalize topic name (lowercase, trim) để nhóm topics giống nhau
+        const normalizedTopicName = topicName.trim().toLowerCase();
 
-        if (!subjectMap[subject].topics[topicName]) {
-          subjectMap[subject].topics[topicName] = {
-            topic: topicName,
+        if (!subjectMap[subject].topics[normalizedTopicName]) {
+          subjectMap[subject].topics[normalizedTopicName] = {
+            topic: topicName, // Giữ tên gốc (viết hoa đầu tiên gặp)
             accuracyHistory: [],
             improvementHistory: [],
-            latestAccuracy: 0,
-            averageImprovement: 0,
-            status: "Chưa đánh giá",
+            count: 0,
           };
         }
 
-        subjectMap[subject].topics[topicName].accuracyHistory.push(
+        // Lưu tất cả accuracy và improvement để tính trung bình
+        subjectMap[subject].topics[normalizedTopicName].accuracyHistory.push(
           topic.new_accuracy
         );
-        subjectMap[subject].topics[topicName].improvementHistory.push(
+        subjectMap[subject].topics[normalizedTopicName].improvementHistory.push(
           topic.improvement
         );
-        subjectMap[subject].topics[topicName].latestAccuracy =
-          topic.new_accuracy;
-        subjectMap[subject].topics[topicName].status = topic.status;
+        subjectMap[subject].topics[normalizedTopicName].count++;
       });
     });
 
     // Tính toán thống kê
     const stats = Object.values(subjectMap).map((subjectData) => {
-      const topicsList = Object.values(subjectData.topics);
+      const topicsList = Object.values(subjectData.topics).map((topic) => {
+        // Tính trung bình accuracy và improvement
+        const avgAccuracy =
+          topic.accuracyHistory.reduce((sum, val) => sum + val, 0) /
+          topic.count;
+        const avgImprovement =
+          topic.improvementHistory.reduce((sum, val) => sum + val, 0) /
+          topic.count;
+
+        return {
+          topic: topic.topic,
+          avgAccuracy: Math.round(avgAccuracy * 10) / 10,
+          avgImprovement: Math.round(avgImprovement * 10) / 10,
+          accuracyHistory: topic.accuracyHistory,
+          improvementHistory: topic.improvementHistory,
+        };
+      });
 
       // Tính tỷ lệ đạt trung bình của môn
-      const totalAccuracy = topicsList.reduce(
-        (sum, t) => sum + (t.latestAccuracy || 0),
+      const totalAvgAccuracy = topicsList.reduce(
+        (sum, t) => sum + t.avgAccuracy,
         0
       );
       const avgAccuracy =
-        topicsList.length > 0 ? totalAccuracy / topicsList.length : 0;
+        topicsList.length > 0 ? totalAvgAccuracy / topicsList.length : 0;
 
-      // Tính overall improvement
-      const latestEval = subjectData.evaluations[0];
+      // Tính overall improvement - Trung bình improvement của các topics
+      const totalAvgImprovement = topicsList.reduce(
+        (sum, t) => sum + t.avgImprovement,
+        0
+      );
       const overallImprovement =
-        latestEval?.detailedAnalysis?.overall_improvement?.improvement || 0;
+        topicsList.length > 0 ? totalAvgImprovement / topicsList.length : 0;
 
-      // Đếm số topics theo status
-      const mastered = topicsList.filter((t) => t.latestAccuracy >= 80).length;
+      // Đếm số topics theo avgAccuracy
+      const mastered = topicsList.filter((t) => t.avgAccuracy >= 80).length;
       const progressing = topicsList.filter(
-        (t) => t.latestAccuracy >= 50 && t.latestAccuracy < 80
+        (t) => t.avgAccuracy >= 50 && t.avgAccuracy < 80
       ).length;
-      const needsWork = topicsList.filter((t) => t.latestAccuracy < 50).length;
+      const needsWork = topicsList.filter((t) => t.avgAccuracy < 50).length;
+
+      // Lấy evaluation mới nhất để hiển thị thời gian
+      const latestEval = subjectData.evaluations.reduce((latest, current) => {
+        if (!latest) return current;
+        const latestDate = new Date(latest.generatedAt);
+        const currentDate = new Date(current.generatedAt);
+        return currentDate > latestDate ? current : latest;
+      }, null);
 
       return {
         subject: subjectData.subject,
         avgAccuracy: Math.round(avgAccuracy * 10) / 10,
-        overallImprovement,
+        overallImprovement: Math.round(overallImprovement * 10) / 10,
         totalTopics: topicsList.length,
         mastered,
         progressing,
@@ -157,7 +189,7 @@ export default function CompetencyMapScreen({ navigation }) {
   const getImprovementIcon = (improvement) => {
     if (improvement > 20) return { icon: "trending-up", color: "#4CAF50" };
     if (improvement > 0) return { icon: "arrow-up", color: "#8BC34A" };
-    if (improvement === 0) return { icon: "minus", color: "#9E9E9E" };
+    if (improvement === 0) return { icon: "remove", color: "#9E9E9E" };
     if (improvement > -20) return { icon: "arrow-down", color: "#FF9800" };
     return { icon: "trending-down", color: "#F44336" };
   };

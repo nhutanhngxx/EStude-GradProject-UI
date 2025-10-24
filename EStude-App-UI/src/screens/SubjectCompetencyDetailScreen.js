@@ -30,6 +30,15 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
     return "#9E9E9E";
   };
 
+  // Hàm tính status từ avgImprovement (theo yêu cầu mới)
+  const getImprovementStatus = (avgImprovement) => {
+    if (avgImprovement >= 20) return { status: "Tiến bộ rõ rệt", color: "#4CAF50" };
+    if (avgImprovement >= 5) return { status: "Có cải thiện", color: "#2196F3" };
+    if (avgImprovement >= -4) return { status: "Ổn định", color: "#9E9E9E" };
+    if (avgImprovement >= -19) return { status: "Giảm nhẹ", color: "#FF9800" };
+    return { status: "Cần cải thiện gấp", color: "#F44336" };
+  };
+
   const getAccuracyLevel = (accuracy) => {
     if (accuracy >= 80) return { label: "Vững vàng", color: "#4CAF50" };
     if (accuracy >= 60) return { label: "Nâng cao", color: "#2196F3" };
@@ -38,7 +47,11 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
   };
 
   const sortedTopics = [...subjectData.topics].sort(
-    (a, b) => b.latestAccuracy - a.latestAccuracy
+    (a, b) => {
+      const accA = a.avgAccuracy || 0;
+      const accB = b.avgAccuracy || 0;
+      return accB - accA;
+    }
   );
 
   const sortedEvaluations = [...subjectData.evaluations].sort(
@@ -193,8 +206,12 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
             {/* <Text style={styles.sectionTitle}>🎯 Chi tiết từng Chủ đề</Text> */}
 
             {sortedTopics.map((topic, index) => {
-              const level = getAccuracyLevel(topic.latestAccuracy);
-              const statusColor = getStatusColor(topic.status);
+              // Hiển thị avgAccuracy (trung bình)
+              const displayAccuracy = topic.avgAccuracy || 0;
+              const level = getAccuracyLevel(displayAccuracy);
+              
+              // Tính status từ avgImprovement
+              const improvementStatus = getImprovementStatus(topic.avgImprovement || 0);
 
               return (
                 <View key={index} style={styles.topicCard}>
@@ -203,11 +220,11 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                     <View
                       style={[
                         styles.statusBadge,
-                        { backgroundColor: `${statusColor}15` },
+                        { backgroundColor: `${improvementStatus.color}15` },
                       ]}
                     >
-                      <Text style={[styles.statusText, { color: statusColor }]}>
-                        {topic.status}
+                      <Text style={[styles.statusText, { color: improvementStatus.color }]}>
+                        {improvementStatus.status}
                       </Text>
                     </View>
                   </View>
@@ -217,7 +234,7 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                       <Text
                         style={[styles.accuracyBig, { color: level.color }]}
                       >
-                        {topic.latestAccuracy}%
+                        {Math.round(displayAccuracy)}%
                       </Text>
                       <Text style={styles.accuracyLabel}>{level.label}</Text>
                     </View>
@@ -228,7 +245,7 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                           style={[
                             styles.progressBarFill,
                             {
-                              width: `${topic.latestAccuracy}%`,
+                              width: `${displayAccuracy}%`,
                               backgroundColor: level.color,
                             },
                           ]}
