@@ -8,6 +8,7 @@ import AttendanceScreen from "../screens/Attendances/AttendanceScreen";
 import AILearningScreen from "../screens/AILearningScreen";
 import NotificationScreen from "../screens/NotificationScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import CompetencyMapScreen from "../screens/CompetencyMapScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -74,12 +75,25 @@ export default function TabNavigator() {
           ),
         }}
       />
-      <Tab.Screen
+      {/* <Tab.Screen
         name="AILearning"
         component={AILearningScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon iconName="laptop" label="Dự đoán AI" focused={focused} />
+          ),
+        }}
+      /> */}
+      <Tab.Screen
+        name="CompetencyMap"
+        component={CompetencyMapScreen}
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              iconName="lightbulb-o"
+              label="Năng lực"
+              focused={focused}
+            />
           ),
         }}
       />

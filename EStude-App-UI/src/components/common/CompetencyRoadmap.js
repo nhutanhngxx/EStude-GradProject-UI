@@ -1,8 +1,12 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
-export default function CompetencyRoadmap({ currentAccuracy, totalTopics, masteredTopics }) {
+export default function CompetencyRoadmap({
+  currentAccuracy,
+  totalTopics,
+  masteredTopics,
+}) {
   const roadmapLevels = [
     {
       level: "Cơ bản",
@@ -39,11 +43,13 @@ export default function CompetencyRoadmap({ currentAccuracy, totalTopics, master
   ];
 
   const getCurrentLevel = () => {
-    return roadmapLevels.find(
-      (level) =>
-        currentAccuracy >= level.minAccuracy &&
-        currentAccuracy < level.maxAccuracy
-    ) || roadmapLevels[roadmapLevels.length - 1];
+    return (
+      roadmapLevels.find(
+        (level) =>
+          currentAccuracy >= level.minAccuracy &&
+          currentAccuracy < level.maxAccuracy
+      ) || roadmapLevels[roadmapLevels.length - 1]
+    );
   };
 
   const currentLevel = getCurrentLevel();
@@ -52,8 +58,23 @@ export default function CompetencyRoadmap({ currentAccuracy, totalTopics, master
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>🗺️ Lộ trình Năng lực</Text>
-      
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+        }}
+      >
+        <Ionicons
+          name="map"
+          size={20}
+          color="#00cc66"
+          style={{ marginRight: 6 }}
+        />
+        <Text style={{ fontSize: 16, fontWeight: "600", color: "#333" }}>
+          Lộ trình Năng lực
+        </Text>
+      </View>
+
       <View style={styles.roadmapContainer}>
         {roadmapLevels.map((level, index) => {
           const isCompleted = currentAccuracy > level.maxAccuracy;
@@ -117,20 +138,23 @@ export default function CompetencyRoadmap({ currentAccuracy, totalTopics, master
                 <Text style={styles.levelRange}>
                   {level.minAccuracy}% - {level.maxAccuracy}%
                 </Text>
-                
-                {isCurrent && (
-                  <View
-                    style={[
-                      styles.currentBadge,
-                      { backgroundColor: `${level.color}15` },
-                    ]}
-                  >
-                    <Text style={[styles.currentBadgeText, { color: level.color }]}>
-                      Vị trí hiện tại: {currentAccuracy.toFixed(1)}%
-                    </Text>
-                  </View>
-                )}
               </View>
+
+              {/* Current Badge */}
+              {isCurrent && (
+                <View
+                  style={[
+                    styles.currentBadge,
+                    { backgroundColor: `${level.color}15` },
+                  ]}
+                >
+                  <Text
+                    style={[styles.currentBadgeText, { color: level.color }]}
+                  >
+                    Vị trí hiện tại: {currentAccuracy.toFixed(1)}%
+                  </Text>
+                </View>
+              )}
             </View>
           );
         })}
@@ -138,7 +162,23 @@ export default function CompetencyRoadmap({ currentAccuracy, totalTopics, master
 
       {/* Overall Progress */}
       <View style={styles.progressContainer}>
-        <Text style={styles.progressTitle}>Tiến trình tổng thể</Text>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginVertical: 10,
+          }}
+        >
+          <Ionicons
+            name="bar-chart"
+            size={20}
+            color="#00cc66"
+            style={{ marginRight: 6 }}
+          />
+          <Text style={{ fontSize: 16, fontWeight: "600", color: "#333" }}>
+            Tiến trình tổng thể
+          </Text>
+        </View>
         <View style={styles.progressBarBg}>
           <View
             style={[
@@ -151,22 +191,48 @@ export default function CompetencyRoadmap({ currentAccuracy, totalTopics, master
           />
         </View>
         <Text style={styles.progressText}>
-          {masteredTopics}/{totalTopics} chủ đề đã vững ({completionPercentage.toFixed(0)}%)
+          {masteredTopics}/{totalTopics} chủ đề đã vững (
+          {completionPercentage.toFixed(0)}%)
         </Text>
       </View>
 
       {/* Next Goal */}
       {currentLevelIndex < roadmapLevels.length - 1 && (
         <View style={styles.nextGoalContainer}>
-          <Text style={styles.nextGoalTitle}>🎯 Mục tiêu tiếp theo</Text>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginVertical: 10,
+            }}
+          >
+            <Ionicons
+              name="trophy"
+              size={20}
+              color="#00cc66"
+              style={{ marginRight: 6 }}
+            />
+            <Text style={{ fontSize: 16, fontWeight: "600", color: "#333" }}>
+              Mục tiêu tiếp theo
+            </Text>
+          </View>
           <Text style={styles.nextGoalText}>
             Đạt {roadmapLevels[currentLevelIndex + 1].minAccuracy}% để lên cấp{" "}
-            <Text style={{ fontWeight: "bold", color: roadmapLevels[currentLevelIndex + 1].color }}>
+            <Text
+              style={{
+                fontWeight: "bold",
+                color: roadmapLevels[currentLevelIndex + 1].color,
+              }}
+            >
               {roadmapLevels[currentLevelIndex + 1].level}
             </Text>
           </Text>
           <Text style={styles.nextGoalProgress}>
-            Còn {(roadmapLevels[currentLevelIndex + 1].minAccuracy - currentAccuracy).toFixed(1)}% nữa!
+            Còn{" "}
+            {(
+              roadmapLevels[currentLevelIndex + 1].minAccuracy - currentAccuracy
+            ).toFixed(1)}
+            % nữa!
           </Text>
         </View>
       )}
@@ -250,8 +316,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   progressContainer: {
-    marginTop: 20,
-    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: "#f0f0f0",
   },

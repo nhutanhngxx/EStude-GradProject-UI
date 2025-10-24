@@ -171,7 +171,7 @@ function AppNavigator() {
           <Stack.Screen
             name="SubjectCompetencyDetail"
             component={SubjectCompetencyDetailScreen}
-            options={{ headerShown: false }}
+            options={{ title: "Chi tiết năng lực", headerShown: true }}
           />
         </>
       )}

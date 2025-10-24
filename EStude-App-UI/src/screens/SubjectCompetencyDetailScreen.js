@@ -47,7 +47,7 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
@@ -55,13 +55,13 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
           {subjectData.subject}
         </Text>
         <View style={{ width: 24 }} />
-      </View>
+      </View> */}
 
       <ScrollView style={styles.container}>
         {/* Subject Overview */}
         <View style={styles.overviewCard}>
-          <Text style={styles.overviewTitle}>📈 Tổng quan Năng lực</Text>
-          
+          <Text style={styles.overviewTitle}>Tổng quan Năng lực</Text>
+
           <View style={styles.bigAccuracyContainer}>
             <Text style={styles.bigAccuracyValue}>
               {subjectData.avgAccuracy}%
@@ -81,7 +81,9 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                 size={28}
                 color="#2196F3"
               />
-              <Text style={styles.statsBoxValue}>{subjectData.progressing}</Text>
+              <Text style={styles.statsBoxValue}>
+                {subjectData.progressing}
+              </Text>
               <Text style={styles.statsBoxLabel}>Đang tiến bộ</Text>
             </View>
             <View style={styles.statsBox}>
@@ -112,14 +114,18 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                     : "trending-down"
                 }
                 size={18}
-                color={subjectData.overallImprovement > 0 ? "#4CAF50" : "#F44336"}
+                color={
+                  subjectData.overallImprovement > 0 ? "#4CAF50" : "#F44336"
+                }
               />
               <Text
                 style={[
                   styles.improvementText,
                   {
                     color:
-                      subjectData.overallImprovement > 0 ? "#4CAF50" : "#F44336",
+                      subjectData.overallImprovement > 0
+                        ? "#4CAF50"
+                        : "#F44336",
                   },
                 ]}
               >
@@ -184,12 +190,12 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
           </View>
         ) : selectedTab === "topics" ? (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>🎯 Chi tiết từng Chủ đề</Text>
-            
+            {/* <Text style={styles.sectionTitle}>🎯 Chi tiết từng Chủ đề</Text> */}
+
             {sortedTopics.map((topic, index) => {
               const level = getAccuracyLevel(topic.latestAccuracy);
               const statusColor = getStatusColor(topic.status);
-              
+
               return (
                 <View key={index} style={styles.topicCard}>
                   <View style={styles.topicHeader}>
@@ -208,7 +214,9 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
 
                   <View style={styles.topicContent}>
                     <View style={styles.accuracySection}>
-                      <Text style={[styles.accuracyBig, { color: level.color }]}>
+                      <Text
+                        style={[styles.accuracyBig, { color: level.color }]}
+                      >
                         {topic.latestAccuracy}%
                       </Text>
                       <Text style={styles.accuracyLabel}>{level.label}</Text>
@@ -235,9 +243,17 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                       <Text style={styles.trendLabel}>Xu hướng cải thiện:</Text>
                       <View style={styles.trendBars}>
                         {topic.improvementHistory.slice(-5).map((imp, idx) => {
-                          const height = Math.abs(imp) > 0 ? Math.min(Math.abs(imp), 100) : 5;
-                          const barColor = imp > 0 ? "#4CAF50" : imp < 0 ? "#F44336" : "#9E9E9E";
-                          
+                          const height =
+                            Math.abs(imp) > 0
+                              ? Math.min(Math.abs(imp), 100)
+                              : 5;
+                          const barColor =
+                            imp > 0
+                              ? "#4CAF50"
+                              : imp < 0
+                              ? "#F44336"
+                              : "#9E9E9E";
+
                           return (
                             <View
                               key={idx}
@@ -263,7 +279,10 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                         style={{
                           fontWeight: "bold",
                           color:
-                            topic.improvementHistory.reduce((a, b) => a + b, 0) /
+                            topic.improvementHistory.reduce(
+                              (a, b) => a + b,
+                              0
+                            ) /
                               topic.improvementHistory.length >
                             0
                               ? "#4CAF50"
@@ -284,12 +303,21 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
           </View>
         ) : (
           <View style={styles.tabContent}>
-            <Text style={styles.sectionTitle}>📝 Lịch sử Đánh giá</Text>
-            
+            {/* <View style={styles.sectionHeader}>
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color="#007AFF"
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.sectionTitle}>Lịch sử Đánh giá</Text>
+            </View> */}
+
             {sortedEvaluations.map((evaluation, index) => {
               const evalData = evaluation.detailedAnalysis;
-              const overallImp = evalData?.overall_improvement?.improvement || 0;
-              
+              const overallImp =
+                evalData?.overall_improvement?.improvement || 0;
+
               return (
                 <View key={index} style={styles.historyCard}>
                   <View style={styles.historyHeader}>
@@ -318,7 +346,8 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                       style={[
                         styles.historyBadge,
                         {
-                          backgroundColor: overallImp > 0 ? "#E8F5E9" : "#FFEBEE",
+                          backgroundColor:
+                            overallImp > 0 ? "#E8F5E9" : "#FFEBEE",
                         },
                       ]}
                     >
@@ -360,7 +389,8 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                               },
                             ]}
                           >
-                            {topic.new_accuracy}% ({topic.improvement > 0 ? "+" : ""}
+                            {topic.new_accuracy}% (
+                            {topic.improvement > 0 ? "+" : ""}
                             {topic.improvement}%)
                           </Text>
                         </View>
@@ -378,7 +408,11 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                       <Text style={styles.viewActionText}>
                         Xem gợi ý hành động
                       </Text>
-                      <Ionicons name="chevron-forward" size={16} color="#00cc66" />
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color="#00cc66"
+                      />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -486,7 +520,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 4,
-    marginBottom: 16,
   },
   tab: {
     flex: 1,
@@ -508,17 +541,21 @@ const styles = StyleSheet.create({
   tabContent: {
     marginBottom: 16,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 10,
+  },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 12,
+    fontWeight: "600",
     color: "#333",
   },
   topicCard: {
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginTop: 12,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -609,7 +646,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginTop: 12,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },

@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   RefreshControl,
 } from "react-native";
+import HeaderAI from "../components/common/AIHeader";
 import { MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -26,7 +27,7 @@ export default function CompetencyMapScreen({ navigation }) {
     try {
       setLoading(true);
       const data = await aiService.getAllUserImprovements(token);
-      
+
       if (Array.isArray(data) && data.length > 0) {
         setImprovements(data);
         processSubjectStats(data);
@@ -45,10 +46,10 @@ export default function CompetencyMapScreen({ navigation }) {
   const processSubjectStats = (data) => {
     // Nhóm theo môn học
     const subjectMap = {};
-    
+
     data.forEach((item) => {
       const subject = item.detailedAnalysis?.subject || "Không rõ";
-      
+
       if (!subjectMap[subject]) {
         subjectMap[subject] = {
           subject,
@@ -57,15 +58,15 @@ export default function CompetencyMapScreen({ navigation }) {
           totalEvaluations: 0,
         };
       }
-      
+
       subjectMap[subject].evaluations.push(item);
       subjectMap[subject].totalEvaluations++;
-      
+
       // Tổng hợp topics
       const topics = item.detailedAnalysis?.topics || [];
       topics.forEach((topic) => {
         const topicName = topic.topic;
-        
+
         if (!subjectMap[subject].topics[topicName]) {
           subjectMap[subject].topics[topicName] = {
             topic: topicName,
@@ -76,36 +77,43 @@ export default function CompetencyMapScreen({ navigation }) {
             status: "Chưa đánh giá",
           };
         }
-        
-        subjectMap[subject].topics[topicName].accuracyHistory.push(topic.new_accuracy);
-        subjectMap[subject].topics[topicName].improvementHistory.push(topic.improvement);
-        subjectMap[subject].topics[topicName].latestAccuracy = topic.new_accuracy;
+
+        subjectMap[subject].topics[topicName].accuracyHistory.push(
+          topic.new_accuracy
+        );
+        subjectMap[subject].topics[topicName].improvementHistory.push(
+          topic.improvement
+        );
+        subjectMap[subject].topics[topicName].latestAccuracy =
+          topic.new_accuracy;
         subjectMap[subject].topics[topicName].status = topic.status;
       });
     });
-    
+
     // Tính toán thống kê
     const stats = Object.values(subjectMap).map((subjectData) => {
       const topicsList = Object.values(subjectData.topics);
-      
+
       // Tính tỷ lệ đạt trung bình của môn
       const totalAccuracy = topicsList.reduce(
         (sum, t) => sum + (t.latestAccuracy || 0),
         0
       );
-      const avgAccuracy = topicsList.length > 0 
-        ? totalAccuracy / topicsList.length 
-        : 0;
-      
+      const avgAccuracy =
+        topicsList.length > 0 ? totalAccuracy / topicsList.length : 0;
+
       // Tính overall improvement
       const latestEval = subjectData.evaluations[0];
-      const overallImprovement = latestEval?.detailedAnalysis?.overall_improvement?.improvement || 0;
-      
+      const overallImprovement =
+        latestEval?.detailedAnalysis?.overall_improvement?.improvement || 0;
+
       // Đếm số topics theo status
-      const mastered = topicsList.filter(t => t.latestAccuracy >= 80).length;
-      const progressing = topicsList.filter(t => t.latestAccuracy >= 50 && t.latestAccuracy < 80).length;
-      const needsWork = topicsList.filter(t => t.latestAccuracy < 50).length;
-      
+      const mastered = topicsList.filter((t) => t.latestAccuracy >= 80).length;
+      const progressing = topicsList.filter(
+        (t) => t.latestAccuracy >= 50 && t.latestAccuracy < 80
+      ).length;
+      const needsWork = topicsList.filter((t) => t.latestAccuracy < 50).length;
+
       return {
         subject: subjectData.subject,
         avgAccuracy: Math.round(avgAccuracy * 10) / 10,
@@ -119,10 +127,10 @@ export default function CompetencyMapScreen({ navigation }) {
         lastEvaluated: latestEval?.generatedAt,
       };
     });
-    
+
     // Sắp xếp theo avgAccuracy giảm dần
     stats.sort((a, b) => b.avgAccuracy - a.avgAccuracy);
-    
+
     setSubjectStats(stats);
   };
 
@@ -137,9 +145,12 @@ export default function CompetencyMapScreen({ navigation }) {
   }, []);
 
   const getCompetencyLevel = (accuracy) => {
-    if (accuracy >= 80) return { level: "Vững vàng", color: "#4CAF50", icon: "trophy" };
-    if (accuracy >= 60) return { level: "Nâng cao", color: "#2196F3", icon: "trending-up" };
-    if (accuracy >= 40) return { level: "Trung bình", color: "#FF9800", icon: "school" };
+    if (accuracy >= 80)
+      return { level: "Vững vàng", color: "#4CAF50", icon: "trophy" };
+    if (accuracy >= 60)
+      return { level: "Nâng cao", color: "#2196F3", icon: "trending-up" };
+    if (accuracy >= 40)
+      return { level: "Trung bình", color: "#FF9800", icon: "school" };
     return { level: "Cơ bản", color: "#F44336", icon: "book-outline" };
   };
 
@@ -180,10 +191,17 @@ export default function CompetencyMapScreen({ navigation }) {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.emptyContainer}>
-          <MaterialCommunityIcons name="map-marker-off" size={80} color="#ccc" />
-          <Text style={styles.emptyText}>Chưa có dữ liệu đánh giá năng lực</Text>
+          <MaterialCommunityIcons
+            name="map-marker-off"
+            size={80}
+            color="#ccc"
+          />
+          <Text style={styles.emptyText}>
+            Chưa có dữ liệu đánh giá năng lực
+          </Text>
           <Text style={styles.emptySubText}>
-            Hãy hoàn thành bài tập và luyện tập để xây dựng bản đồ năng lực của bạn
+            Hãy hoàn thành bài tập và luyện tập để xây dựng bản đồ năng lực của
+            bạn
           </Text>
         </View>
       </SafeAreaView>
@@ -192,13 +210,13 @@ export default function CompetencyMapScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#333" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bản đồ Năng lực</Text>
         <View style={{ width: 24 }} />
-      </View>
+      </View> */}
 
       <ScrollView
         style={styles.container}
@@ -211,9 +229,11 @@ export default function CompetencyMapScreen({ navigation }) {
           />
         }
       >
+        <HeaderAI />
+
         {/* Tổng quan */}
         <View style={styles.overviewCard}>
-          <Text style={styles.overviewTitle}>📊 Tổng quan Năng lực</Text>
+          <Text style={styles.overviewTitle}>Tổng quan Năng lực</Text>
           <View style={styles.overviewStats}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{subjectStats.length}</Text>
@@ -241,12 +261,14 @@ export default function CompetencyMapScreen({ navigation }) {
         </View>
 
         {/* Roadmap theo môn học */}
-        <Text style={styles.sectionTitle}>🗺️ Lộ trình Năng lực theo Môn học</Text>
-        
+        <Text style={styles.sectionTitle}>Lộ trình Năng lực theo Môn học</Text>
+
         {subjectStats.map((subjectData, index) => {
           const competency = getCompetencyLevel(subjectData.avgAccuracy);
-          const improvement = getImprovementIcon(subjectData.overallImprovement);
-          
+          const improvement = getImprovementIcon(
+            subjectData.overallImprovement
+          );
+
           return (
             <TouchableOpacity
               key={index}
@@ -277,12 +299,16 @@ export default function CompetencyMapScreen({ navigation }) {
                     { backgroundColor: `${competency.color}15` },
                   ]}
                 >
-                  <Text style={[styles.competencyText, { color: competency.color }]}>
+                  <Text
+                    style={[styles.competencyText, { color: competency.color }]}
+                  >
                     {competency.level}
                   </Text>
                 </View>
                 <View style={styles.accuracyRow}>
-                  <Text style={styles.accuracyValue}>{subjectData.avgAccuracy}%</Text>
+                  <Text style={styles.accuracyValue}>
+                    {subjectData.avgAccuracy}%
+                  </Text>
                   <Ionicons
                     name={improvement.icon}
                     size={18}
@@ -310,19 +336,34 @@ export default function CompetencyMapScreen({ navigation }) {
               {/* Topics breakdown */}
               <View style={styles.topicsBreakdown}>
                 <View style={styles.breakdownItem}>
-                  <View style={[styles.breakdownDot, { backgroundColor: "#4CAF50" }]} />
+                  <View
+                    style={[
+                      styles.breakdownDot,
+                      { backgroundColor: "#4CAF50" },
+                    ]}
+                  />
                   <Text style={styles.breakdownText}>
                     {subjectData.mastered} vững
                   </Text>
                 </View>
                 <View style={styles.breakdownItem}>
-                  <View style={[styles.breakdownDot, { backgroundColor: "#2196F3" }]} />
+                  <View
+                    style={[
+                      styles.breakdownDot,
+                      { backgroundColor: "#2196F3" },
+                    ]}
+                  />
                   <Text style={styles.breakdownText}>
                     {subjectData.progressing} tiến bộ
                   </Text>
                 </View>
                 <View style={styles.breakdownItem}>
-                  <View style={[styles.breakdownDot, { backgroundColor: "#FF9800" }]} />
+                  <View
+                    style={[
+                      styles.breakdownDot,
+                      { backgroundColor: "#FF9800" },
+                    ]}
+                  />
                   <Text style={styles.breakdownText}>
                     {subjectData.needsWork} cần luyện
                   </Text>
@@ -333,7 +374,9 @@ export default function CompetencyMapScreen({ navigation }) {
               {subjectData.lastEvaluated && (
                 <Text style={styles.lastEvaluated}>
                   Đánh giá gần nhất:{" "}
-                  {new Date(subjectData.lastEvaluated).toLocaleDateString("vi-VN")}
+                  {new Date(subjectData.lastEvaluated).toLocaleDateString(
+                    "vi-VN"
+                  )}
                 </Text>
               )}
             </TouchableOpacity>
@@ -411,9 +454,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   overviewTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   overviewStats: {
     flexDirection: "row",

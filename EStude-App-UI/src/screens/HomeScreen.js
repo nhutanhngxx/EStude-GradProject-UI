@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   RefreshControl,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { FontAwesome, Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { AuthContext } from "../contexts/AuthContext";
 import attendanceService from "../services/attandanceService";
@@ -243,21 +244,21 @@ export default function HomeStudentScreen({ navigation }) {
     try {
       setLoadingCompetency(true);
       const improvements = await aiService.getAllUserImprovements(token);
-      
+
       if (Array.isArray(improvements) && improvements.length > 0) {
         // Process similar to CompetencyMapScreen
         const subjectMap = {};
-        
+
         improvements.forEach((item) => {
           const subject = item.detailedAnalysis?.subject || "Không rõ";
-          
+
           if (!subjectMap[subject]) {
             subjectMap[subject] = {
               subject,
               topics: {},
             };
           }
-          
+
           const topics = item.detailedAnalysis?.topics || [];
           topics.forEach((topic) => {
             const topicName = topic.topic;
@@ -267,21 +268,26 @@ export default function HomeStudentScreen({ navigation }) {
             };
           });
         });
-        
+
         const subjectStats = Object.values(subjectMap).map((subjectData) => {
           const topicsList = Object.values(subjectData.topics);
           const totalAccuracy = topicsList.reduce(
             (sum, t) => sum + (t.latestAccuracy || 0),
             0
           );
-          const avgAccuracy = topicsList.length > 0 
-            ? totalAccuracy / topicsList.length 
-            : 0;
-          
-          const mastered = topicsList.filter(t => t.latestAccuracy >= 80).length;
-          const progressing = topicsList.filter(t => t.latestAccuracy >= 50 && t.latestAccuracy < 80).length;
-          const needsWork = topicsList.filter(t => t.latestAccuracy < 50).length;
-          
+          const avgAccuracy =
+            topicsList.length > 0 ? totalAccuracy / topicsList.length : 0;
+
+          const mastered = topicsList.filter(
+            (t) => t.latestAccuracy >= 80
+          ).length;
+          const progressing = topicsList.filter(
+            (t) => t.latestAccuracy >= 50 && t.latestAccuracy < 80
+          ).length;
+          const needsWork = topicsList.filter(
+            (t) => t.latestAccuracy < 50
+          ).length;
+
           return {
             avgAccuracy: Math.round(avgAccuracy * 10) / 10,
             mastered,
@@ -290,16 +296,19 @@ export default function HomeStudentScreen({ navigation }) {
             totalTopics: topicsList.length,
           };
         });
-        
+
         const stats = {
           totalSubjects: subjectStats.length,
           totalTopics: subjectStats.reduce((sum, s) => sum + s.totalTopics, 0),
           totalMastered: subjectStats.reduce((sum, s) => sum + s.mastered, 0),
-          totalProgressing: subjectStats.reduce((sum, s) => sum + s.progressing, 0),
+          totalProgressing: subjectStats.reduce(
+            (sum, s) => sum + s.progressing,
+            0
+          ),
           totalNeedsWork: subjectStats.reduce((sum, s) => sum + s.needsWork, 0),
           subjectStats,
         };
-        
+
         setCompetencyStats(stats);
       } else {
         setCompetencyStats(null);
@@ -336,19 +345,23 @@ export default function HomeStudentScreen({ navigation }) {
     fetchAttendance();
     fetchOverview();
     fetchTodaySchedule();
-    fetchCompetencyStats();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCompetencyStats();
+    }, [])
+  );
 
   const quickActions = [
     { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
     { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
     { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
-    { id: "qa4", label: "Năng lực", iconName: "area-chart", color: "#9C27B0" },
+    // { id: "qa4", label: "Năng lực", iconName: "area-chart", color: "#9C27B0" },
   ];
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" />
       <ScrollView
         style={styles.container}
         refreshControl={
@@ -360,6 +373,7 @@ export default function HomeStudentScreen({ navigation }) {
           />
         }
       >
+        <StatusBar barStyle="dark-content" />
         <UserHeader />
 
         {/* Tác vụ nhanh */}
