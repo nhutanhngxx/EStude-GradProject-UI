@@ -175,9 +175,11 @@ export default function TeacherGradeInput() {
     const res = await subjectGradeService.saveGrade(payload);
     if (res && showToastMsg) {
       showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
+    } else {
+      showToast(`Lưu điểm cho ${student.fullName} thất bại!`, "error");
     }
-    await aiService.predictSubjectsForStudent(student.userId);
-    await aiService.predictStudentGPA(student.userId);
+    // await aiService.predictSubjectsForStudent(student.userId);
+    // await aiService.predictStudentGPA(student.userId);
     return res;
   };
 

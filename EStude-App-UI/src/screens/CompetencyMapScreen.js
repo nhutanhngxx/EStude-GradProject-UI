@@ -71,7 +71,7 @@ export default function CompetencyMapScreen({ navigation }) {
       const topics = item.detailedAnalysis?.topics || [];
       topics.forEach((topic) => {
         const topicName = topic.topic;
-        
+
         // Normalize topic name (lowercase, trim) để nhóm topics giống nhau
         const normalizedTopicName = topicName.trim().toLowerCase();
 
@@ -197,13 +197,13 @@ export default function CompetencyMapScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Bản đồ Năng lực</Text>
           <View style={{ width: 24 }} />
-        </View>
+        </View> */}
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#00cc66" />
           <Text style={styles.loadingText}>Đang tải dữ liệu năng lực...</Text>

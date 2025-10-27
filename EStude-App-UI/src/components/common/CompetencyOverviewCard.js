@@ -14,9 +14,12 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
   };
 
   const getCompetencyLevel = (accuracy) => {
-    if (accuracy >= 80) return { level: "Vững vàng", color: "#4CAF50", icon: "trophy" };
-    if (accuracy >= 60) return { level: "Nâng cao", color: "#2196F3", icon: "trending-up" };
-    if (accuracy >= 40) return { level: "Trung bình", color: "#FF9800", icon: "school" };
+    if (accuracy >= 80)
+      return { level: "Vững vàng", color: "#4CAF50", icon: "trophy" };
+    if (accuracy >= 60)
+      return { level: "Nâng cao", color: "#2196F3", icon: "trending-up" };
+    if (accuracy >= 40)
+      return { level: "Trung bình", color: "#FF9800", icon: "school" };
     return { level: "Cơ bản", color: "#F44336", icon: "book-outline" };
   };
 
@@ -27,7 +30,11 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <MaterialCommunityIcons name="map-marker-path" size={20} color="#00cc66" />
+          <MaterialCommunityIcons
+            name="map-marker-path"
+            size={20}
+            color="#00cc66"
+          />
           <Text style={styles.title}>Bản đồ Năng lực</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#999" />

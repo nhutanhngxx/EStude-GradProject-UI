@@ -201,6 +201,7 @@ export default function ExamDoingScreen({ navigation, route }) {
           const layer2Payload = { feedback_data: processedResult };
           try {
             const layer2Result = await aiService.layer2(layer2Payload, token);
+            showToast("Gợi ý học tập thành công.", { type: "success" });
             console.log("layer2Result: ", layer2Result);
             setRecommendations(layer2Result?.data || layer2Result);
           } catch (layer2Error) {
@@ -368,9 +369,45 @@ export default function ExamDoingScreen({ navigation, route }) {
             ) : aiResult?.detailedAnalysis ? (
               <ScrollView style={styles.resultContainer}>
                 <View style={styles.summaryBox}>
-                  {/* <Text style={styles.subjectTitle}>
-                    Môn học: {aiResult.detailedAnalysis.subject}
-                  </Text> */}
+                  <View
+                    style={{
+                      flex: 1,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="stats-chart-outline"
+                      size={26}
+                      color={themeColors.primary}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        color: "#333",
+                        textAlign: "center",
+                      }}
+                    >
+                      Điểm của bạn
+                    </Text>
+                    <Text
+                      style={{
+                        marginTop: 8,
+                        fontSize: 48,
+                        lineHeight: 52,
+                        fontWeight: "bold",
+                        color: themeColors.primary,
+                        textAlign: "center",
+                      }}
+                    >
+                      {(
+                        (aiResult.detailedAnalysis.summary.correct_count /
+                          aiResult.detailedAnalysis.summary.total_questions) *
+                        10
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+
                   <Text style={styles.summaryText}>
                     Tổng số câu:{" "}
                     {aiResult.detailedAnalysis.summary.total_questions}
@@ -782,9 +819,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 20,
+    alignItems: "center",
   },
   subjectTitle: { fontSize: 18, fontWeight: "700", marginBottom: 8 },
-  summaryText: { fontSize: 15, color: "#333", marginVertical: 2 },
+  summaryText: { fontSize: 13, color: "#333", marginVertical: 2 },
   feedbackCard: {
     padding: 14,
     borderRadius: 12,

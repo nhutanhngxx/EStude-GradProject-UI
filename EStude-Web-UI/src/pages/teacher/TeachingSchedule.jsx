@@ -411,12 +411,12 @@ export default function TeachingScheduleFull() {
               />
             )}
 
-            <button
+            {/* <button
               onClick={fetchSchedules}
               className="px-3 py-2 text-green-600 bg-transparent hover:underline transition-all duration-200"
             >
               Cập nhật lịch
-            </button>
+            </button> */}
           </div>
         </div>
       </header>
