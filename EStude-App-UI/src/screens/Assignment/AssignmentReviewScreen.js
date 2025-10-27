@@ -6,6 +6,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import submissionService from "../../services/submissionService";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,6 +38,12 @@ export default function ExamReviewScreen({ route, navigation }) {
   const [improvements, setImprovements] = useState([]); // Layer 4 - Đánh giá tiến bộ
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Details"); // Tab mặc định
+
+  // 🎯 States cho Practice Settings Modal
+  const [showPracticeModal, setShowPracticeModal] = useState(false);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [numQuestions, setNumQuestions] = useState("5");
+  const [difficulty, setDifficulty] = useState("easy");
 
   const getAIQuestionFeedback = (question) => {
     if (!aiResult?.detailedAnalysis?.feedback) return null;
@@ -183,18 +195,16 @@ export default function ExamReviewScreen({ route, navigation }) {
     fetchData();
   }, [submissionId, token]);
 
-  const handleGeneratePractice = async (rawTopic) => {
+  // 🎯 Mở modal chọn settings cho bài luyện tập
+  const handleOpenPracticeModal = (rawTopic) => {
     // Kiểm tra aiResult có sẵn không
     if (!aiResult || !aiResult.resultId) {
       showToast("Đang tải dữ liệu phân tích. Vui lòng thử lại sau giây lát.", {
         type: "warning",
       });
-      console.warn("⚠️ aiResult not ready:", aiResult);
       return;
     }
-    
-    console.log("✅ aiResult available with resultId:", aiResult.resultId);
-    
+
     let topic = rawTopic;
     if (!topic) {
       showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {
@@ -214,24 +224,126 @@ export default function ExamReviewScreen({ route, navigation }) {
       return;
     }
 
+    // Lưu topic và mở modal
+    setSelectedTopic(topic);
+    setNumQuestions("5"); // Reset về default
+    setDifficulty("easy"); // Reset về default
+    setShowPracticeModal(true);
+  };
+
+  // 🚀 Tạo bài luyện tập với settings đã chọn
+  const handleGeneratePractice = async () => {
+    if (!selectedTopic) return;
+
+    const topic = selectedTopic;
+
+    // ✅ Lấy submission_id
+    const submissionIdForLayer3 = submission?.submissionId;
+
+    if (!submissionIdForLayer3) {
+      showToast("Lỗi: Không tìm thấy submission_id để tạo bài luyện tập.", {
+        type: "error",
+      });
+      return;
+    }
+
+    // 🔥 GỌI API LẤY FEEDBACK THỰC TẾ TỪ ASSIGNMENT
+    let referenceQuestions = [];
+    try {
+      const assignmentId = submission.assignmentId;
+      console.log(
+        "🔍 Fetching feedback from API for assignmentId:",
+        assignmentId
+      );
+
+      const feedbackResults = await aiService.getAIFeedbackByAssignmentId(
+        assignmentId,
+        token
+      );
+
+      if (
+        feedbackResults &&
+        Array.isArray(feedbackResults) &&
+        feedbackResults.length > 0
+      ) {
+        // Lấy feedback mới nhất
+        const latestFeedback = feedbackResults.reduce((latest, current) => {
+          return current.resultId > latest.resultId ? current : latest;
+        }, feedbackResults[0]);
+
+        console.log("✅ Latest feedback retrieved:", latestFeedback.resultId);
+
+        // Lọc feedback theo topic
+        if (latestFeedback?.detailedAnalysis?.feedback) {
+          latestFeedback.detailedAnalysis.feedback
+            .filter((f) => f.topic?.toLowerCase().includes(topic.toLowerCase()))
+            .forEach((f) => {
+              referenceQuestions.push({
+                question: f.question || "",
+                topic: f.topic || topic,
+                explanation: f.explanation || f.feedback || "",
+              });
+            });
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error fetching feedback from API:", error);
+      // Không throw error, tiếp tục với fallback
+    }
+
+    // Nếu không có reference questions từ API, tạo một default
+    if (referenceQuestions.length === 0) {
+      console.warn("⚠️ No reference questions from API, using fallback");
+      referenceQuestions.push({
+        question: `Câu hỏi mẫu về ${topic}`,
+        topic: topic,
+        explanation: `Đây là câu hỏi liên quan đến chủ đề ${topic}`,
+      });
+    }
+
+    // 🎯 Sử dụng settings từ modal
+    const numQuestionsInt = parseInt(numQuestions) || 5;
+
     const layer3Payload = {
-      assignment_id: submission.assignmentId,
+      submission_id: submissionIdForLayer3.toString(), // ✅ BẮT BUỘC
       subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
       topics: [topic],
-      difficulty: "easy",
-      num_questions: 3,
+      difficulty: difficulty, // ✅ Từ modal
+      num_questions: numQuestionsInt, // ✅ Từ modal
+      reference_questions: referenceQuestions, // ✅ THÊM reference_questions
     };
+
+    console.log(
+      "📤 Layer 3 Payload (AssignmentReviewScreen):",
+      JSON.stringify(layer3Payload, null, 2)
+    );
 
     try {
       setLoading(true);
+      setShowPracticeModal(false); // Đóng modal trước khi gọi API
+
       const layer3Result = await aiService.layer3(layer3Payload, token);
+
+      console.log(
+        "📥 Layer 3 Raw Response:",
+        JSON.stringify(layer3Result, null, 2)
+      );
+
       const quizData = layer3Result?.data ?? layer3Result;
+
+      console.log("📊 Quiz Data:", JSON.stringify(quizData, null, 2));
 
       if (
         !quizData ||
         !Array.isArray(quizData.questions) ||
         quizData.questions.length === 0
       ) {
+        console.error("❌ Layer 3 validation failed:", {
+          hasQuizData: !!quizData,
+          isArray: Array.isArray(quizData.questions),
+          questionsLength: quizData?.questions?.length,
+          fullResponse: layer3Result,
+        });
         showToast("Không tạo được bài luyện tập (API trả về rỗng).", {
           type: "error",
         });
@@ -240,8 +352,13 @@ export default function ExamReviewScreen({ route, navigation }) {
       }
 
       navigation.navigate("PracticeQuiz", {
-        quiz: { ...quizData, assignmentId: submission.assignmentId },
+        quiz: {
+          ...quizData,
+          assignmentId: submission.assignmentId,
+          submissionId: submission.submissionId, // ✅ THÊM submissionId vào quiz
+        },
         previousFeedback: aiResult, // Truyền toàn bộ object Layer 1 (có resultId, detailedAnalysis)
+        submissionId: submission.submissionId, // ✅ THÊM submissionId vào params
       });
     } catch (error) {
       console.error("Lỗi gọi Layer 3:", error);
@@ -297,6 +414,157 @@ export default function ExamReviewScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* 🎯 Practice Settings Modal */}
+      <Modal
+        visible={showPracticeModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowPracticeModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={styles.modalContainer}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Cài đặt bài luyện tập</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setShowPracticeModal(false);
+                      }}
+                    >
+                      <Ionicons name="close-circle" size={28} color="#999" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    style={styles.modalBody}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    <Text style={styles.topicLabel}>
+                      📚 Chủ đề:{" "}
+                      <Text style={styles.topicValue}>{selectedTopic}</Text>
+                    </Text>
+
+                    {/* Số câu hỏi */}
+                    <View style={styles.settingGroup}>
+                      <Text style={styles.settingLabel}>🔢 Số câu hỏi:</Text>
+                      <TextInput
+                        style={styles.numberInput}
+                        value={numQuestions}
+                        onChangeText={setNumQuestions}
+                        keyboardType="numeric"
+                        maxLength={2}
+                        placeholder="5"
+                        returnKeyType="done"
+                        onSubmitEditing={Keyboard.dismiss}
+                      />
+                    </View>
+
+                    {/* Mức độ */}
+                    <View style={styles.settingGroup}>
+                      <Text style={styles.settingLabel}>📊 Mức độ:</Text>
+                      <View style={styles.difficultyButtons}>
+                        {[
+                          {
+                            key: "easy",
+                            label: "Dễ",
+                            icon: "happy-outline",
+                            color: "#4caf50",
+                          },
+                          {
+                            key: "medium",
+                            label: "Trung bình",
+                            icon: "sunny-outline",
+                            color: "#ff9800",
+                          },
+                          {
+                            key: "hard",
+                            label: "Khó",
+                            icon: "flame-outline",
+                            color: "#f44336",
+                          },
+                          {
+                            key: "mixed",
+                            label: "Hỗn hợp",
+                            icon: "shuffle-outline",
+                            color: "#9c27b0",
+                          },
+                        ].map((item) => (
+                          <TouchableOpacity
+                            key={item.key}
+                            style={[
+                              styles.difficultyBtn,
+                              difficulty === item.key && {
+                                backgroundColor: item.color,
+                                borderColor: item.color,
+                              },
+                            ]}
+                            onPress={() => {
+                              Keyboard.dismiss();
+                              setDifficulty(item.key);
+                            }}
+                          >
+                            <Ionicons
+                              name={item.icon}
+                              size={18}
+                              color={
+                                difficulty === item.key ? "#fff" : item.color
+                              }
+                            />
+                            <Text
+                              style={[
+                                styles.difficultyText,
+                                difficulty === item.key &&
+                                  styles.difficultyTextActive,
+                              ]}
+                            >
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  </ScrollView>
+
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setShowPracticeModal(false);
+                      }}
+                    >
+                      <Text style={styles.cancelBtnText}>Hủy</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.confirmBtn}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        handleGeneratePractice();
+                      }}
+                    >
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="#fff"
+                      />
+                      <Text style={styles.confirmBtnText}>
+                        Tạo bài luyện tập
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.examTitle}>{submission.assignmentName}</Text>
@@ -557,7 +825,7 @@ export default function ExamReviewScreen({ route, navigation }) {
                         />
                         <Text style={styles.aiAnalysisComment}>
                           {" "}
-                          <Text style={styles.label}>Độ khó:</Text>{" "}
+                          <Text style={styles.label}>Mức độ:</Text>{" "}
                           {aiFb.difficulty_level}
                         </Text>
                       </View>
@@ -610,7 +878,7 @@ export default function ExamReviewScreen({ route, navigation }) {
                 // Loại bỏ duplicate topics (chỉ giữ lại topic đầu tiên)
                 const uniqueTopics = [];
                 const seenTopics = new Set();
-                
+
                 recommendations.weak_topics?.forEach((t) => {
                   const topicName = (t.topic || "").trim().toLowerCase();
                   if (!seenTopics.has(topicName)) {
@@ -621,7 +889,13 @@ export default function ExamReviewScreen({ route, navigation }) {
 
                 return uniqueTopics.map((t, idx) => (
                   <View key={idx} style={styles.recommendationCard}>
-                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        flex: 1,
+                      }}
+                    >
                       <Ionicons
                         name="book-outline"
                         size={18}
@@ -635,7 +909,7 @@ export default function ExamReviewScreen({ route, navigation }) {
 
                     <TouchableOpacity
                       style={styles.recButton}
-                      onPress={() => handleGeneratePractice(t)}
+                      onPress={() => handleOpenPracticeModal(t)}
                     >
                       <Ionicons
                         name="reload-circle-outline"
@@ -1064,5 +1338,134 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: "600",
     color: "#000",
+  },
+
+  // 🎯 Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    width: "90%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e0e0e0",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222",
+  },
+  modalBody: {
+    padding: 20,
+  },
+  topicLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 20,
+    padding: 12,
+    backgroundColor: "#f0f7f0",
+    borderRadius: 8,
+  },
+  topicValue: {
+    color: themeColors.secondary,
+    fontWeight: "700",
+  },
+  settingGroup: {
+    marginBottom: 20,
+  },
+  settingLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 10,
+  },
+  numberInput: {
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+    backgroundColor: "#f9f9f9",
+  },
+  difficultyButtons: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  difficultyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#e0e0e0",
+    backgroundColor: "#f9f9f9",
+    minWidth: "48%",
+    justifyContent: "center",
+  },
+  difficultyText: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 6,
+    color: "#666",
+  },
+  difficultyTextActive: {
+    color: "#fff",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    gap: 10,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#666",
+  },
+  confirmBtn: {
+    flex: 2,
+    flexDirection: "row",
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: themeColors.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  confirmBtnText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
   },
 });

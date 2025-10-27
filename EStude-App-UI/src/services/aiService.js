@@ -53,7 +53,7 @@ const endpoints = {
   // Lấy TẤT CẢ Improvement layer 4 theo assignment_id
   getAIImprovementByAssignmentId:
     "/api/ai/me/improvement/assignment/{assignmentId}",
-  
+
   // Lấy TẤT CẢ Improvement của user
   getAllUserImprovements: "/api/ai/me/improvement",
 };
@@ -203,8 +203,19 @@ const aiService = {
     }
   },
 
+  /**
+   * Layer 1: Phân tích chi tiết từng câu hỏi
+   * @param {Object} payload - { assignment_id, submission_id, student_name, subject, questions }
+   * @param {string} token - JWT token
+   */
   layer1: async (payload, token) => {
     try {
+      // Validate required fields
+      if (!payload.submission_id) {
+        console.error("Layer1: submission_id is required");
+        return null;
+      }
+
       const response = await fetch(`${config.BASE_URL}${endpoints.layer1}`, {
         method: "POST",
         headers: {
@@ -229,8 +240,19 @@ const aiService = {
     }
   },
 
+  /**
+   * Layer 2: Đưa ra gợi ý học tập cá nhân hóa
+   * @param {Object} payload - { submission_id, feedback_data }
+   * @param {string} token - JWT token
+   */
   layer2: async (payload, token) => {
     try {
+      // Validate required fields
+      if (!payload.submission_id) {
+        console.error("Layer2: submission_id is required");
+        return null;
+      }
+
       const response = await fetch(`${config.BASE_URL}${endpoints.layer2}`, {
         method: "POST",
         headers: {
@@ -240,7 +262,8 @@ const aiService = {
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        // throw new Error("Đưa ra gợi ý học tập cá nhân hóa thất bại");
+        const errText = await response.text();
+        console.error("Layer2 request failed:", response.status, errText);
         return null;
       }
       const result = await response.json();
@@ -254,8 +277,25 @@ const aiService = {
     }
   },
 
+  /**
+   * Layer 3: Sinh ra câu hỏi luyện tập
+   * @param {Object} payload - { submission_id, subject, topics, num_questions, difficulty, reference_questions }
+   * @param {string} token - JWT token
+   */
   layer3: async (payload, token) => {
     try {
+      // Validate required fields
+      if (!payload.submission_id) {
+        console.error("❌ Layer3: submission_id is required");
+        return null;
+      }
+
+      console.log("📤 Layer3 API Call:", {
+        url: `${config.BASE_URL}${endpoints.layer3}`,
+        payload: payload,
+        hasToken: !!token,
+      });
+
       const response = await fetch(`${config.BASE_URL}${endpoints.layer3}`, {
         method: "POST",
         headers: {
@@ -264,20 +304,45 @@ const aiService = {
         },
         body: JSON.stringify(payload),
       });
+
+      console.log("📥 Layer3 Response Status:", response.status);
+
       if (!response.ok) {
-        // throw new Error("Sinh ra câu hỏi luyện tập thất bại");
+        const errText = await response.text();
+        console.error("❌ Layer3 request failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorBody: errText,
+        });
         return null;
       }
+
       const result = await response.json();
+      console.log("✅ Layer3 success:", result);
       return result;
     } catch (error) {
-      console.error("Sinh ra câu hỏi luyện tập hiện không khả dụng:", error);
+      console.error("❌ Layer3 Exception:", {
+        message: error.message,
+        stack: error.stack,
+        error: error,
+      });
       return null;
     }
   },
 
+  /**
+   * Layer 4: Đánh giá tiến bộ sau luyện tập
+   * @param {Object} payload - { submission_id, subject, student_id, result_id, previous_results_id, previous_results, new_results }
+   * @param {string} token - JWT token
+   */
   layer4: async (payload, token) => {
     try {
+      // Validate required fields
+      if (!payload.submission_id) {
+        console.error("Layer4: submission_id is required");
+        return null;
+      }
+
       const response = await fetch(`${config.BASE_URL}${endpoints.layer4}`, {
         method: "POST",
         headers: {
@@ -287,7 +352,8 @@ const aiService = {
         body: JSON.stringify(payload),
       });
       if (!response.ok) {
-        // throw new Error("Đánh giá tiện ích sau luyện tập thất bại");
+        const errText = await response.text();
+        console.error("Layer4 request failed:", response.status, errText);
         return null;
       }
       const result = await response.json();
@@ -351,11 +417,13 @@ const aiService = {
 
   // Lấy TẤT CẢ Recommendation layer 2 theo assignment_id
   getAIRecommendationByAssignmentId: async (assignmentId, token) => {
-    console.log("Token Layer 2",token);
-    
+    console.log("Token Layer 2", token);
+
     try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.getAIRecommendationByAssignmentId.replace(
+        `${
+          config.BASE_URL
+        }${endpoints.getAIRecommendationByAssignmentId.replace(
           "{assignmentId}",
           assignmentId
         )}`,
@@ -383,7 +451,9 @@ const aiService = {
   getAIPracticeReviewByAssignmentId: async (assignmentId, token) => {
     try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.getAIPracticeReviewByAssignmentId.replace(
+        `${
+          config.BASE_URL
+        }${endpoints.getAIPracticeReviewByAssignmentId.replace(
           "{assignmentId}",
           assignmentId
         )}`,
@@ -407,9 +477,19 @@ const aiService = {
     }
   },
 
-  // Gửi kết quả bài luyện tập (Layer 3.5)
+  /**
+   * Layer 3.5: Gửi kết quả bài luyện tập
+   * @param {Object} payload - { submission_id, assignment_id, student_name, subject, questions }
+   * @param {string} token - JWT token
+   */
   submitPracticeReview: async (payload, token) => {
     try {
+      // Validate required fields
+      if (!payload.submission_id) {
+        console.error("Layer3.5: submission_id is required");
+        return null;
+      }
+
       const response = await fetch(
         `${config.BASE_URL}${endpoints.submitPracticeReview}`,
         {

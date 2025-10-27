@@ -76,13 +76,97 @@ export default function ImprovementScreen({ navigation, route }) {
       return;
     }
 
+    // ✅ Lấy submission_id từ quiz hoặc route params
+    const submissionIdForLayer3 =
+      quiz?.submissionId || route.params?.submissionId;
+
+    if (!submissionIdForLayer3) {
+      showToast("Lỗi: Không tìm thấy submission_id để tạo bài luyện tập mới.", {
+        type: "error",
+      });
+      return;
+    }
+
+    // � GỌI API LẤY FEEDBACK THỰC TẾ TỪ ASSIGNMENT
+    let referenceQuestions = [];
+    const assignmentId = quiz?.assignmentId || route.params?.assignmentId;
+
+    if (assignmentId && assignmentId !== "practice") {
+      try {
+        console.log(
+          "🔍 Fetching feedback from API for assignmentId:",
+          assignmentId
+        );
+
+        const feedbackResults = await aiService.getAIFeedbackByAssignmentId(
+          assignmentId,
+          token
+        );
+
+        if (
+          feedbackResults &&
+          Array.isArray(feedbackResults) &&
+          feedbackResults.length > 0
+        ) {
+          // Lấy feedback mới nhất
+          const latestFeedback = feedbackResults.reduce((latest, current) => {
+            return current.resultId > latest.resultId ? current : latest;
+          }, feedbackResults[0]);
+
+          console.log("✅ Latest feedback retrieved:", latestFeedback.resultId);
+
+          // Lọc feedback theo weak topics
+          if (latestFeedback?.detailedAnalysis?.feedback) {
+            weakTopics.forEach((topic) => {
+              latestFeedback.detailedAnalysis.feedback
+                .filter((f) =>
+                  f.topic?.toLowerCase().includes(topic.toLowerCase())
+                )
+                .forEach((f) => {
+                  referenceQuestions.push({
+                    question: f.question || "",
+                    topic: f.topic || topic,
+                    explanation: f.explanation || f.feedback || "",
+                  });
+                });
+            });
+          }
+        }
+      } catch (error) {
+        console.error("❌ Error fetching feedback from API:", error);
+        // Không throw error, tiếp tục với fallback
+      }
+    }
+
+    // Nếu không có reference questions từ API, tạo reference questions mặc định
+    if (referenceQuestions.length === 0) {
+      console.warn("⚠️ No reference questions from API, using fallback");
+      weakTopics.forEach((topic) => {
+        const topicData = evaluation?.topics?.find((t) => t.topic === topic);
+        referenceQuestions.push({
+          question: `Câu hỏi ôn tập về ${topic}`,
+          topic: topic,
+          explanation: topicData
+            ? `Độ chính xác hiện tại: ${topicData.new_accuracy}%. Cần cải thiện.`
+            : `Đây là câu hỏi liên quan đến chủ đề ${topic}`,
+        });
+      });
+    }
+
     const layer3Payload = {
-      assignment_id: quiz?.assignmentId || "practice",
+      submission_id: submissionIdForLayer3.toString(), // ✅ THÊM submission_id
+      assignment_id: (quiz?.assignmentId || "practice").toString(),
       subject: evaluation?.subject || quiz?.subject || "Chưa xác định",
       topics: weakTopics,
       difficulty: "medium",
       num_questions: 5,
+      reference_questions: referenceQuestions, // ✅ THÊM reference_questions
     };
+
+    console.log(
+      "📤 ImprovementScreen Layer3 Payload:",
+      JSON.stringify(layer3Payload, null, 2)
+    );
 
     try {
       const layer3Result = await aiService.layer3(layer3Payload, token);
@@ -104,8 +188,13 @@ export default function ImprovementScreen({ navigation, route }) {
       };
 
       navigation.navigate("PracticeQuiz", {
-        quiz: { ...quizData, assignmentId: quiz?.assignmentId },
+        quiz: {
+          ...quizData,
+          assignmentId: quiz?.assignmentId,
+          submissionId: quiz?.submissionId || route.params?.submissionId, // ✅ THÊM submissionId
+        },
         previousFeedback: newPreviousFeedback,
+        submissionId: quiz?.submissionId || route.params?.submissionId, // ✅ THÊM submissionId vào params
       });
     } catch (error) {
       console.error(error);

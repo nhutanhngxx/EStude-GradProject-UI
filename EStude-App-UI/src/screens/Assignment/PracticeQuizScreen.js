@@ -189,7 +189,14 @@ export default function PracticeQuizScreen({ navigation, route }) {
       `📊 Building payload from ${quizData.questions?.length || 0} questions`
     );
 
+    // ✅ Lấy submission_id từ quiz
+    const submissionIdForLayer35 =
+      quizData.submissionId || route.params?.submissionId;
+
     return {
+      submission_id: submissionIdForLayer35
+        ? submissionIdForLayer35.toString()
+        : undefined, // ✅ THÊM submission_id
       assignment_id: String(quizData.assignmentId || "practice"),
       student_name: user?.fullName || user?.name || "Học sinh",
       subject: quizData.subject || "Chưa xác định",
@@ -210,7 +217,9 @@ export default function PracticeQuizScreen({ navigation, route }) {
         if (correctAnswer === null && q.correct_answer) {
           correctAnswer = Number(q.correct_answer);
           console.log(
-            `📝 Using correct_answer from raw question ${idx + 1}: ${correctAnswer}`
+            `📝 Using correct_answer from raw question ${
+              idx + 1
+            }: ${correctAnswer}`
           );
         }
 
@@ -368,7 +377,10 @@ export default function PracticeQuizScreen({ navigation, route }) {
   const handleEvaluateProgress = async () => {
     console.log("🔍 handleEvaluateProgress called");
     console.log("📊 aiResult (Layer 3.5):", JSON.stringify(aiResult, null, 2));
-    console.log("📊 previousFeedback (Layer 1):", JSON.stringify(previousFeedback, null, 2));
+    console.log(
+      "📊 previousFeedback (Layer 1):",
+      JSON.stringify(previousFeedback, null, 2)
+    );
 
     if (!aiResult?.detailedAnalysis) {
       showToast("Chưa có dữ liệu bài luyện tập để đánh giá.", {
@@ -404,7 +416,10 @@ export default function PracticeQuizScreen({ navigation, route }) {
     if (!previousResultsId) {
       console.error("❌ Missing previousResultsId from previousFeedback");
       console.error("previousFeedback type:", typeof previousFeedback);
-      console.error("previousFeedback keys:", previousFeedback ? Object.keys(previousFeedback) : "null");
+      console.error(
+        "previousFeedback keys:",
+        previousFeedback ? Object.keys(previousFeedback) : "null"
+      );
       showToast("Không tìm thấy dữ liệu bài làm gốc (Layer 1).", {
         type: "error",
       });
@@ -467,7 +482,16 @@ export default function PracticeQuizScreen({ navigation, route }) {
       }));
     }
 
+    // ✅ Lấy submission_id từ quiz
+    const submissionIdForLayer4 =
+      quiz?.submissionId ||
+      normalizedQuiz?.submissionId ||
+      route.params?.submissionId;
+
     const layer4Payload = {
+      submission_id: submissionIdForLayer4
+        ? submissionIdForLayer4.toString()
+        : undefined, // ✅ THÊM submission_id
       student_id: user?.userId,
       subject: aiResult.detailedAnalysis?.subject || quiz?.subject,
       result_id: String(layer35ResultId),
@@ -576,16 +600,26 @@ export default function PracticeQuizScreen({ navigation, route }) {
                   );
                 })}
 
-                <TouchableOpacity onPress={() => toggleHint(key)}>
-                  <Text style={styles.hintText}>Gợi ý</Text>
-                </TouchableOpacity>
-
-                {showHint[key] && (
-                  <Text style={styles.hintExplanation}>
-                    {trimSnippet(
-                      (q.options || []).find((o) => o.explanation)?.explanation
-                    )}
-                  </Text>
+                {/* Hiển thị mức độ câu hỏi */}
+                {q.difficulty_level && (
+                  <View style={styles.difficultyBadge}>
+                    <Text style={styles.difficultyLabel}>Mức độ:</Text>
+                    <Text
+                      style={[
+                        styles.difficultyText,
+                        q.difficulty_level?.toLowerCase() === "dễ" ||
+                        q.difficulty_level?.toLowerCase() === "easy"
+                          ? styles.difficultyEasy
+                          : q.difficulty_level?.toLowerCase() ===
+                              "trung bình" ||
+                            q.difficulty_level?.toLowerCase() === "medium"
+                          ? styles.difficultyMedium
+                          : styles.difficultyHard,
+                      ]}
+                    >
+                      {q.difficulty_level}
+                    </Text>
+                  </View>
                 )}
               </View>
             );
@@ -911,4 +945,35 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   progressText: { color: "#444", fontWeight: "600" },
+
+  // 🎯 Difficulty Badge Styles
+  difficultyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 6,
+    alignSelf: "flex-start",
+  },
+  difficultyLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#666",
+    marginRight: 6,
+  },
+  difficultyText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  difficultyEasy: {
+    color: "#4caf50",
+  },
+  difficultyMedium: {
+    color: "#ff9800",
+  },
+  difficultyHard: {
+    color: "#f44336",
+  },
 });
