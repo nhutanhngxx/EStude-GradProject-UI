@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, PlusCircle, Save, Trash2, User, Users, X } from "lucide-react";
+import {
+  BookUser,
+  Edit,
+  Eye,
+  PlusCircle,
+  Save,
+  Trash2,
+  User,
+  Users,
+  X,
+} from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -20,21 +30,24 @@ const Badge = ({ text, color }) => (
 
 const Modal = ({ title, children, onClose }) =>
   createPortal(
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-10/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-[90%] h-[90vh] flex flex-col border border-gray-200 dark:border-gray-600">
+        {/* Header */}
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-            aria-label="Đóng modal"
+            className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            aria-label="Đóng"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="px-6 py-4">{children}</div>
+
+        {/* Body - chiếm toàn bộ chiều cao còn lại */}
+        <div className="flex-1 overflow-hidden px-6 py-4">{children}</div>
       </div>
     </div>,
     document.body
@@ -106,6 +119,10 @@ const ManageClasses = () => {
   const [selectedTeacher, setSelectedTeacher] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [teachers, setTeachers] = useState([]);
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [teacherSearch, setTeacherSearch] = useState({});
+  const [editTeacher, setEditTeacher] = useState(null);
+
   const [editableSemesters, setEditableSemesters] = useState([
     { termNumber: 1, beginDate: "", endDate: "" },
   ]);
@@ -130,7 +147,9 @@ const ManageClasses = () => {
       // console.log("Subjects: ", result);
 
       const filtered = result.filter(
-        (s) => Array.isArray(s.schools) && s.schools.some((sch) => sch.schoolId === schoolId)
+        (s) =>
+          Array.isArray(s.schools) &&
+          s.schools.some((sch) => sch.schoolId === schoolId)
       );
 
       // console.log("Filtered Subjects: ", filtered);
@@ -141,7 +160,6 @@ const ManageClasses = () => {
       fetchSubjects();
     }
   }, [schoolId]);
-
 
   // Load danh sách giáo viên
   useEffect(() => {
@@ -158,7 +176,7 @@ const ManageClasses = () => {
     try {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
       console.log("all class: ", allClasses);
-      
+
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
       if (!allClasses || !allClassSubjects) return;
 
@@ -433,6 +451,11 @@ const ManageClasses = () => {
       return true;
     });
 
+  const homeroomTeachers = teachers.filter((t) => t.homeroomTeacher);
+  const subjectTeachers = teachers;
+
+  console.log("homeroomTeachers: ", homeroomTeachers);
+  console.log("subjectTeachers: ", subjectTeachers);
 
   // Giao diện chính
   return (
@@ -597,242 +620,444 @@ const ManageClasses = () => {
           title={modalType === "add" ? "Thêm lớp mới" : "Thông tin lớp học"}
           onClose={closeModal}
         >
-          <div className="flex flex-col h-[60vh]">
+          <div className="flex flex-col h-full">
             <form
               id="classForm"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSave();
               }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden"
+              className="flex-1 min-h-0" // Quan trọng: cho phép form co giãn
             >
-              <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
-                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
-                            focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                >
-                  <option value="GRADE_6">Khối 6</option>
-                  <option value="GRADE_7">Khối 7</option>
-                  <option value="GRADE_8">Khối 8</option>
-                  <option value="GRADE_9">Khối 9</option>
-                  <option value="GRADE_10">Khối 10</option>
-                  <option value="GRADE_11">Khối 11</option>
-                  <option value="GRADE_12">Khối 12</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Tên lớp"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                />
-                <input
-                  type="number"
-                  placeholder="Sĩ số lớp"
-                  value={classSize}
-                  disabled
-                  onChange={(e) => setClassSize(Number(e.target.value))}
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                />
-                <select
-                  value={selectedTeacher}
-                  onChange={(e) => setSelectedTeacher(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
-                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
-                          focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                >
-                  <option value="">-- Chọn giáo viên chủ nhiệm --</option>
-                  {teachers
-                    .filter((t) => t.homeroomTeacher)
-                    .map((t) => (
-                      <option key={t.userId} value={t.userId}>
-                        {t.fullName}
-                      </option>
-                    ))}
-                </select>
-                <div>
-                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                    Danh sách học kỳ
-                  </label>
-                  <div className="overflow-x-auto border rounded-lg border-gray-300 dark:border-gray-600">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-100 dark:bg-gray-700">
-                        <tr>
-                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            Số học kỳ
-                          </th>
-                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            Bắt đầu
-                          </th>
-                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            Kết thúc
-                          </th>
-                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            Hành động
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {editableSemesters.map((sem, index) => (
-                          <tr
-                            key={index}
-                            className="border-b border-gray-200 dark:border-gray-700"
-                          >
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min={1}
-                                value={sem.termNumber}
-                                readOnly
-                                className="w-12 px-2 py-1 border rounded text-center bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="date"
-                                value={sem.beginDate}
-                                onChange={(e) =>
-                                  updateSemester(
-                                    index,
-                                    "beginDate",
-                                    e.target.value
-                                  )
-                                }
-                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="date"
-                                value={sem.endDate}
-                                onChange={(e) =>
-                                  updateSemester(
-                                    index,
-                                    "endDate",
-                                    e.target.value
-                                  )
-                                }
-                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <button
-                                type="button"
-                                onClick={() => removeSemester(index)}
-                                className="text-red-600 dark:text-red-400 hover:underline"
-                              >
-                                Xóa
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addSemester}
-                    className="mt-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                  >
-                    + Thêm học kỳ
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
-                <div>
-                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                    Môn học
-                  </label>
-
-                  {subjects ? (
-                  <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
-                    {subjects.map((subj) => {
-                      const selected = selectedSubjects.find(
-                        (s) => s.subjectId === subj.subjectId
-                      );
-                      return (
-                        <div
-                          key={subj.subjectId}
-                          className="flex items-center gap-2"
+              {/* Grid 2 cột - bằng nhau, khít */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
+                {/* Cột trái */}
+                <div className="flex flex-col min-h-0">
+                  <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+                    {/* Khối & Tên lớp */}
+                    <div className="flex gap-4">
+                      <div className="flex-[3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Khối
+                        </label>
+                        <select
+                          value={gradeLevel}
+                          onChange={(e) => setGradeLevel(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
                         >
-                          <input
-                            type="checkbox"
-                            checked={!!selected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedSubjects([
-                                  ...selectedSubjects,
-                                  {
-                                    subjectId: subj.subjectId,
-                                    teacherId: null,
-                                  },
-                                ]);
-                              } else {
-                                setSelectedSubjects(
-                                  selectedSubjects.filter(
-                                    (s) => s.subjectId !== subj.subjectId
-                                  )
-                                );
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
-                          />
-                          <span className="flex-1 text-gray-900 dark:text-gray-100">
-                            {subj.name}
-                          </span>
-                          <select
-                            value={selected?.teacherId ?? ""}
-                            onChange={(e) =>
-                              setSelectedSubjects(
-                                selectedSubjects.map((s) =>
-                                  s.subjectId === subj.subjectId
-                                    ? {
-                                        ...s,
-                                        teacherId: e.target.value
-                                          ? Number(e.target.value)
-                                          : null,
-                                      }
-                                    : s
-                                )
-                              )
-                            }
-                            className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                            disabled={!selected}
-                          >
-                            <option value="">
-                              {selected?.teacherName || "-- Chọn giáo viên --"}
+                          <option value="GRADE_6">Khối 6</option>
+                          <option value="GRADE_7">Khối 7</option>
+                          <option value="GRADE_8">Khối 8</option>
+                          <option value="GRADE_9">Khối 9</option>
+                          <option value="GRADE_10">Khối 10</option>
+                          <option value="GRADE_11">Khối 11</option>
+                          <option value="GRADE_12">Khối 12</option>
+                        </select>
+                      </div>
+                      <div className="flex-[7]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Tên lớp
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="VD: 12A1"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sĩ số & GVCN */}
+                    <div className="flex gap-4">
+                      <div className="flex-[3]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Sĩ số lớp
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={classSize}
+                          disabled
+                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                      <div className="flex-[7]">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                          Giáo viên chủ nhiệm
+                        </label>
+                        <select
+                          value={selectedTeacher}
+                          onChange={(e) => setSelectedTeacher(e.target.value)}
+                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                        >
+                          <option value="">
+                            -- Chọn giáo viên chủ nhiệm --
+                          </option>
+                          {homeroomTeachers.map((t) => (
+                            <option key={t.userId} value={t.userId}>
+                              {t.fullName} ({t.teacherCode})
                             </option>
-                            {teachers.map((t) => (
-                              <option key={t.userId} value={t.userId}>
-                                {t.fullName} - {t.teacherCode}
-                              </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Danh sách học kỳ */}
+                    <div>
+                      <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                        Danh sách học kỳ
+                      </label>
+                      <div className="border rounded-lg border-gray-300 dark:border-gray-600 overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                              <th className="px-3 py-2 text-left">Số học kỳ</th>
+                              <th className="px-3 py-2 text-left">Bắt đầu</th>
+                              <th className="px-3 py-2 text-left">Kết thúc</th>
+                              <th className="px-3 py-2 text-left">Hành động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {editableSemesters.map((sem, index) => (
+                              <tr
+                                key={index}
+                                className="border-t border-gray-200 dark:border-gray-700"
+                              >
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    value={sem.termNumber}
+                                    readOnly
+                                    className="w-12 px-2 py-1 border rounded text-center bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="date"
+                                    value={sem.beginDate}
+                                    onChange={(e) =>
+                                      updateSemester(
+                                        index,
+                                        "beginDate",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="px-2 py-1 border rounded w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <input
+                                    type="date"
+                                    value={sem.endDate}
+                                    onChange={(e) =>
+                                      updateSemester(
+                                        index,
+                                        "endDate",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="px-2 py-1 border rounded w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                  />
+                                </td>
+                                <td className="px-3 py-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSemester(index)}
+                                    className="text-red-600 dark:text-red-400 hover:underline text-sm"
+                                  >
+                                    Xóa
+                                  </button>
+                                </td>
+                              </tr>
                             ))}
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div> ) : (
-                    <span className="text-gray-500 dark:text-gray-400 italic">
-                      Hiện tại chưa có môn học nào.
-                    </span>
-                  )}
+                          </tbody>
+                        </table>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addSemester}
+                        className="mt-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      >
+                        + Thêm học kỳ
+                      </button>
+                    </div>
+
+                    {/* Danh sách môn học đã chọn */}
+                    <div>
+                      <label className="flex items-center gap-2 font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                        <BookUser size={16} />
+                        Danh sách môn học đã thêm
+                      </label>
+                      {selectedSubjects.length > 0 ? (
+                        <ul className="space-y-2 border rounded-lg p-2 max-h-48 overflow-y-auto border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
+                          {selectedSubjects.map((subj) => {
+                            const subjectInfo = subjects.find(
+                              (s) => s.subjectId === subj.subjectId
+                            );
+                            const teacherInfo = teachers.find(
+                              (t) => t.userId === subj.teacherId
+                            );
+                            return (
+                              <li
+                                key={subj.subjectId}
+                                className="flex justify-between items-center text-sm bg-white dark:bg-gray-700 rounded-lg px-3 py-2 shadow-sm"
+                              >
+                                <div className="flex-1 flex justify-between gap-2">
+                                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                    {subjectInfo?.name}
+                                  </span>
+                                  <span className="text-gray-500 dark:text-gray-400 truncate">
+                                    {teacherInfo
+                                      ? `${teacherInfo.fullName} (${teacherInfo.teacherCode})`
+                                      : "Chưa chọn"}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedSubjects((prev) =>
+                                      prev.filter(
+                                        (s) => s.subjectId !== subj.subjectId
+                                      )
+                                    )
+                                  }
+                                  className="text-red-500 dark:text-red-400 hover:underline text-xs ml-2"
+                                >
+                                  Xóa
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          Chưa thêm môn học nào.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cột phải - Môn học & Giáo viên */}
+                <div className="flex flex-col min-h-0">
+                  <div className="flex-1 overflow-y-auto pl-2 space-y-4">
+                    <div>
+                      <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                        Môn học & Giáo viên phụ trách
+                      </label>
+
+                      {/* Ô tìm kiếm môn */}
+                      <input
+                        type="text"
+                        placeholder="Tìm môn học..."
+                        value={subjectSearch}
+                        onChange={(e) => setSubjectSearch(e.target.value)}
+                        className="w-full px-3 py-2 mb-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                      />
+
+                      {/* Danh sách môn */}
+                      <div className="space-y-3 max-h-[48vh] overflow-y-auto pr-1">
+                        {subjects
+                          .filter((s) =>
+                            s.name
+                              .toLowerCase()
+                              .includes(subjectSearch.toLowerCase())
+                          )
+                          .map((subj) => {
+                            const selected = selectedSubjects.find(
+                              (s) => s.subjectId === subj.subjectId
+                            );
+                            const teacher = teachers.find(
+                              (t) => t.userId === selected?.teacherId
+                            );
+
+                            return (
+                              <div
+                                key={subj.subjectId}
+                                className={`p-3 border rounded-lg transition-all ${
+                                  selected
+                                    ? "bg-green-50 dark:bg-green-900/30 border-green-400"
+                                    : "bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!selected}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setSelectedSubjects((prev) => [
+                                            ...prev,
+                                            {
+                                              subjectId: subj.subjectId,
+                                              teacherId: null,
+                                            },
+                                          ]);
+                                        } else {
+                                          setSelectedSubjects((prev) =>
+                                            prev.filter(
+                                              (s) =>
+                                                s.subjectId !== subj.subjectId
+                                            )
+                                          );
+                                        }
+                                      }}
+                                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-200"
+                                    />
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {subj.name}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {selected && (
+                                  <div className="mt-3">
+                                    {!teacher ||
+                                    editTeacher === subj.subjectId ? (
+                                      <>
+                                        <input
+                                          type="text"
+                                          placeholder="Tìm giáo viên..."
+                                          value={
+                                            teacherSearch[subj.subjectId] || ""
+                                          }
+                                          onChange={(e) =>
+                                            setTeacherSearch((prev) => ({
+                                              ...prev,
+                                              [subj.subjectId]: e.target.value,
+                                            }))
+                                          }
+                                          className="w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                                        />
+                                        <div className="max-h-32 overflow-y-auto border rounded mt-1 border-gray-200 dark:border-gray-600">
+                                          {subjectTeachers
+                                            .filter((t) => {
+                                              const term = (
+                                                teacherSearch[subj.subjectId] ||
+                                                ""
+                                              ).toLowerCase();
+                                              return (
+                                                t.fullName
+                                                  .toLowerCase()
+                                                  .includes(term) ||
+                                                (t.teacherCode &&
+                                                  t.teacherCode
+                                                    .toLowerCase()
+                                                    .includes(term))
+                                              );
+                                            })
+                                            .map((t) => (
+                                              <div
+                                                key={t.userId}
+                                                onClick={() => {
+                                                  setSelectedSubjects((prev) =>
+                                                    prev.map((s) =>
+                                                      s.subjectId ===
+                                                      subj.subjectId
+                                                        ? {
+                                                            ...s,
+                                                            teacherId: t.userId,
+                                                          }
+                                                        : s
+                                                    )
+                                                  );
+                                                  setEditTeacher(null);
+                                                  setTeacherSearch((prev) => ({
+                                                    ...prev,
+                                                    [subj.subjectId]: "",
+                                                  }));
+                                                }}
+                                                className={`px-2 py-1.5 cursor-pointer text-sm transition-colors ${
+                                                  t.userId ===
+                                                  selected.teacherId
+                                                    ? "bg-blue-600 text-white"
+                                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                                                }`}
+                                              >
+                                                <span className="font-medium">
+                                                  {t.fullName}
+                                                </span>
+                                                <span className="text-xs ml-1">
+                                                  (
+                                                  {t.teacherCode ||
+                                                    "Chưa có mã"}
+                                                  )
+                                                </span>
+                                              </div>
+                                            ))}
+                                          {subjectTeachers.filter((t) => {
+                                            const term = (
+                                              teacherSearch[subj.subjectId] ||
+                                              ""
+                                            ).toLowerCase();
+                                            return (
+                                              t.fullName
+                                                .toLowerCase()
+                                                .includes(term) ||
+                                              (t.teacherCode &&
+                                                t.teacherCode
+                                                  .toLowerCase()
+                                                  .includes(term))
+                                            );
+                                          }).length === 0 && (
+                                            <div className="px-2 py-1 text-xs text-gray-500 italic">
+                                              Không tìm thấy giáo viên
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <div className="flex justify-between items-center text-sm">
+                                        <span className="text-green-700 dark:text-green-400">
+                                          GV:{" "}
+                                          <span className="font-semibold">
+                                            {teacher.fullName}
+                                          </span>{" "}
+                                          ({teacher.teacherCode})
+                                        </span>
+                                        <button
+                                          onClick={() =>
+                                            setEditTeacher(subj.subjectId)
+                                          }
+                                          className="text-blue-600 dark:text-blue-400 hover:underline text-xs flex items-center gap-1"
+                                        >
+                                          <Edit size={14} /> Sửa
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      {subjects.length === 0 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          Chưa có môn học nào.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </form>
-            <div className="flex justify-end gap-2 mt-4">
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={closeModal}
-                className="text-sm px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                className="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 form="classForm"
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm transition"
               >
                 <Save size={16} />
                 {modalType === "add" ? "Lưu lớp học" : "Lưu thay đổi"}
