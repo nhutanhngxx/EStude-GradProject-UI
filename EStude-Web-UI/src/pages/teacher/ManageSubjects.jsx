@@ -31,6 +31,7 @@ export default function ManageSubjects() {
   const { confirm } = useConfirm();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
+  const isAdmin = user.admin === true; // Kiểm tra admin của Teacher (Giáo vụ)
 
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -44,9 +45,13 @@ export default function ManageSubjects() {
       try {
         const result = await subjectService.getAllSubjects();
         if (result) {
-          const filtered = result.filter((s) =>
-            s.schools?.some((sch) => sch.schoolId === schoolId)
-          );
+          // Nếu Teacher có admin = true (giáo vụ) thì lấy tất cả môn học
+          // Nếu Teacher thông thường thì chỉ lấy môn học của trường
+          const filtered = isAdmin
+            ? result // Teacher admin (giáo vụ) lấy tất cả môn học
+            : result.filter((s) =>
+                s.schools?.some((sch) => sch.schoolId === schoolId)
+              );
           setSubjects(filtered);
         }
       } catch (error) {
@@ -55,7 +60,7 @@ export default function ManageSubjects() {
       }
     };
     fetchSubjects();
-  }, [schoolId, showToast]);
+  }, [schoolId, showToast, isAdmin]);
 
   const resetForm = () => {
     setName("");
@@ -75,19 +80,29 @@ export default function ManageSubjects() {
         (!selectedSubject || s.subjectId !== selectedSubject.subjectId)
     );
     if (isDuplicate) {
-      showToast("Môn học này đã tồn tại trong trường của bạn.", "error");
+      showToast(
+        `Môn học này đã tồn tại ${
+          isAdmin ? "trong hệ thống" : "trong trường của bạn"
+        }.`,
+        "error"
+      );
       return;
     }
 
     try {
       let result;
       if (selectedSubject) {
-        result = await subjectService.updateSubject({
-          subjectId: selectedSubject.subjectId,
-          name,
-          description,
-          schoolId,
-        });
+        // Nếu là admin thì không gửi schoolId (môn học global)
+        const payload = isAdmin
+          ? { subjectId: selectedSubject.subjectId, name, description }
+          : {
+              subjectId: selectedSubject.subjectId,
+              name,
+              description,
+              schoolId,
+            };
+
+        result = await subjectService.updateSubject(payload);
         if (result) {
           setSubjects((prev) =>
             prev.map((s) =>
@@ -103,11 +118,12 @@ export default function ManageSubjects() {
           showToast("Cập nhật môn học thành công!", "success");
         }
       } else {
-        result = await subjectService.addSubject({
-          name,
-          description,
-          schoolId,
-        });
+        // Nếu là admin thì không gửi schoolId (môn học global)
+        const payload = isAdmin
+          ? { name, description }
+          : { name, description, schoolId };
+
+        result = await subjectService.addSubject(payload);
         if (result) {
           setSubjects((prev) => [
             ...prev,
@@ -184,7 +200,6 @@ export default function ManageSubjects() {
         description: (row.description || row.Description || "")
           .toString()
           .trim(),
-        schoolId: schoolId,
       }));
 
       const invalid = rows.filter((r) => !r.name);
@@ -233,11 +248,11 @@ export default function ManageSubjects() {
       const added = [];
       for (const r of rowsToImport) {
         try {
-          const payload = {
-            name: r.name,
-            description: r.description,
-            schoolId,
-          };
+          // Nếu là admin thì không gửi schoolId (môn học global)
+          const payload = isAdmin
+            ? { name: r.name, description: r.description }
+            : { name: r.name, description: r.description, schoolId };
+
           const res = await subjectService.addSubject(payload);
           if (res) added.push(res);
         } catch (err) {
@@ -267,29 +282,32 @@ export default function ManageSubjects() {
     }
   };
 
-  const chartData = {
-    labels: subjects.map((s) => s.name),
-    datasets: [
-      {
-        label: "Số lớp được phân",
-        data: subjects.map((s) => s.classes?.length || 0),
-        backgroundColor: "#3b82f6",
-        borderColor: "#2563eb",
-        borderWidth: 1,
-      },
-    ],
-  };
+  // Commented out chart - uncomment if needed
+  // const chartData = {
+  //   labels: subjects.map((s) => s.name),
+  //   datasets: [
+  //     {
+  //       label: "Số lớp được phân",
+  //       data: subjects.map((s) => s.classes?.length || 0),
+  //       backgroundColor: "#3b82f6",
+  //       borderColor: "#2563eb",
+  //       borderWidth: 1,
+  //     },
+  //   ],
+  // };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold mb-2">Quản lý môn học (Giáo vụ)</h1>
+          <h1 className="text-2xl font-bold mb-2">
+            Quản lý môn học {isAdmin && "(Giáo vụ)"}
+          </h1>
           <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xl">
-            Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập
-            và đánh giá học sinh. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và
-            import/export Excel dễ dàng.
+            {isAdmin
+              ? "Quản lý tất cả môn học trong hệ thống. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và import/export Excel dễ dàng."
+              : "Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập và đánh giá học sinh. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và import/export Excel dễ dàng."}
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">

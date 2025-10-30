@@ -279,12 +279,12 @@ export default function HomeStudentScreen({ navigation }) {
             }
 
             // Lưu tất cả accuracy và improvement để tính trung bình
-            subjectMap[subject].topics[normalizedTopicName].accuracyHistory.push(
-              topic.new_accuracy
-            );
-            subjectMap[subject].topics[normalizedTopicName].improvementHistory.push(
-              topic.improvement
-            );
+            subjectMap[subject].topics[
+              normalizedTopicName
+            ].accuracyHistory.push(topic.new_accuracy);
+            subjectMap[subject].topics[
+              normalizedTopicName
+            ].improvementHistory.push(topic.improvement);
             subjectMap[subject].topics[normalizedTopicName].count++;
           });
         });
@@ -304,7 +304,7 @@ export default function HomeStudentScreen({ navigation }) {
               avgImprovement: Math.round(avgImprovement * 10) / 10,
             };
           });
-          
+
           // Tính tỷ lệ đạt trung bình
           const totalAvgAccuracy = topicsList.reduce(
             (sum, t) => sum + t.avgAccuracy,
@@ -314,15 +314,11 @@ export default function HomeStudentScreen({ navigation }) {
             topicsList.length > 0 ? totalAvgAccuracy / topicsList.length : 0;
 
           // Đếm topics theo avgAccuracy
-          const mastered = topicsList.filter(
-            (t) => t.avgAccuracy >= 80
-          ).length;
+          const mastered = topicsList.filter((t) => t.avgAccuracy >= 80).length;
           const progressing = topicsList.filter((t) => {
             return t.avgAccuracy >= 50 && t.avgAccuracy < 80;
           }).length;
-          const needsWork = topicsList.filter(
-            (t) => t.avgAccuracy < 50
-          ).length;
+          const needsWork = topicsList.filter((t) => t.avgAccuracy < 50).length;
 
           return {
             avgAccuracy: Math.round(avgAccuracy * 10) / 10,
@@ -393,7 +389,12 @@ export default function HomeStudentScreen({ navigation }) {
     { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
     { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
     { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
-    // { id: "qa4", label: "Năng lực", iconName: "area-chart", color: "#9C27B0" },
+    {
+      id: "qa4",
+      label: "Đánh giá",
+      iconName: "check-square-o",
+      color: "#9C27B0",
+    },
   ];
 
   return (
@@ -432,7 +433,7 @@ export default function HomeStudentScreen({ navigation }) {
                       navigation.navigate("ScheduleList");
                       break;
                     case "qa4":
-                      navigation.navigate("CompetencyMap");
+                      navigation.navigate("AssessmentSubjectSelection");
                       break;
                   }
                 }}

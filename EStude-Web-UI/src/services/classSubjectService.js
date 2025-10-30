@@ -2,7 +2,7 @@ import config from "../config/config.js";
 
 const endpoints = {
   addClassSubject: "/api/class-subjects",
-  getTeacherClassSubjects: `/api/teachers/classes/{teacherId}/class-subjects`,
+  getTeacherClassSubjects: `/api/teachers/{teacherId}/class-subjects`,
   getAllClassSubjects: "/api/class-subjects",
   deleteClassSubject: "/api/class-subjects/{classSubjectId}",
 };

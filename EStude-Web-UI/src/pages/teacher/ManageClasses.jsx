@@ -121,27 +121,37 @@ const ManageClasses = () => {
   // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
-  // console.log("School ID của user: ", schoolId);
+  const isAdmin = user.admin === true; // Kiểm tra teacher có phải giáo vụ không
 
   // Load danh sách môn học
   useEffect(() => {
     const fetchSubjects = async () => {
-      const result = await subjectService.getAllSubjects();
-      // console.log("Subjects: ", result);
+      try {
+        const result = await subjectService.getAllSubjects();
+        console.log("All Subjects: ", result);
 
-      const filtered = result.filter(
-        (s) => Array.isArray(s.schools) && s.schools.some((sch) => sch.schoolId === schoolId)
-      );
+        // Nếu là giáo vụ (isAdmin = true) thì lấy tất cả môn học
+        // Nếu là teacher thông thường thì filter theo schoolId
+        const filtered = isAdmin
+          ? result // Giáo vụ: lấy tất cả môn học (bao gồm global)
+          : result.filter(
+              (s) =>
+                Array.isArray(s.schools) &&
+                s.schools.some((sch) => sch.schoolId === schoolId)
+            );
 
-      // console.log("Filtered Subjects: ", filtered);
-      setSubjects(filtered);
+        console.log("Filtered Subjects: ", filtered);
+        setSubjects(filtered);
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+        showToast("Lỗi khi tải danh sách môn học!", "error");
+      }
     };
 
-    if (schoolId) {
+    if (schoolId || isAdmin) {
       fetchSubjects();
     }
-  }, [schoolId]);
-
+  }, [schoolId, isAdmin, showToast]);
 
   // Load danh sách giáo viên
   useEffect(() => {
@@ -158,8 +168,10 @@ const ManageClasses = () => {
     try {
       const allClasses = await classService.getClassesBySchoolId(schoolId);
       console.log("all class: ", allClasses);
-      
+
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
+      console.log("all classSubjects: ", allClassSubjects);
+
       if (!allClasses || !allClassSubjects) return;
 
       const classesWithSubjects = allClasses.map((cls) => {
@@ -184,6 +196,7 @@ const ManageClasses = () => {
           ).values(),
         ];
 
+        console.log(`Subjects for class ${cls.name}:`, subjectsForClass);
         return { ...cls, subjects: subjectsForClass };
       });
 
@@ -193,7 +206,6 @@ const ManageClasses = () => {
       showToast("Lỗi khi tải dữ liệu lớp học!", "error");
     }
   }, [schoolId, showToast]);
-
   useEffect(() => {
     fetchClassesWithSubjects();
   }, [fetchClassesWithSubjects]);
@@ -432,7 +444,6 @@ const ManageClasses = () => {
       if (filterStatus === "ended") return isEnded;
       return true;
     });
-
 
   // Giao diện chính
   return (
@@ -748,73 +759,75 @@ const ManageClasses = () => {
                   </label>
 
                   {subjects ? (
-                  <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
-                    {subjects.map((subj) => {
-                      const selected = selectedSubjects.find(
-                        (s) => s.subjectId === subj.subjectId
-                      );
-                      return (
-                        <div
-                          key={subj.subjectId}
-                          className="flex items-center gap-2"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!selected}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedSubjects([
-                                  ...selectedSubjects,
-                                  {
-                                    subjectId: subj.subjectId,
-                                    teacherId: null,
-                                  },
-                                ]);
-                              } else {
-                                setSelectedSubjects(
-                                  selectedSubjects.filter(
-                                    (s) => s.subjectId !== subj.subjectId
-                                  )
-                                );
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
-                          />
-                          <span className="flex-1 text-gray-900 dark:text-gray-100">
-                            {subj.name}
-                          </span>
-                          <select
-                            value={selected?.teacherId ?? ""}
-                            onChange={(e) =>
-                              setSelectedSubjects(
-                                selectedSubjects.map((s) =>
-                                  s.subjectId === subj.subjectId
-                                    ? {
-                                        ...s,
-                                        teacherId: e.target.value
-                                          ? Number(e.target.value)
-                                          : null,
-                                      }
-                                    : s
-                                )
-                              )
-                            }
-                            className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                            disabled={!selected}
+                    <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
+                      {subjects.map((subj) => {
+                        const selected = selectedSubjects.find(
+                          (s) => s.subjectId === subj.subjectId
+                        );
+                        return (
+                          <div
+                            key={subj.subjectId}
+                            className="flex items-center gap-2"
                           >
-                            <option value="">
-                              {selected?.teacherName || "-- Chọn giáo viên --"}
-                            </option>
-                            {teachers.map((t) => (
-                              <option key={t.userId} value={t.userId}>
-                                {t.fullName} - {t.teacherCode}
+                            <input
+                              type="checkbox"
+                              checked={!!selected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSubjects([
+                                    ...selectedSubjects,
+                                    {
+                                      subjectId: subj.subjectId,
+                                      teacherId: null,
+                                    },
+                                  ]);
+                                } else {
+                                  setSelectedSubjects(
+                                    selectedSubjects.filter(
+                                      (s) => s.subjectId !== subj.subjectId
+                                    )
+                                  );
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
+                            />
+                            <span className="flex-1 text-gray-900 dark:text-gray-100">
+                              {subj.name}
+                            </span>
+                            <select
+                              value={selected?.teacherId ?? ""}
+                              onChange={(e) =>
+                                setSelectedSubjects(
+                                  selectedSubjects.map((s) =>
+                                    s.subjectId === subj.subjectId
+                                      ? {
+                                          ...s,
+                                          teacherId: e.target.value
+                                            ? Number(e.target.value)
+                                            : null,
+                                        }
+                                      : s
+                                  )
+                                )
+                              }
+                              className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                              disabled={!selected}
+                            >
+                              <option value="">
+                                {selected?.teacherName ||
+                                  "-- Chọn giáo viên --"}
                               </option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div> ) : (
+                              {teachers.map((t) => (
+                                <option key={t.userId} value={t.userId}>
+                                  {t.fullName} - {t.teacherCode}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
                     <span className="text-gray-500 dark:text-gray-400 italic">
                       Hiện tại chưa có môn học nào.
                     </span>

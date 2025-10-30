@@ -10,6 +10,9 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import AdminManageSchools from "./pages/admin/ManageSchools";
 import AdminManageAccounts from "./pages/admin/ManageUsers";
 import AdminManageClasses from "./pages/admin/ManageClasses";
+import AdminManageSubjects from "./pages/admin/ManageSubjects";
+import AdminManageTopics from "./pages/admin/ManageTopics";
+import AdminManageQuestionBank from "./pages/admin/ManageQuestionBank";
 import AdminReports from "./pages/admin/Reports";
 import AdminNotifications from "./pages/admin/Notifications";
 
@@ -54,6 +57,9 @@ function App() {
             <Route path="schools" element={<AdminManageSchools />} />
             <Route path="users" element={<AdminManageAccounts />} />
             <Route path="classes" element={<AdminManageClasses />} />
+            <Route path="subjects" element={<AdminManageSubjects />} />
+            <Route path="topics" element={<AdminManageTopics />} />
+            <Route path="question-bank" element={<AdminManageQuestionBank />} />
             <Route path="statistics-reports" element={<AdminReports />} />
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
