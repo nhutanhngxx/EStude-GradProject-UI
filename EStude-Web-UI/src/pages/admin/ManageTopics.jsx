@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { PlusCircle, Trash2, X, Edit2, BookMarked, Filter } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  PlusCircle,
+  Trash2,
+  X,
+  Edit2,
+  BookMarked,
+  Filter,
+  Upload,
+  Download,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
+import * as XLSX from "xlsx";
 import topicService from "../../services/topicService";
 import subjectService from "../../services/subjectService";
 import { useToast } from "../../contexts/ToastContext";
@@ -41,6 +51,7 @@ const VOLUMES = [
 const ManageTopics = () => {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const fileInputRef = useRef(null);
   const [topics, setTopics] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [modalType, setModalType] = useState(null);
@@ -48,6 +59,7 @@ const ManageTopics = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const itemsPerPage = 10;
 
   // Filters
@@ -256,6 +268,222 @@ const ManageTopics = () => {
     return grade ? grade.label : gradeLevel;
   };
 
+  // Download template Excel
+  const handleDownloadTemplate = () => {
+    const link = document.createElement("a");
+    link.href = "/files/topics-template.xlsx";
+    link.download = "topics-template.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("Đang tải template...", "info");
+  };
+
+  // Import Excel
+  const handleImportExcel = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input để có thể chọn lại cùng 1 file
+    e.target.value = "";
+
+    // Kiểm tra xem đã chọn môn học chưa
+    if (!filters.subjectId) {
+      showToast("Vui lòng chọn môn học trước khi import!", "error");
+      return;
+    }
+
+    if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
+      showToast("Vui lòng chọn file Excel (.xlsx hoặc .xls)", "error");
+      return;
+    }
+
+    try {
+      setImporting(true);
+
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+
+      console.log("Available sheets:", workbook.SheetNames);
+
+      // Đọc sheet "Danh sách chủ đề" hoặc sheet đầu tiên nếu không tìm thấy
+      let sheetName = "Danh sách chủ đề";
+      let worksheet = workbook.Sheets[sheetName];
+
+      // Nếu không tìm thấy, thử các tên khác
+      if (!worksheet) {
+        const possibleNames = [
+          "Danh sách chủ đề",
+          "Danh sach chu de",
+          "Topics",
+          "Data",
+        ];
+
+        for (const name of possibleNames) {
+          if (workbook.Sheets[name]) {
+            worksheet = workbook.Sheets[name];
+            sheetName = name;
+            break;
+          }
+        }
+      }
+
+      // Nếu vẫn không tìm thấy, dùng sheet đầu tiên (bỏ qua sheet "Hướng dẫn")
+      if (!worksheet) {
+        const firstDataSheet = workbook.SheetNames.find(
+          (name) =>
+            !name.toLowerCase().includes("hướng dẫn") &&
+            !name.toLowerCase().includes("huong dan") &&
+            !name.toLowerCase().includes("instruction")
+        );
+
+        if (firstDataSheet) {
+          worksheet = workbook.Sheets[firstDataSheet];
+          sheetName = firstDataSheet;
+          console.log(`Using sheet: ${sheetName}`);
+        } else {
+          showToast(
+            `Không tìm thấy sheet dữ liệu. Sheets có sẵn: ${workbook.SheetNames.join(
+              ", "
+            )}`,
+            "error"
+          );
+          return;
+        }
+      }
+
+      console.log(`Reading data from sheet: ${sheetName}`);
+
+      // Convert sang JSON
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      console.log("Parsed data:", jsonData);
+
+      if (jsonData.length === 0) {
+        showToast("File Excel không có dữ liệu", "error");
+        return;
+      }
+
+      console.log("Dữ liệu import:", jsonData);
+
+      // Lấy môn học đã chọn trong filter
+      const selectedSubject = subjects.find(
+        (s) => s.subjectId === filters.subjectId
+      );
+
+      if (!selectedSubject) {
+        showToast("Không tìm thấy thông tin môn học đã chọn", "error");
+        return;
+      }
+
+      console.log("Môn học được chọn:", selectedSubject);
+
+      // Validate và chuẩn bị dữ liệu
+      const topicsToImport = [];
+      const errors = [];
+
+      for (let i = 0; i < jsonData.length; i++) {
+        const row = jsonData[i];
+        const rowNum = i + 2; // +2 vì Excel bắt đầu từ 1 và có header row
+
+        // Validate required fields
+        if (!row["Tên chủ đề"]?.trim()) {
+          errors.push(`Dòng ${rowNum}: Thiếu tên chủ đề`);
+          continue;
+        }
+
+        if (!row["Khối lớp"]) {
+          errors.push(`Dòng ${rowNum}: Thiếu khối lớp`);
+          continue;
+        }
+
+        if (!row["Tập sách"]) {
+          errors.push(`Dòng ${rowNum}: Thiếu tập sách`);
+          continue;
+        }
+
+        // Validate grade level
+        const gradeLevel = row["Khối lớp"].toString().trim();
+        const validGrades = GRADE_LEVELS.map((g) => g.value);
+        if (!validGrades.includes(gradeLevel)) {
+          errors.push(
+            `Dòng ${rowNum}: Khối lớp không hợp lệ (phải là ${validGrades.join(
+              ", "
+            )})`
+          );
+          continue;
+        }
+
+        // Validate volume
+        const volume = parseInt(row["Tập sách"]);
+        if (![1, 2].includes(volume)) {
+          errors.push(`Dòng ${rowNum}: Tập sách phải là 1 hoặc 2`);
+          continue;
+        }
+
+        // Tạo object topic với subjectId từ filter đã chọn
+        topicsToImport.push({
+          name: row["Tên chủ đề"].toString().trim(),
+          chapter: row["Chương"]?.toString().trim() || "",
+          description: row["Mô tả"]?.toString().trim() || "",
+          gradeLevel: gradeLevel,
+          volume: volume,
+          orderIndex: parseInt(row["Thứ tự"]) || 1,
+          subjectId: filters.subjectId, // Dùng subjectId đã chọn trong filter
+        });
+      }
+
+      // Hiển thị lỗi nếu có
+      if (errors.length > 0) {
+        const errorMsg = `Có ${errors.length} lỗi:\n${errors
+          .slice(0, 5)
+          .join("\n")}${
+          errors.length > 5 ? `\n...và ${errors.length - 5} lỗi khác` : ""
+        }`;
+        showToast(errorMsg, "error");
+      }
+
+      // Import các topic hợp lệ
+      if (topicsToImport.length === 0) {
+        showToast("Không có dữ liệu hợp lệ để import", "error");
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const topic of topicsToImport) {
+        try {
+          await topicService.createTopic(topic);
+          successCount++;
+        } catch (error) {
+          failCount++;
+          console.error("Lỗi import topic:", topic.name, error);
+        }
+      }
+
+      // Refresh danh sách
+      await fetchTopics();
+
+      // Hiển thị kết quả
+      if (successCount > 0) {
+        showToast(
+          `Import thành công ${successCount} chủ đề${
+            failCount > 0 ? `, thất bại ${failCount}` : ""
+          }`,
+          failCount > 0 ? "warn" : "success"
+        );
+      } else {
+        showToast("Import thất bại. Vui lòng kiểm tra lại dữ liệu", "error");
+      }
+    } catch (error) {
+      console.error("Lỗi khi import Excel:", error);
+      showToast("Lỗi khi đọc file Excel: " + error.message, "error");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
@@ -267,14 +495,38 @@ const ManageTopics = () => {
               {t("admin.topics.title") || "Quản lý Chủ đề"}
             </h1>
           </div>
-          <button
-            onClick={() => openModal("add")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            disabled={!filters.subjectId}
-          >
-            <PlusCircle className="w-5 h-5" />
-            {t("admin.topics.addNew") || "Thêm chủ đề"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadTemplate}
+              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <Download className="w-5 h-5" />
+              Template
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+              disabled={importing || !filters.subjectId}
+            >
+              <Upload className="w-5 h-5" />
+              {importing ? "Đang import..." : "Import Excel"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportExcel}
+              className="hidden"
+            />
+            <button
+              onClick={() => openModal("add")}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              disabled={!filters.subjectId}
+            >
+              <PlusCircle className="w-5 h-5" />
+              {t("admin.topics.addNew") || "Thêm chủ đề"}
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

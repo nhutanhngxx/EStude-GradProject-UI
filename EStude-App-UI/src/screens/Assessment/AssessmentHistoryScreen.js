@@ -432,7 +432,7 @@ export default function AssessmentHistoryScreen({ navigation }) {
         {/* Score */}
         <View style={styles.scoreContainer}>
           <Text style={[styles.scoreText, { color: performanceColor }]}>
-            {item.score / 10} điểm
+            {(item.score / 10).toFixed(2)} điểm
           </Text>
           <Text style={styles.scoreDetail}>
             {item.correctAnswers}/{item.totalQuestions} câu đúng

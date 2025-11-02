@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,12 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useToast } from "../../contexts/ToastContext";
 import { Ionicons } from "@expo/vector-icons";
+import { AuthContext } from "../../contexts/AuthContext";
+import aiService from "../../services/aiService";
 
 const themeColors = {
   primary: "#7C3AED",
@@ -24,7 +27,9 @@ const { width } = Dimensions.get("window");
 export default function AssessmentImprovementScreen({ navigation, route }) {
   const { evaluation } = route.params; // evaluation từ Layer 4
   const { showToast } = useToast();
+  const { user, token } = useContext(AuthContext);
   const [showMotivation, setShowMotivation] = useState(false);
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
 
   console.log(
     "🎯 Assessment Improvement Screen - evaluation:",
@@ -59,6 +64,92 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
 
   const handleGoBack = () => {
     navigation.goBack();
+  };
+
+  const handleViewLearningRoadmap = async () => {
+    try {
+      setGeneratingRoadmap(true);
+      showToast("Đang tạo lộ trình học tập...", { type: "info" });
+
+      // Bước 1: Lấy feedback mới nhất (câu hỏi làm sai)
+      const feedbackResponse = await aiService.getFeedbackLatest(token);
+      if (!feedbackResponse || !feedbackResponse.detailedAnalysis) {
+        showToast("Không thể lấy thông tin câu hỏi sai!", { type: "error" });
+        return;
+      }
+
+      // Bước 2: Lấy improvement mới nhất (đã có sẵn từ evaluation params)
+      const improvementData = evaluation;
+
+      // Bước 3: Chuẩn bị payload cho Layer 5
+      const feedbackData = feedbackResponse.detailedAnalysis;
+
+      // Transform incorrect questions từ feedback
+      const incorrectQuestions = feedbackData.feedback
+        .filter((item) => !item.is_correct)
+        .map((item) => ({
+          question_id: item.question_id,
+          topic: item.topic,
+          subtopic: item.subtopic,
+          difficulty:
+            item.difficulty_level === "Dễ"
+              ? "EASY"
+              : item.difficulty_level === "Trung bình"
+              ? "MEDIUM"
+              : "HARD",
+          question_text: item.question,
+          student_answer: item.student_answer,
+          correct_answer: item.correct_answer,
+          error_type: "CONCEPT_MISUNDERSTANDING", // Default value
+        }));
+
+      const payload = {
+        submission_id: feedbackData.submission_id,
+        student_id: user.userId,
+        subject: feedbackData.subject,
+        evaluation_data: {
+          topics: improvementData.topics || [],
+          overall_improvement: improvementData.overall_improvement || {},
+        },
+        incorrect_questions: incorrectQuestions,
+        learning_style: "VISUAL", // TODO: Có thể lấy từ user profile
+        available_time_per_day: 30, // TODO: Có thể lấy từ user profile (phút)
+      };
+
+      console.log("📤 Generating Roadmap with payload:", payload);
+
+      // Bước 4: POST để tạo roadmap
+      const generateResponse = await aiService.generateLearningRoadmap(
+        payload,
+        token
+      );
+
+      if (!generateResponse || !generateResponse.success) {
+        showToast("Không thể tạo lộ trình học tập!", { type: "error" });
+        return;
+      }
+
+      showToast("Lộ trình học tập đã được tạo!", { type: "success" });
+
+      // Bước 5: Lấy roadmap mới nhất và navigate
+      const roadmapResponse = await aiService.getRoadmapLatest(token);
+
+      if (!roadmapResponse || !roadmapResponse.detailedAnalysis) {
+        showToast("Không thể tải lộ trình!", { type: "error" });
+        return;
+      }
+
+      // Navigate với data thực
+      navigation.navigate("AssessmentLearningRoadmap", {
+        roadmap: roadmapResponse.detailedAnalysis,
+        evaluation: evaluation,
+      });
+    } catch (error) {
+      console.error("❌ Error generating roadmap:", error);
+      showToast("Lỗi khi tạo lộ trình học tập!", { type: "error" });
+    } finally {
+      setGeneratingRoadmap(false);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -102,8 +193,15 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
   const renderOverallImprovement = () => {
     if (!evaluation?.overall_improvement) return null;
 
-    const { improvement, direction, previous_average, new_average } =
-      evaluation.overall_improvement;
+    console.log("📈 Overall improvement data:", evaluation.overall_improvement);
+
+    // Safe destructuring with defaults
+    const {
+      improvement = 0,
+      direction = "Không thay đổi",
+      previous_average = 0,
+      new_average = 0,
+    } = evaluation.overall_improvement || {};
 
     return (
       <View style={styles.overallCard}>
@@ -185,93 +283,112 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
   const renderTopicProgress = () => {
     if (!evaluation?.topics || evaluation.topics.length === 0) return null;
 
+    console.log("🔍 Topics data:", evaluation.topics);
+
     return (
       <View style={styles.topicsContainer}>
         <Text style={styles.sectionTitle}>Chi tiết từng chủ đề</Text>
 
-        {evaluation.topics.map((topic, index) => (
-          <View key={index} style={styles.topicCard}>
-            <View style={styles.topicHeader}>
-              <View style={styles.topicTitleRow}>
-                <Ionicons
-                  name={getStatusIcon(topic.status)}
-                  size={20}
-                  color={getStatusColor(topic.status)}
-                />
-                <Text style={styles.topicName}>{topic.topic}</Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: `${getStatusColor(topic.status)}15` },
-                ]}
-              >
-                <Text
+        {evaluation.topics.map((topic, index) => {
+          // Safe guard cho undefined/null values
+          console.log(`📊 Topic ${index}:`, {
+            improvement: topic.improvement,
+            previous: topic.previous_accuracy,
+            new: topic.new_accuracy,
+          });
+
+          const safeImprovement = Number(topic.improvement) || 0;
+          const safePreviousAccuracy = Number(topic.previous_accuracy) || 0;
+          const safeNewAccuracy = Number(topic.new_accuracy) || 0;
+          const safeStatus = topic.status || "Chưa đánh giá";
+
+          return (
+            <View key={index} style={styles.topicCard}>
+              <View style={styles.topicHeader}>
+                <View style={styles.topicTitleRow}>
+                  <Ionicons
+                    name={getStatusIcon(safeStatus)}
+                    size={20}
+                    color={getStatusColor(safeStatus)}
+                  />
+                  <Text style={styles.topicName}>{topic.topic}</Text>
+                </View>
+                <View
                   style={[
-                    styles.statusText,
-                    { color: getStatusColor(topic.status) },
+                    styles.statusBadge,
+                    { backgroundColor: `${getStatusColor(safeStatus)}15` },
                   ]}
                 >
-                  {topic.status}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: getStatusColor(safeStatus) },
+                    ]}
+                  >
+                    {safeStatus}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.accuracyComparison}>
+                <View style={styles.accuracyBox}>
+                  <Text style={styles.accuracyLabel}>Trước</Text>
+                  <Text style={styles.accuracyValue}>
+                    {safePreviousAccuracy.toFixed(0)}%
+                  </Text>
+                </View>
+
+                <View style={styles.improvementArrow}>
+                  <Ionicons
+                    name={
+                      safeImprovement > 0
+                        ? "arrow-forward"
+                        : safeImprovement === 0
+                        ? "remove"
+                        : "arrow-back"
+                    }
+                    size={20}
+                    color={
+                      safeImprovement > 0
+                        ? "#4CAF50"
+                        : safeImprovement === 0
+                        ? "#FF9800"
+                        : "#F44336"
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.improvementValue,
+                      {
+                        color:
+                          safeImprovement > 0
+                            ? "#4CAF50"
+                            : safeImprovement === 0
+                            ? "#FF9800"
+                            : "#F44336",
+                      },
+                    ]}
+                  >
+                    {safeImprovement > 0 ? "+" : ""}
+                    {safeImprovement.toFixed(1)}%
+                  </Text>
+                </View>
+
+                <View style={styles.accuracyBox}>
+                  <Text style={styles.accuracyLabel}>Sau</Text>
+                  <Text
+                    style={[
+                      styles.accuracyValue,
+                      { color: themeColors.primary },
+                    ]}
+                  >
+                    {safeNewAccuracy.toFixed(0)}%
+                  </Text>
+                </View>
               </View>
             </View>
-
-            <View style={styles.accuracyComparison}>
-              <View style={styles.accuracyBox}>
-                <Text style={styles.accuracyLabel}>Trước</Text>
-                <Text style={styles.accuracyValue}>
-                  {topic.previous_accuracy.toFixed(0)}%
-                </Text>
-              </View>
-
-              <View style={styles.improvementArrow}>
-                <Ionicons
-                  name={
-                    topic.improvement > 0
-                      ? "arrow-forward"
-                      : topic.improvement === 0
-                      ? "remove"
-                      : "arrow-back"
-                  }
-                  size={20}
-                  color={
-                    topic.improvement > 0
-                      ? "#4CAF50"
-                      : topic.improvement === 0
-                      ? "#FF9800"
-                      : "#F44336"
-                  }
-                />
-                <Text
-                  style={[
-                    styles.improvementValue,
-                    {
-                      color:
-                        topic.improvement > 0
-                          ? "#4CAF50"
-                          : topic.improvement === 0
-                          ? "#FF9800"
-                          : "#F44336",
-                    },
-                  ]}
-                >
-                  {topic.improvement > 0 ? "+" : ""}
-                  {topic.improvement.toFixed(1)}%
-                </Text>
-              </View>
-
-              <View style={styles.accuracyBox}>
-                <Text style={styles.accuracyLabel}>Sau</Text>
-                <Text
-                  style={[styles.accuracyValue, { color: themeColors.primary }]}
-                >
-                  {topic.new_accuracy.toFixed(0)}%
-                </Text>
-              </View>
-            </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     );
   };
@@ -332,7 +449,31 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
         {/* Next Action */}
         {renderNextAction()}
 
-        {/* Action Button */}
+        {/* Learning Roadmap Button */}
+        <TouchableOpacity
+          style={[
+            styles.roadmapButton,
+            generatingRoadmap && styles.roadmapButtonDisabled,
+          ]}
+          onPress={handleViewLearningRoadmap}
+          activeOpacity={0.8}
+          disabled={generatingRoadmap}
+        >
+          {generatingRoadmap ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={styles.roadmapButtonText}>Đang tạo lộ trình...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="map" size={22} color="#fff" />
+              <Text style={styles.roadmapButtonText}>Xem lộ trình học tập</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </>
+          )}
+        </TouchableOpacity>
+
+        {/* Action Buttons */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleGoBack}
@@ -568,6 +709,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#555",
     lineHeight: 24,
+  },
+  roadmapButton: {
+    backgroundColor: themeColors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: themeColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  roadmapButtonDisabled: {
+    backgroundColor: "#999",
+    shadowColor: "#999",
+  },
+  roadmapButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#fff",
   },
   backButton: {
     backgroundColor: themeColors.primary,

@@ -108,9 +108,10 @@ export default function AssessmentSubjectSelectionScreen({ navigation }) {
       </View>
       <View style={styles.subjectInfo}>
         <Text style={styles.subjectName}>{item.subjectName}</Text>
-        <Text style={styles.subjectDetail}>
+        {/* <Text style={styles.subjectDetail}>
           Lớp {item.className} • {item.semester}
-        </Text>
+        </Text> */}
+        <Text style={styles.subjectDetail}>Lớp {item.className}</Text>
         <Text style={styles.teacherName}>GV: {item.teacherName}</Text>
       </View>
       <Ionicons name="chevron-forward" size={24} color="#999" />

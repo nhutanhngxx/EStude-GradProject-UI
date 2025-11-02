@@ -38,6 +38,7 @@ import AssessmentQuizScreen from "./src/screens/Assessment/AssessmentQuizScreen"
 import AssessmentResultScreen from "./src/screens/Assessment/AssessmentResultScreen";
 import AssessmentReviewScreen from "./src/screens/Assessment/AssessmentReviewScreen";
 import AssessmentImprovementScreen from "./src/screens/Assessment/AssessmentImprovementScreen";
+import AssessmentLearningRoadmapScreen from "./src/screens/Assessment/AssessmentLearningRoadmapScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -231,6 +232,15 @@ function AppNavigator() {
             component={AssessmentImprovementScreen}
             options={{
               title: "Đánh giá tiến bộ",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentLearningRoadmap"
+            component={AssessmentLearningRoadmapScreen}
+            options={{
+              title: "Lộ trình học tập",
               headerTitleAlign: "center",
             }}
           />

@@ -397,7 +397,7 @@ export default function AssessmentQuizScreen({ route, navigation }) {
                     Bài làm đã được chấm!
                   </Text>
                   <Text style={styles.resultModalScore}>
-                    {submissionResult.score / 10} điểm
+                    {(submissionResult.score / 10).toFixed(2)} điểm
                   </Text>
                   <Text style={styles.resultModalSubtitle}>
                     {submissionResult.correctAnswers}/

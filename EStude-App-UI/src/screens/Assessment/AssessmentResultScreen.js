@@ -246,7 +246,7 @@ export default function AssessmentResultScreen({ route, navigation }) {
             color={performance.color}
           />
           <Text style={styles.performanceLabel}>{performance.label}</Text>
-          <Text style={styles.scoreText}>{score / 10} điểm</Text>
+          <Text style={styles.scoreText}>{(score / 10).toFixed(2)} điểm</Text>
           <Text style={styles.subjectName}>{subjectName}</Text>
         </View>
 
