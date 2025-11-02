@@ -10,6 +10,7 @@ import {
   Alert,
   FlatList,
   Modal,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "../../contexts/ToastContext";
@@ -267,17 +268,76 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
     }
   };
 
-  const handleOpenResource = (resource) => {
+  const handleOpenResource = async (resource) => {
+    const resourceUrl = resource.url || resource.resource_url;
+    const resourceTitle = resource.title;
+    const resourceType = resource.type;
+
+    // Nếu không có URL
+    if (!resourceUrl) {
+      Alert.alert(
+        "Link không khả dụng",
+        `Tài liệu "${resourceTitle}" chưa có link.\n\n💡 Bạn có thể tự tìm kiếm:\n- Trên Google: "${resourceTitle}"\n- Trên YouTube (nếu là video)\n- Trên các trang giáo dục trực tuyến`,
+        [{ text: "Đã hiểu" }]
+      );
+      return;
+    }
+
     Alert.alert(
-      resource.title,
-      `Loại: ${resource.type}\nThời gian: ${resource.duration_minutes} phút\n\nBạn có muốn mở tài liệu này không?`,
+      resourceTitle,
+      `Loại: ${resourceType}\nThời gian: ${resource.duration_minutes} phút\n\nBạn có muốn mở tài liệu này không?`,
       [
         { text: "Hủy", style: "cancel" },
         {
           text: "Mở",
-          onPress: () => {
-            // TODO: Open URL in browser
-            showToast(`Đang mở: ${resource.title}`, { type: "info" });
+          onPress: async () => {
+            try {
+              // Kiểm tra xem URL có thể mở được không
+              const canOpen = await Linking.canOpenURL(resourceUrl);
+
+              if (canOpen) {
+                // Mở URL trong trình duyệt
+                await Linking.openURL(resourceUrl);
+                showToast(`Đang mở: ${resourceTitle}`, { type: "success" });
+              } else {
+                // URL không hợp lệ hoặc không thể mở
+                Alert.alert(
+                  "Link bị hỏng",
+                  `Không thể mở link này.\n\nURL: ${resourceUrl}\n\n💡 Gợi ý:\n- Tìm kiếm "${resourceTitle}" trên Google\n- Tìm video tương tự trên YouTube\n- Kiểm tra tài liệu trên trang web giáo dục`,
+                  [
+                    { text: "Đóng", style: "cancel" },
+                    {
+                      text: "Tìm trên Google",
+                      onPress: () => {
+                        const searchQuery = encodeURIComponent(resourceTitle);
+                        Linking.openURL(
+                          `https://www.google.com/search?q=${searchQuery}`
+                        );
+                      },
+                    },
+                  ]
+                );
+              }
+            } catch (error) {
+              console.error("Error opening URL:", error);
+              // Lỗi khi mở URL
+              Alert.alert(
+                "Không thể mở link",
+                `Link có vẻ bị hỏng hoặc không tồn tại.\n\n💡 Bạn có thể:\n1. Tìm kiếm "${resourceTitle}" trên Google\n2. Tìm video tương tự trên YouTube\n3. Hỏi giáo viên về tài liệu thay thế`,
+                [
+                  { text: "Đóng", style: "cancel" },
+                  {
+                    text: "Tìm trên Google",
+                    onPress: () => {
+                      const searchQuery = encodeURIComponent(resourceTitle);
+                      Linking.openURL(
+                        `https://www.google.com/search?q=${searchQuery}`
+                      );
+                    },
+                  },
+                ]
+              );
+            }
           },
         },
       ]
