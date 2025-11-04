@@ -6,12 +6,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
 } from "react-native";
 import submissionService from "../../services/submissionService";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,16 +28,8 @@ export default function ExamReviewScreen({ route, navigation }) {
   const [submission, setSubmission] = useState(null);
   const [aiResult, setAiResult] = useState(null); // Layer 1 - Feedback
   const [recommendations, setRecommendations] = useState(null); // Layer 2
-  const [practiceReviews, setPracticeReviews] = useState([]); // Layer 3.5 - Lịch sử bài luyện tập
-  const [improvements, setImprovements] = useState([]); // Layer 4 - Đánh giá tiến bộ
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Details"); // Tab mặc định
-
-  // 🎯 States cho Practice Settings Modal
-  const [showPracticeModal, setShowPracticeModal] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState(null);
-  const [numQuestions, setNumQuestions] = useState("5");
-  const [difficulty, setDifficulty] = useState("easy");
 
   const getAIQuestionFeedback = (question) => {
     if (!aiResult?.detailedAnalysis?.feedback) return null;
@@ -167,23 +153,6 @@ export default function ExamReviewScreen({ route, navigation }) {
               latestRecommendation.detailedAnalysis || latestRecommendation
             );
           }
-
-          // Lấy Practice Review layer 3.5 theo assignment_id
-          const practiceReviewResult =
-            await aiService.getAIPracticeReviewByAssignmentId(
-              assignmentId,
-              token
-            );
-          if (practiceReviewResult && Array.isArray(practiceReviewResult)) {
-            setPracticeReviews(practiceReviewResult);
-          }
-
-          // Lấy Improvement layer 4 theo assignment_id
-          const improvementResult =
-            await aiService.getAIImprovementByAssignmentId(assignmentId, token);
-          if (improvementResult && Array.isArray(improvementResult)) {
-            setImprovements(improvementResult);
-          }
         }
       } catch (err) {
         console.error("Lỗi khi load dữ liệu:", err);
@@ -194,206 +163,6 @@ export default function ExamReviewScreen({ route, navigation }) {
     };
     fetchData();
   }, [submissionId, token]);
-
-  // 🎯 Mở modal chọn settings cho bài luyện tập
-  const handleOpenPracticeModal = (rawTopic) => {
-    // Kiểm tra aiResult có sẵn không
-    if (!aiResult || !aiResult.resultId) {
-      showToast("Đang tải dữ liệu phân tích. Vui lòng thử lại sau giây lát.", {
-        type: "warning",
-      });
-      return;
-    }
-
-    let topic = rawTopic;
-    if (!topic) {
-      showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {
-        type: "error",
-      });
-      return;
-    }
-    if (typeof topic === "object") {
-      topic = topic.topic ?? topic.name ?? topic.label ?? null;
-    }
-    topic = typeof topic === "string" ? topic.trim() : null;
-
-    if (!topic || topic.toLowerCase() === "không xác định") {
-      showToast("Chủ đề không rõ — không thể tạo bài luyện tập tự động.", {
-        type: "warning",
-      });
-      return;
-    }
-
-    // Lưu topic và mở modal
-    setSelectedTopic(topic);
-    setNumQuestions("5"); // Reset về default
-    setDifficulty("easy"); // Reset về default
-    setShowPracticeModal(true);
-  };
-
-  // 🚀 Tạo bài luyện tập với settings đã chọn
-  const handleGeneratePractice = async () => {
-    if (!selectedTopic) return;
-
-    const topic = selectedTopic;
-
-    // ✅ Lấy submission_id
-    const submissionIdForLayer3 = submission?.submissionId;
-
-    if (!submissionIdForLayer3) {
-      showToast("Lỗi: Không tìm thấy submission_id để tạo bài luyện tập.", {
-        type: "error",
-      });
-      return;
-    }
-
-    // 🔥 GỌI API LẤY FEEDBACK THỰC TẾ TỪ ASSIGNMENT
-    let referenceQuestions = [];
-    try {
-      const assignmentId = submission.assignmentId;
-      console.log(
-        "🔍 Fetching feedback from API for assignmentId:",
-        assignmentId
-      );
-
-      const feedbackResults = await aiService.getAIFeedbackByAssignmentId(
-        assignmentId,
-        token
-      );
-
-      if (
-        feedbackResults &&
-        Array.isArray(feedbackResults) &&
-        feedbackResults.length > 0
-      ) {
-        // Lấy feedback mới nhất
-        const latestFeedback = feedbackResults.reduce((latest, current) => {
-          return current.resultId > latest.resultId ? current : latest;
-        }, feedbackResults[0]);
-
-        console.log("✅ Latest feedback retrieved:", latestFeedback.resultId);
-
-        // Lọc feedback theo topic
-        if (latestFeedback?.detailedAnalysis?.feedback) {
-          latestFeedback.detailedAnalysis.feedback
-            .filter((f) => f.topic?.toLowerCase().includes(topic.toLowerCase()))
-            .forEach((f) => {
-              referenceQuestions.push({
-                question: f.question || "",
-                topic: f.topic || topic,
-                explanation: f.explanation || f.feedback || "",
-              });
-            });
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error fetching feedback from API:", error);
-      // Không throw error, tiếp tục với fallback
-    }
-
-    // Nếu không có reference questions từ API, tạo một default
-    if (referenceQuestions.length === 0) {
-      console.warn("⚠️ No reference questions from API, using fallback");
-      referenceQuestions.push({
-        question: `Câu hỏi mẫu về ${topic}`,
-        topic: topic,
-        explanation: `Đây là câu hỏi liên quan đến chủ đề ${topic}`,
-      });
-    }
-
-    // 🎯 Sử dụng settings từ modal
-    const numQuestionsInt = parseInt(numQuestions) || 5;
-
-    const layer3Payload = {
-      submission_id: submissionIdForLayer3.toString(), // ✅ BẮT BUỘC
-      subject: aiResult?.detailedAnalysis?.subject || submission.assignmentName,
-      topics: [topic],
-      difficulty: difficulty, // ✅ Từ modal
-      num_questions: numQuestionsInt, // ✅ Từ modal
-      reference_questions: referenceQuestions, // ✅ THÊM reference_questions
-    };
-
-    console.log(
-      "📤 Layer 3 Payload (AssignmentReviewScreen):",
-      JSON.stringify(layer3Payload, null, 2)
-    );
-
-    try {
-      setLoading(true);
-      setShowPracticeModal(false); // Đóng modal trước khi gọi API
-
-      const layer3Result = await aiService.layer3(layer3Payload, token);
-
-      console.log(
-        "📥 Layer 3 Raw Response:",
-        JSON.stringify(layer3Result, null, 2)
-      );
-
-      const quizData = layer3Result?.data ?? layer3Result;
-
-      console.log("📊 Quiz Data:", JSON.stringify(quizData, null, 2));
-
-      if (
-        !quizData ||
-        !Array.isArray(quizData.questions) ||
-        quizData.questions.length === 0
-      ) {
-        console.error("❌ Layer 3 validation failed:", {
-          hasQuizData: !!quizData,
-          isArray: Array.isArray(quizData.questions),
-          questionsLength: quizData?.questions?.length,
-          fullResponse: layer3Result,
-        });
-        showToast("Không tạo được bài luyện tập (API trả về rỗng).", {
-          type: "error",
-        });
-        setLoading(false);
-        return;
-      }
-
-      navigation.navigate("PracticeQuiz", {
-        quiz: {
-          ...quizData,
-          assignmentId: submission.assignmentId,
-          submissionId: submission.submissionId, // ✅ THÊM submissionId vào quiz
-        },
-        previousFeedback: aiResult, // Truyền toàn bộ object Layer 1 (có resultId, detailedAnalysis)
-        submissionId: submission.submissionId, // ✅ THÊM submissionId vào params
-      });
-    } catch (error) {
-      console.error("Lỗi gọi Layer 3:", error);
-      showToast("Lỗi khi tạo bài luyện tập.", { type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleViewPractice = (practiceReviewData) => {
-    // Hiển thị chi tiết của practice review
-    navigation.navigate("PracticeReviewDetail", {
-      practiceReview: practiceReviewData,
-    });
-  };
-
-  const handleEvaluateProgress = async () => {
-    if (!improvements || improvements.length === 0) {
-      showToast("Chưa có dữ liệu đánh giá tiến bộ.", { type: "warning" });
-      return;
-    }
-
-    // Lấy đánh giá tiến bộ mới nhất
-    const latestImprovement = improvements[0];
-
-    navigation.navigate("Improvement", {
-      evaluation: latestImprovement,
-      quiz: {
-        subject:
-          aiResult?.detailedAnalysis?.subject || submission.assignmentName,
-        assignmentId: submission.assignmentId,
-      },
-      previousFeedback: aiResult?.detailedAnalysis?.feedback,
-    });
-  };
 
   if (loading && !submission) {
     return (
@@ -414,157 +183,6 @@ export default function ExamReviewScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* 🎯 Practice Settings Modal */}
-      <Modal
-        visible={showPracticeModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowPracticeModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback>
-                <View style={styles.modalContainer}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Cài đặt bài luyện tập</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setShowPracticeModal(false);
-                      }}
-                    >
-                      <Ionicons name="close-circle" size={28} color="#999" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView
-                    style={styles.modalBody}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    <Text style={styles.topicLabel}>
-                      📚 Chủ đề:{" "}
-                      <Text style={styles.topicValue}>{selectedTopic}</Text>
-                    </Text>
-
-                    {/* Số câu hỏi */}
-                    <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>🔢 Số câu hỏi:</Text>
-                      <TextInput
-                        style={styles.numberInput}
-                        value={numQuestions}
-                        onChangeText={setNumQuestions}
-                        keyboardType="numeric"
-                        maxLength={2}
-                        placeholder="5"
-                        returnKeyType="done"
-                        onSubmitEditing={Keyboard.dismiss}
-                      />
-                    </View>
-
-                    {/* Mức độ */}
-                    <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>📊 Mức độ:</Text>
-                      <View style={styles.difficultyButtons}>
-                        {[
-                          {
-                            key: "easy",
-                            label: "Dễ",
-                            icon: "happy-outline",
-                            color: "#4caf50",
-                          },
-                          {
-                            key: "medium",
-                            label: "Trung bình",
-                            icon: "sunny-outline",
-                            color: "#ff9800",
-                          },
-                          {
-                            key: "hard",
-                            label: "Khó",
-                            icon: "flame-outline",
-                            color: "#f44336",
-                          },
-                          {
-                            key: "mixed",
-                            label: "Hỗn hợp",
-                            icon: "shuffle-outline",
-                            color: "#9c27b0",
-                          },
-                        ].map((item) => (
-                          <TouchableOpacity
-                            key={item.key}
-                            style={[
-                              styles.difficultyBtn,
-                              difficulty === item.key && {
-                                backgroundColor: item.color,
-                                borderColor: item.color,
-                              },
-                            ]}
-                            onPress={() => {
-                              Keyboard.dismiss();
-                              setDifficulty(item.key);
-                            }}
-                          >
-                            <Ionicons
-                              name={item.icon}
-                              size={18}
-                              color={
-                                difficulty === item.key ? "#fff" : item.color
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.difficultyText,
-                                difficulty === item.key &&
-                                  styles.difficultyTextActive,
-                              ]}
-                            >
-                              {item.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  </ScrollView>
-
-                  <View style={styles.modalFooter}>
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setShowPracticeModal(false);
-                      }}
-                    >
-                      <Text style={styles.cancelBtnText}>Hủy</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.confirmBtn}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        handleGeneratePractice();
-                      }}
-                    >
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#fff"
-                      />
-                      <Text style={styles.confirmBtnText}>
-                        Tạo bài luyện tập
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.examTitle}>{submission.assignmentName}</Text>
@@ -604,23 +222,10 @@ export default function ExamReviewScreen({ route, navigation }) {
             Gợi ý học tập
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, activeTab === "Practice" && styles.tabActive]}
-          onPress={() => setActiveTab("Practice")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "Practice" && styles.tabTextActive,
-            ]}
-          >
-            Bài luyện tập
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Body */}
-      {activeTab === "Details" ? (
+      {/* Body - Details Tab */}
+      {activeTab === "Details" && (
         <ScrollView style={{ flex: 1, padding: 12 }}>
           {/* Tóm tắt AI */}
           <View style={styles.aiSummary}>
@@ -836,7 +441,10 @@ export default function ExamReviewScreen({ route, navigation }) {
             );
           })}
         </ScrollView>
-      ) : activeTab === "Recommendations" ? (
+      )}
+
+      {/* Body - Recommendations Tab */}
+      {activeTab === "Recommendations" && (
         <ScrollView style={{ flex: 1, padding: 12 }}>
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -865,16 +473,16 @@ export default function ExamReviewScreen({ route, navigation }) {
                 {recommendations.overall_advice}
               </Text>
 
-              <View style={styles.subHeader}>
+              {/* <View style={styles.subHeader}>
                 <Ionicons
                   name="alert-circle-outline"
                   size={18}
                   color="#f57c00"
                 />
                 <Text style={styles.subSectionTitle}>Chủ đề yếu</Text>
-              </View>
+              </View> */}
 
-              {(() => {
+              {/* {(() => {
                 // Loại bỏ duplicate topics (chỉ giữ lại topic đầu tiên)
                 const uniqueTopics = [];
                 const seenTopics = new Set();
@@ -920,7 +528,7 @@ export default function ExamReviewScreen({ route, navigation }) {
                     </TouchableOpacity>
                   </View>
                 ));
-              })()}
+              })()} */}
             </>
           ) : (
             <View style={styles.aiSummary}>
@@ -932,91 +540,6 @@ export default function ExamReviewScreen({ route, navigation }) {
               <Text style={{ marginLeft: 6, color: "#777" }}>
                 Không có gợi ý học tập nào hiện tại.
               </Text>
-            </View>
-          )}
-        </ScrollView>
-      ) : (
-        <ScrollView style={{ flex: 1, padding: 12 }}>
-          {practiceReviews.length > 0 ? (
-            <>
-              <View style={styles.sectionHeader}>
-                <Ionicons
-                  name="time-outline"
-                  size={22}
-                  color={themeColors.primary}
-                />
-                <Text style={styles.sectionTitle}>
-                  Lịch sử bài luyện tập ({practiceReviews.length})
-                </Text>
-              </View>
-
-              {practiceReviews.map((review, idx) => {
-                const detailedAnalysis = review.detailedAnalysis || {};
-                const summary = detailedAnalysis.summary || {};
-                return (
-                  <TouchableOpacity
-                    key={review.resultId || idx}
-                    style={styles.practiceCard}
-                    onPress={() => handleViewPractice(review)}
-                  >
-                    <Text style={styles.pracTitle}>
-                      {detailedAnalysis.subject || "Bài luyện tập"} - Lần{" "}
-                      {idx + 1}
-                    </Text>
-                    <Text style={styles.pracDate}>
-                      Ngày:{" "}
-                      {detailedAnalysis.timestamp
-                        ? new Date(detailedAnalysis.timestamp).toLocaleString(
-                            "vi-VN"
-                          )
-                        : "N/A"}
-                    </Text>
-                    <View style={{ flexDirection: "row", marginTop: 4 }}>
-                      <Text style={styles.pracScore}>
-                        Tổng câu hỏi: {summary.total_questions || 0}
-                      </Text>
-                      <Text style={[styles.pracScore, { marginLeft: 16 }]}>
-                        Đúng: {summary.correct_count || 0}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.pracScore,
-                        { marginTop: 4, fontWeight: "700" },
-                      ]}
-                    >
-                      Độ chính xác:{" "}
-                      {summary.accuracy_percentage?.toFixed(1) || 0}%
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-              {/* <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  improvements.length === 0
-                    ? { backgroundColor: "#ccc" } // xám nếu chưa có dữ liệu
-                    : loading
-                    ? { backgroundColor: "#66bb6a" } // nhạt hơn khi đang loading
-                    : { backgroundColor: "#2e7d32" }, // xanh chính khi sẵn sàng
-                ]}
-                onPress={handleEvaluateProgress}
-                disabled={loading || improvements.length === 0}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={[styles.actionText, { color: "#fff" }]}>
-                    {improvements.length > 0
-                      ? "Xem đánh giá tiến bộ"
-                      : "Chưa có đánh giá tiến bộ"}
-                  </Text>
-                )}
-              </TouchableOpacity> */}
-            </>
-          ) : (
-            <View style={styles.aiSummary}>
-              <Text>Chưa có bài luyện tập nào.</Text>
             </View>
           )}
         </ScrollView>

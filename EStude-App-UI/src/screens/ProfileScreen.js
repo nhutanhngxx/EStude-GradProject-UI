@@ -11,23 +11,28 @@ import {
   StyleSheet,
   TextInput,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
+import * as ImagePicker from "expo-image-picker";
 import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import SubjectListScreen from "../screens/Subjects/SubjectListScreen";
 import studentStudyService from "../services/studentStudyService";
 import SimpleSubjectListScreen from "./Subjects/SimpleSubjectListScreen";
+import authService from "../services/authService";
 
 const encodeURIComponentSafe = (str) => encodeURIComponent(str || "Unknown");
 
 export default function ProfileScreen({ navigation }) {
-  const { user } = useContext(AuthContext);
+  const { user, token, updateUser } = useContext(AuthContext);
   const { showToast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [email, setEmail] = useState(user?.email || "");
   const [activeTab, setActiveTab] = useState("Tổng quan");
   const [academicRecords, setAcademicRecords] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const tabs = [
     "Tổng quan",
     "Đang học",
@@ -37,6 +42,106 @@ export default function ProfileScreen({ navigation }) {
   const handleSave = () => {
     showToast("Lưu thông tin thành công!", { type: "success" });
     setIsEditing(false);
+  };
+
+  /**
+   * Yêu cầu quyền truy cập thư viện ảnh
+   */
+  const requestPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Cần quyền truy cập",
+        "Ứng dụng cần quyền truy cập thư viện ảnh để thay đổi ảnh đại diện.",
+        [{ text: "OK" }]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  /**
+   * Xử lý chọn và upload avatar
+   */
+  const handlePickAvatar = async () => {
+    try {
+      // Kiểm tra quyền truy cập
+      const hasPermission = await requestPermission();
+      if (!hasPermission) return;
+
+      // Mở thư viện ảnh
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: "images", // Sử dụng string literal thay vì enum
+        allowsEditing: true,
+        aspect: [1, 1], // Tỷ lệ 1:1 cho avatar
+        quality: 0.8, // Giảm chất lượng để tối ưu kích thước file
+      });
+
+      // Kiểm tra nếu user hủy
+      if (result.canceled) {
+        return;
+      }
+
+      // Lấy thông tin ảnh đã chọn
+      const selectedImage = result.assets[0];
+
+      console.log("Selected image details:", {
+        uri: selectedImage.uri,
+        width: selectedImage.width,
+        height: selectedImage.height,
+        fileSize: selectedImage.fileSize,
+        type: selectedImage.type,
+      });
+
+      // Hiển thị loading
+      setUploadingAvatar(true);
+
+      // Chuẩn bị file object
+      const imageFile = {
+        uri: selectedImage.uri,
+        type: selectedImage.type || "image/jpeg",
+        name: `avatar_${user.userId}_${Date.now()}.jpg`,
+      };
+
+      // Gọi API upload
+      const uploadResult = await authService.updateAvatar(
+        user.userId,
+        imageFile,
+        token
+      );
+
+      if (uploadResult) {
+        // Backend trả về format: { userId, fullName, avatarUrl, message }
+        // Cập nhật user với avatarUrl mới
+        const updatedUser = {
+          ...user,
+          avatarUrl: uploadResult.avatarUrl,
+          avatarPath: undefined, // Clear avatarPath cũ để ưu tiên avatarUrl mới
+          fullName: uploadResult.fullName || user.fullName,
+        };
+
+        console.log("✅ Updated user with new avatar:", {
+          userId: updatedUser.userId,
+          avatarUrl: updatedUser.avatarUrl,
+        });
+
+        // Cập nhật user trong context
+        if (updateUser) {
+          await updateUser(updatedUser);
+        }
+
+        showToast("Cập nhật ảnh đại diện thành công!", { type: "success" });
+      } else {
+        showToast("Không thể cập nhật ảnh đại diện. Vui lòng thử lại.", {
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Error picking avatar:", error);
+      showToast("Đã xảy ra lỗi khi chọn ảnh.", { type: "error" });
+    } finally {
+      setUploadingAvatar(false);
+    }
   };
 
   const activities = [
@@ -56,7 +161,10 @@ export default function ProfileScreen({ navigation }) {
     },
   ];
 
-  const avatarSource = user?.avatarPath
+  // Ưu tiên avatarUrl (từ backend S3) trước, sau đó mới đến avatarPath (local)
+  const avatarSource = user?.avatarUrl
+    ? { uri: user.avatarUrl }
+    : user?.avatarPath
     ? { uri: user.avatarPath }
     : {
         uri: `https://ui-avatars.com/api/?name=${encodeURIComponentSafe(
@@ -92,13 +200,31 @@ export default function ProfileScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileCard}>
-          <Image
-            source={avatarSource}
-            style={styles.avatar}
-            onError={(e) =>
-              console.log("Tải ảnh đại diện thất bại:", e.nativeEvent.error)
-            }
-          />
+          {/* Avatar với loading indicator */}
+          <TouchableOpacity
+            onPress={handlePickAvatar}
+            disabled={uploadingAvatar}
+            style={styles.avatarContainer}
+          >
+            <Image
+              source={avatarSource}
+              style={styles.avatar}
+              onError={(e) =>
+                console.log("Tải ảnh đại diện thất bại:", e.nativeEvent.error)
+              }
+            />
+            {uploadingAvatar && (
+              <View style={styles.avatarLoading}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            )}
+            {!uploadingAvatar && (
+              <View style={styles.avatarEditBadge}>
+                <Icon name="camera" size={16} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+
           <View style={{ flex: 1, justifyContent: "space-between", gap: 4 }}>
             <Text style={styles.name}>{user?.fullName || "-"}</Text>
             <Text style={[styles.infoText, { fontSize: 12 }]}>
@@ -352,11 +478,38 @@ const styles = StyleSheet.create({
     // resizeMode: "cover",
     marginBottom: 20,
   },
+  avatarContainer: {
+    position: "relative",
+    marginRight: 12,
+  },
   avatar: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    marginRight: 12,
+  },
+  avatarLoading: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 32,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarEditBadge: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: "#4CAF50",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   name: {
     fontSize: 18,
