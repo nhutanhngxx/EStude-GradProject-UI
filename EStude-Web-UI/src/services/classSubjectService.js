@@ -5,6 +5,7 @@ const endpoints = {
   getTeacherClassSubjects: `/api/teachers/{teacherId}/class-subjects`,
   getAllClassSubjects: "/api/class-subjects",
   deleteClassSubject: "/api/class-subjects/{classSubjectId}",
+  updateTeacher: "/api/class-subjects/{classSubjectId}/teacher",
 };
 
 const accessToken = localStorage.getItem("accessToken");
@@ -104,6 +105,41 @@ const classSubjectService = {
     } catch (error) {
       console.error("Lỗi khi lấy danh sách môn học của lớp:", error);
       return null;
+    }
+  },
+
+  /**
+   * Update teacher for an existing ClassSubject
+   * @param {number} classSubjectId - ID of ClassSubject
+   * @param {number|null} teacherId - ID of new teacher (null to remove)
+   * @returns {Promise<Object>} Updated ClassSubject data
+   */
+  updateClassSubjectTeacher: async (classSubjectId, teacherId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.updateTeacher.replace(
+          "{classSubjectId}",
+          classSubjectId
+        )}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+          body: JSON.stringify({ teacherId }),
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || "Cập nhật giáo viên thất bại");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("❌ Lỗi khi cập nhật giáo viên:", error);
+      throw error;
     }
   },
 };

@@ -17,15 +17,25 @@ const NotificationBell = () => {
     const fetchNotifications = async () => {
       try {
         const result = await notificationService.getReceivedNotifications();
-        if (result) {
+        if (result && Array.isArray(result)) {
           const sorted = result.sort(
             (a, b) => new Date(b.sentAt) - new Date(a.sentAt)
           );
           setNotifications(sorted.slice(0, 5));
           setAllNotifications([]);
+        } else {
+          // API trả về null hoặc không phải array - set empty array
+          setNotifications([]);
+          setAllNotifications([]);
         }
       } catch (error) {
-        console.error("Lỗi khi tải thông báo:", error);
+        // Chỉ log error nếu không phải connection refused (backend offline)
+        if (!error.message?.includes("Failed to fetch")) {
+          console.error("Lỗi khi tải thông báo:", error);
+        }
+        // Set empty array thay vì để undefined
+        setNotifications([]);
+        setAllNotifications([]);
       } finally {
         setLoading(false);
       }
@@ -51,14 +61,20 @@ const NotificationBell = () => {
       setLoadingAll(true);
       try {
         const result = await notificationService.getReceivedNotifications();
-        if (result) {
+        if (result && Array.isArray(result)) {
           const sorted = result.sort(
             (a, b) => new Date(b.sentAt) - new Date(a.sentAt)
           );
           setAllNotifications(sorted);
+        } else {
+          setAllNotifications([]);
         }
       } catch (error) {
-        console.error("Lỗi khi tải toàn bộ thông báo:", error);
+        // Chỉ log error nếu không phải connection refused
+        if (!error.message?.includes("Failed to fetch")) {
+          console.error("Lỗi khi tải toàn bộ thông báo:", error);
+        }
+        setAllNotifications([]);
       } finally {
         setLoadingAll(false);
       }

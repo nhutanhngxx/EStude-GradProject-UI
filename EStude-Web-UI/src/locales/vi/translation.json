@@ -44,7 +44,8 @@
     "manageSchedules": "Quản lý lịch học",
     "schedules": "Lịch dạy của tôi",
     "manageClasses": "Quản lý lớp học",
-    "grades": "Nhập điểm"
+    "grades": "Nhập điểm",
+    "homeroomClass": "Lớp chủ nhiệm"
   },
   "dashboard": {
     "manageAccounts": "Quản lý tài khoản",
@@ -470,6 +471,12 @@
       "filters": "Bộ lọc",
       "search": "Tìm kiếm câu hỏi...",
       "noData": "Không có dữ liệu"
+    }
+  },
+  "teacher": {
+    "homeroom": {
+      "title": "Lớp học chủ nhiệm",
+      "subtitle": "Quản lý thông tin học sinh lớp chủ nhiệm"
     }
   }
 }

@@ -13,7 +13,8 @@ import AdminManageClasses from "./pages/admin/ManageClasses";
 import AdminManageSubjects from "./pages/admin/ManageSubjects";
 import AdminManageTopics from "./pages/admin/ManageTopics";
 import AdminManageQuestionBank from "./pages/admin/ManageQuestionBank";
-import AdminReports from "./pages/admin/Reports";
+// ✅ Ẩn tab Phân tích & Báo cáo
+// import AdminReports from "./pages/admin/Reports";
 import AdminNotifications from "./pages/admin/Notifications";
 
 import TeacherLayout from "./layouts/TeacherLayout";
@@ -27,6 +28,7 @@ import TeacherManageSubjects from "./pages/teacher/ManageSubjects";
 import TeacherManageAttendance from "./pages/teacher/ManageAttendance";
 import TeacherAITool from "./pages/teacher/AI";
 import TeacherMyClasses from "./pages/teacher/MyClasses";
+import TeacherHomeroomClass from "./pages/teacher/HomeroomClass";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentDashboard from "./pages/student/Dashboard";
@@ -60,7 +62,8 @@ function App() {
             <Route path="subjects" element={<AdminManageSubjects />} />
             <Route path="topics" element={<AdminManageTopics />} />
             <Route path="question-bank" element={<AdminManageQuestionBank />} />
-            <Route path="statistics-reports" element={<AdminReports />} />
+            {/* ✅ Ẩn tab Phân tích & Báo cáo */}
+            {/* <Route path="statistics-reports" element={<AdminReports />} /> */}
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
         </Route>
@@ -82,6 +85,7 @@ function App() {
             <Route path="attendance" element={<TeacherManageAttendance />} />
             <Route path="ai-tools" element={<TeacherAITool />} />
             <Route path="my-classes" element={<TeacherMyClasses />} />
+            <Route path="homeroom-class" element={<TeacherHomeroomClass />} />
             <Route path="grades" element={<TeacherGradeInput />} />
           </Route>
         </Route>

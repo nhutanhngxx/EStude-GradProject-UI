@@ -179,7 +179,14 @@ const ManageQuestionBank = () => {
 
       const data = await topicService.getTopics(topicFilters);
       if (data) {
-        setTopics(data);
+        // ✅ Sắp xếp topics theo volume trước, sau đó theo orderIndex
+        const sortedTopics = data.sort((a, b) => {
+          if (a.volume !== b.volume) {
+            return a.volume - b.volume;
+          }
+          return a.orderIndex - b.orderIndex;
+        });
+        setTopics(sortedTopics);
       }
     } catch (error) {
       console.error("Error loading topics:", error);
@@ -206,6 +213,21 @@ const ManageQuestionBank = () => {
   };
 
   const openModal = (type, question = null) => {
+    // ✅ Check: Phải chọn môn học và chủ đề trước khi thêm mới
+    if (type === "add") {
+      console.log("🔍 [openModal] Checking filters:", filters);
+      if (!filters.subjectId) {
+        console.log("⚠️ [openModal] Missing subjectId - showing toast");
+        showToast("Vui lòng chọn môn học trước khi thêm câu hỏi!", "warn");
+        return;
+      }
+      if (!filters.topicId) {
+        console.log("⚠️ [openModal] Missing topicId - showing toast");
+        showToast("Vui lòng chọn chủ đề trước khi thêm câu hỏi!", "warn");
+        return;
+      }
+    }
+
     setModalType(type);
     setSelectedQuestion(question);
 
@@ -216,7 +238,7 @@ const ManageQuestionBank = () => {
     if (question) {
       setFormData({
         questionText: question.questionText,
-        points: question.points,
+        points: 1.0, // ✅ Luôn mặc định = 1 (kể cả khi edit)
         questionType: question.questionType,
         topicId: question.topic?.topicId || filters.topicId,
         difficultyLevel: question.difficultyLevel,
@@ -324,7 +346,7 @@ const ManageQuestionBank = () => {
 
       const payload = {
         questionText: formData.questionText,
-        points: parseFloat(formData.points),
+        points: 1.0, // ✅ Luôn mặc định = 1
         questionType: formData.questionType,
         topicId: parseInt(formData.topicId),
         difficultyLevel: formData.difficultyLevel,
@@ -387,10 +409,32 @@ const ManageQuestionBank = () => {
     showToast("Đang tải xuống file mẫu Excel...", "info");
   };
 
+  // Handler click nút Import - check validation trước khi mở file dialog
+  const handleImportClick = () => {
+    console.log("🔍 [handleImportClick] Checking filters:", filters);
+    if (!filters.subjectId) {
+      console.log("⚠️ [handleImportClick] Missing subjectId - showing toast");
+      showToast("Vui lòng chọn môn học trước khi import câu hỏi!", "warn");
+      return;
+    }
+    if (!filters.topicId) {
+      console.log("⚠️ [handleImportClick] Missing topicId - showing toast");
+      showToast("Vui lòng chọn chủ đề trước khi import câu hỏi!", "warn");
+      return;
+    }
+    // Nếu validation pass, trigger input file click
+    document.getElementById("import-excel-input")?.click();
+  };
+
   const handleImportExcel = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Reset input để có thể chọn lại cùng 1 file
+    e.target.value = "";
+
+    // Validation đã được check ở handleImportClick rồi
+    // Chỉ check file type
     if (
       !file.name.endsWith(".xlsx") &&
       !file.name.endsWith(".xls") &&
@@ -474,7 +518,7 @@ const ManageQuestionBank = () => {
 
           return {
             questionText: row.questionText.toString(),
-            points: parseFloat(row.points) || 1.0,
+            points: 1.0, // ✅ Luôn mặc định = 1 (bỏ qua giá trị từ Excel)
             questionType: row.questionType,
             difficultyLevel: row.difficultyLevel,
             attachmentUrl: row.attachmentUrl || null,
@@ -569,7 +613,7 @@ const ManageQuestionBank = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900 pt-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
@@ -588,24 +632,24 @@ const ManageQuestionBank = () => {
               <Download className="w-5 h-5" />
               Tải file mẫu
             </button>
-            <label
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+            <button
+              onClick={handleImportClick}
+              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
               title="Import từ Excel"
             >
               <Upload className="w-5 h-5" />
               Import Excel
-              <input
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleImportExcel}
-                className="hidden"
-                disabled={!filters.topicId}
-              />
-            </label>
+            </button>
+            <input
+              id="import-excel-input"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleImportExcel}
+              className="hidden"
+            />
             <button
               onClick={() => openModal("add")}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-              disabled={!filters.topicId}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
             >
               <PlusCircle className="w-5 h-5" />
               {t("admin.questionBank.addNew") || "Thêm câu hỏi"}
@@ -769,7 +813,7 @@ const ManageQuestionBank = () => {
         )}
 
         {/* Questions List */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-16">
           {loading ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
               Đang tải...
@@ -1047,7 +1091,8 @@ const ManageQuestionBank = () => {
                 </select>
               </div>
 
-              <div>
+              {/* ✅ Ẩn trường Điểm - Mặc định = 1 */}
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Điểm
                 </label>
@@ -1064,7 +1109,7 @@ const ManageQuestionBank = () => {
                   }
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

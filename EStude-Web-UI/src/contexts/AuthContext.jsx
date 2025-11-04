@@ -40,6 +40,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+  };
+
   const forgotPassword = async (email) => {
     return await passwordService.sendOtp(email);
   };
@@ -58,6 +63,7 @@ export const AuthProvider = ({ children }) => {
         user,
         login,
         logout,
+        updateUser,
         forgotPassword,
         verifyOtp,
         resetPassword,

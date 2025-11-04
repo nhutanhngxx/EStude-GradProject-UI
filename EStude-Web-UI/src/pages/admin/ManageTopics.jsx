@@ -130,6 +130,16 @@ const ManageTopics = () => {
   };
 
   const openModal = (type, topic = null) => {
+    // ✅ Check: Phải chọn môn học trước khi thêm mới
+    if (type === "add" && !filters.subjectId) {
+      console.log("🔍 [ManageTopics openModal] Checking filters:", filters);
+      console.log(
+        "⚠️ [ManageTopics openModal] Missing subjectId - showing toast"
+      );
+      showToast("Vui lòng chọn môn học trước khi thêm chủ đề!", "warn");
+      return;
+    }
+
     setModalType(type);
     setSelectedTopic(topic);
     if (topic) {
@@ -244,12 +254,22 @@ const ManageTopics = () => {
     }
   };
 
-  const filteredTopics = topics.filter((topic) =>
-    [topic.name, topic.chapter, topic.description]
-      .join(" ")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const filteredTopics = topics
+    .filter((topic) =>
+      [topic.name, topic.chapter, topic.description]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
+    )
+    // ✅ Sắp xếp theo volume trước, sau đó theo orderIndex trong mỗi volume
+    .sort((a, b) => {
+      // So sánh volume trước
+      if (a.volume !== b.volume) {
+        return a.volume - b.volume;
+      }
+      // Nếu cùng volume, so sánh orderIndex
+      return a.orderIndex - b.orderIndex;
+    });
 
   const totalPages = Math.ceil(filteredTopics.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -279,6 +299,23 @@ const ManageTopics = () => {
     showToast("Đang tải template...", "info");
   };
 
+  // Handler click nút Import - check validation trước khi mở file dialog
+  const handleImportClick = () => {
+    console.log(
+      "🔍 [ManageTopics handleImportClick] Checking filters:",
+      filters
+    );
+    if (!filters.subjectId) {
+      console.log(
+        "⚠️ [ManageTopics handleImportClick] Missing subjectId - showing toast"
+      );
+      showToast("Vui lòng chọn môn học trước khi import!", "warn");
+      return;
+    }
+    // Nếu validation pass, mở file dialog
+    fileInputRef.current?.click();
+  };
+
   // Import Excel
   const handleImportExcel = async (e) => {
     const file = e.target.files?.[0];
@@ -287,12 +324,8 @@ const ManageTopics = () => {
     // Reset input để có thể chọn lại cùng 1 file
     e.target.value = "";
 
-    // Kiểm tra xem đã chọn môn học chưa
-    if (!filters.subjectId) {
-      showToast("Vui lòng chọn môn học trước khi import!", "error");
-      return;
-    }
-
+    // Validation đã được check ở handleImportClick rồi, nên bỏ qua ở đây
+    // Chỉ check file type
     if (!file.name.endsWith(".xlsx") && !file.name.endsWith(".xls")) {
       showToast("Vui lòng chọn file Excel (.xlsx hoặc .xls)", "error");
       return;
@@ -367,16 +400,34 @@ const ManageTopics = () => {
       console.log("Dữ liệu import:", jsonData);
 
       // Lấy môn học đã chọn trong filter
+      console.log(
+        "🔍 [Import] filters.subjectId:",
+        filters.subjectId,
+        "Type:",
+        typeof filters.subjectId
+      );
+      console.log(
+        "🔍 [Import] Available subjects:",
+        subjects.map((s) => ({
+          id: s.subjectId,
+          type: typeof s.subjectId,
+          name: s.name,
+        }))
+      );
+
+      // So sánh subjectId (giờ cả 2 đều là number)
       const selectedSubject = subjects.find(
         (s) => s.subjectId === filters.subjectId
       );
+
+      console.log("🔍 [Import] selectedSubject:", selectedSubject);
 
       if (!selectedSubject) {
         showToast("Không tìm thấy thông tin môn học đã chọn", "error");
         return;
       }
 
-      console.log("Môn học được chọn:", selectedSubject);
+      console.log("✅ Môn học được chọn:", selectedSubject);
 
       // Validate và chuẩn bị dữ liệu
       const topicsToImport = [];
@@ -429,7 +480,7 @@ const ManageTopics = () => {
           gradeLevel: gradeLevel,
           volume: volume,
           orderIndex: parseInt(row["Thứ tự"]) || 1,
-          subjectId: filters.subjectId, // Dùng subjectId đã chọn trong filter
+          subjectId: parseInt(filters.subjectId), // Convert sang number để đảm bảo đúng type
         });
       }
 
@@ -504,9 +555,9 @@ const ManageTopics = () => {
               Template
             </button>
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleImportClick}
               className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-              disabled={importing || !filters.subjectId}
+              disabled={importing}
             >
               <Upload className="w-5 h-5" />
               {importing ? "Đang import..." : "Import Excel"}
@@ -521,7 +572,6 @@ const ManageTopics = () => {
             <button
               onClick={() => openModal("add")}
               className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-              disabled={!filters.subjectId}
             >
               <PlusCircle className="w-5 h-5" />
               {t("admin.topics.addNew") || "Thêm chủ đề"}
@@ -546,7 +596,15 @@ const ManageTopics = () => {
               <select
                 value={filters.subjectId}
                 onChange={(e) => {
-                  setFilters({ ...filters, subjectId: e.target.value });
+                  // Convert sang number nếu có giá trị, giữ nguyên empty string nếu chọn "Chọn môn học"
+                  const value = e.target.value ? parseInt(e.target.value) : "";
+                  console.log(
+                    "🔍 [Filter onChange] Selected subjectId:",
+                    value,
+                    "Type:",
+                    typeof value
+                  );
+                  setFilters({ ...filters, subjectId: value });
                   setCurrentPage(1);
                 }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -626,7 +684,7 @@ const ManageTopics = () => {
 
         {/* Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto mb-16">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
                 <tr>
@@ -797,7 +855,10 @@ const ManageTopics = () => {
                 <select
                   value={formData.subjectId}
                   onChange={(e) =>
-                    setFormData({ ...formData, subjectId: e.target.value })
+                    setFormData({
+                      ...formData,
+                      subjectId: parseInt(e.target.value) || "",
+                    })
                   }
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required

@@ -66,11 +66,12 @@ export default function AdminSidebar() {
       path: "/admin/question-bank",
       icon: <HelpCircle size={20} />,
     },
-    {
-      key: "reports",
-      path: "/admin/statistics-reports",
-      icon: <FileBarChart size={20} />,
-    },
+    // ✅ Ẩn tab Phân tích & Báo cáo
+    // {
+    //   key: "reports",
+    //   path: "/admin/statistics-reports",
+    //   icon: <FileBarChart size={20} />,
+    // },
     {
       key: "notifications",
       path: "/admin/notifications",

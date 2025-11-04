@@ -175,26 +175,18 @@ const ManageClasses = () => {
       if (!allClasses || !allClassSubjects) return;
 
       const classesWithSubjects = allClasses.map((cls) => {
-        const subjectsForClass = [
-          ...new Map(
-            allClassSubjects
-              .filter((cs) =>
-                cls.terms.some((t) => t.termId === cs.term?.termId)
-              )
-              .map((cs) => [
-                cs.subject.subjectId,
-                {
-                  classSubjectId: cs.classSubjectId,
-                  subjectId: cs.subject.subjectId,
-                  name: cs.subject.name,
-                  teacherId: cs.teacher?.userId ?? null,
-                  teacherName: cs.teacher?.fullName,
-                  termId: cs.term?.termId,
-                  termName: cs.term?.name,
-                },
-              ])
-          ).values(),
-        ];
+        // ✅ Keep all subjects with their terms (don't deduplicate)
+        const subjectsForClass = allClassSubjects
+          .filter((cs) => cls.terms.some((t) => t.termId === cs.term?.termId))
+          .map((cs) => ({
+            classSubjectId: cs.classSubjectId,
+            subjectId: cs.subject.subjectId,
+            name: cs.subject.name,
+            teacherId: cs.teacher?.userId ?? null,
+            teacherName: cs.teacher?.fullName,
+            termId: cs.term?.termId,
+            termName: cs.term?.name,
+          }));
 
         console.log(`Subjects for class ${cls.name}:`, subjectsForClass);
         return { ...cls, subjects: subjectsForClass };
@@ -252,14 +244,28 @@ const ManageClasses = () => {
     } else if (type === "edit" && cls) {
       setName(cls.name);
       setClassSize(cls.classSize || 0);
-      setSelectedSubjects(
-        cls.subjects?.map((s) => ({
+
+      // ✅ Group subjects by subjectId with teachers per term
+      const subjectsMap = new Map();
+
+      cls.subjects?.forEach((s) => {
+        if (!subjectsMap.has(s.subjectId)) {
+          subjectsMap.set(s.subjectId, {
+            subjectId: s.subjectId,
+            name: s.name,
+            termTeachers: {}, // { termId: { classSubjectId, teacherId, teacherName } }
+          });
+        }
+
+        const subjectData = subjectsMap.get(s.subjectId);
+        subjectData.termTeachers[s.termId] = {
           classSubjectId: s.classSubjectId,
-          subjectId: s.subjectId,
-          teacherId: s.teacherId ?? null,
-          teacherName: s.teacherName || "",
-        })) || []
-      );
+          teacherId: s.teacherId,
+          teacherName: s.teacherName,
+        };
+      });
+
+      setSelectedSubjects(Array.from(subjectsMap.values()));
       setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
       setEditableSemesters(
         cls.terms?.map((t, idx) => ({
@@ -340,24 +346,53 @@ const ManageClasses = () => {
       if (modalType === "edit" && selectedClass?.subjects) {
         for (const term of classResult.terms) {
           for (const subj of selectedSubjects) {
+            // Get teacher for this specific term
+            const termTeacher = subj.termTeachers?.[term.termId];
+            const newTeacherId = termTeacher?.teacherId ?? null;
+
+            // Find existing ClassSubject for this subject + term
             const existingSubject = selectedClass.subjects.find(
               (s) => s.subjectId === subj.subjectId && s.termId === term.termId
             );
 
-            // Cập nhật hoặc thêm mới classSubject
-            const payload = {
-              classId: classResult.classId,
-              subjectId: subj.subjectId,
-              teacherId: subj.teacherId ?? null,
-              termIds: [term.termId],
-            };
             if (existingSubject?.classSubjectId) {
-              payload.classSubjectId = existingSubject.classSubjectId;
+              // ✅ Subject exists in this term → UPDATE teacher if changed
+              const oldTeacherId = existingSubject.teacherId;
+
+              if (oldTeacherId !== newTeacherId) {
+                try {
+                  await classSubjectService.updateClassSubjectTeacher(
+                    existingSubject.classSubjectId,
+                    newTeacherId
+                  );
+                  console.log(
+                    `✅ Updated teacher for subject ${subj.subjectId} term ${term.termId}: ${oldTeacherId} → ${newTeacherId}`
+                  );
+                } catch (error) {
+                  console.error(`❌ Failed to update teacher:`, error);
+                  throw error;
+                }
+              } else {
+                console.log(
+                  `⏭️ No teacher change for subject ${subj.subjectId} in term ${term.termId}`
+                );
+              }
+            } else {
+              // ✅ New subject for this term → CREATE
+              const payload = {
+                classId: classResult.classId,
+                subjectId: subj.subjectId,
+                teacherId: newTeacherId,
+                termIds: [term.termId],
+              };
+              await classSubjectService.addClassSubject(payload);
+              console.log(
+                `✅ Added new subject ${subj.subjectId} to term ${term.termId} with teacher ${newTeacherId}`
+              );
             }
-            await classSubjectService.addClassSubject(payload);
           }
 
-          // Xóa các môn học không còn được chọn
+          // Remove subjects not selected anymore
           const subjectsToRemove = selectedClass.subjects.filter(
             (existingSubject) =>
               !selectedSubjects.some(
@@ -370,11 +405,14 @@ const ManageClasses = () => {
               await classSubjectService.deleteClassSubject(
                 subject.classSubjectId
               );
+              console.log(
+                `✅ Removed subject ${subject.subjectId} from term ${subject.termId}`
+              );
             }
           }
         }
       } else if (modalType === "add") {
-        // Thêm mới môn học cho lớp
+        // Add new subjects to class
         for (const subj of selectedSubjects) {
           for (const term of classResult.terms) {
             const exists = allClassSubjects.some(
@@ -385,10 +423,16 @@ const ManageClasses = () => {
             );
 
             if (!exists) {
+              // Get teacher for this term (if termTeachers structure exists)
+              const teacherId =
+                subj.termTeachers?.[term.termId]?.teacherId ??
+                subj.teacherId ??
+                null;
+
               const payload = {
                 classId: classResult.classId,
                 subjectId: subj.subjectId,
-                teacherId: subj.teacherId ?? null,
+                teacherId: teacherId,
                 termIds: [term.termId],
               };
               await classSubjectService.addClassSubject(payload);
@@ -552,7 +596,9 @@ const ManageClasses = () => {
                   </td> */}
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {c.subjects?.length ? (
-                      <span className="font-medium">{c.subjects.length}</span>
+                      <span className="font-medium">
+                        {new Set(c.subjects.map((s) => s.subjectId)).size}
+                      </span>
                     ) : (
                       <span className="text-gray-500 dark:text-gray-400">
                         0
@@ -608,7 +654,7 @@ const ManageClasses = () => {
           title={modalType === "add" ? "Thêm lớp mới" : "Thông tin lớp học"}
           onClose={closeModal}
         >
-          <div className="flex flex-col h-[60vh]">
+          <div className="flex flex-col h-[80vh]">
             <form
               id="classForm"
               onSubmit={(e) => {
@@ -755,11 +801,11 @@ const ManageClasses = () => {
               <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                    Môn học
+                    Môn học và Giáo viên theo Học kỳ
                   </label>
 
-                  {subjects ? (
-                    <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
+                  {subjects && subjects.length > 0 ? (
+                    <div className="space-y-3 border p-3 rounded-lg border-gray-300 dark:border-gray-600 max-h-[500px] overflow-y-auto">
                       {subjects.map((subj) => {
                         const selected = selectedSubjects.find(
                           (s) => s.subjectId === subj.subjectId
@@ -767,62 +813,98 @@ const ManageClasses = () => {
                         return (
                           <div
                             key={subj.subjectId}
-                            className="flex items-center gap-2"
+                            className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50"
                           >
-                            <input
-                              type="checkbox"
-                              checked={!!selected}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedSubjects([
-                                    ...selectedSubjects,
-                                    {
-                                      subjectId: subj.subjectId,
-                                      teacherId: null,
-                                    },
-                                  ]);
-                                } else {
-                                  setSelectedSubjects(
-                                    selectedSubjects.filter(
-                                      (s) => s.subjectId !== subj.subjectId
-                                    )
-                                  );
-                                }
-                              }}
-                              className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
-                            />
-                            <span className="flex-1 text-gray-900 dark:text-gray-100">
-                              {subj.name}
-                            </span>
-                            <select
-                              value={selected?.teacherId ?? ""}
-                              onChange={(e) =>
-                                setSelectedSubjects(
-                                  selectedSubjects.map((s) =>
-                                    s.subjectId === subj.subjectId
-                                      ? {
-                                          ...s,
-                                          teacherId: e.target.value
+                            {/* Subject checkbox and name */}
+                            <div className="flex items-center gap-2 mb-2">
+                              <input
+                                type="checkbox"
+                                checked={!!selected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // Add subject with empty termTeachers
+                                    setSelectedSubjects([
+                                      ...selectedSubjects,
+                                      {
+                                        subjectId: subj.subjectId,
+                                        name: subj.name,
+                                        termTeachers: {},
+                                      },
+                                    ]);
+                                  } else {
+                                    // Remove subject
+                                    setSelectedSubjects(
+                                      selectedSubjects.filter(
+                                        (s) => s.subjectId !== subj.subjectId
+                                      )
+                                    );
+                                  }
+                                }}
+                                className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
+                              />
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                {subj.name}
+                              </span>
+                            </div>
+
+                            {/* Teacher selection per term */}
+                            {selected && editableSemesters.length > 0 && (
+                              <div className="ml-6 space-y-2">
+                                {editableSemesters.map((term) => {
+                                  const termTeacher =
+                                    selected.termTeachers?.[term.termId];
+                                  return (
+                                    <div
+                                      key={term.termId}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <span className="text-sm text-gray-600 dark:text-gray-400 w-20">
+                                        HK{term.termNumber}:
+                                      </span>
+                                      <select
+                                        value={termTeacher?.teacherId ?? ""}
+                                        onChange={(e) => {
+                                          const newTeacherId = e.target.value
                                             ? Number(e.target.value)
-                                            : null,
-                                        }
-                                      : s
-                                  )
-                                )
-                              }
-                              className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                              disabled={!selected}
-                            >
-                              <option value="">
-                                {selected?.teacherName ||
-                                  "-- Chọn giáo viên --"}
-                              </option>
-                              {teachers.map((t) => (
-                                <option key={t.userId} value={t.userId}>
-                                  {t.fullName} - {t.teacherCode}
-                                </option>
-                              ))}
-                            </select>
+                                            : null;
+
+                                          setSelectedSubjects(
+                                            selectedSubjects.map((s) =>
+                                              s.subjectId === subj.subjectId
+                                                ? {
+                                                    ...s,
+                                                    termTeachers: {
+                                                      ...s.termTeachers,
+                                                      [term.termId]: {
+                                                        teacherId: newTeacherId,
+                                                        classSubjectId:
+                                                          termTeacher?.classSubjectId,
+                                                      },
+                                                    },
+                                                  }
+                                                : s
+                                            )
+                                          );
+                                        }}
+                                        className="flex-1 px-2 py-1 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                                      >
+                                        <option value="">
+                                          -- Chọn giáo viên --
+                                        </option>
+                                        {teachers.map((t) => (
+                                          <option
+                                            key={t.userId}
+                                            value={t.userId}
+                                          >
+                                            {t.fullName} ({t.teacherCode})
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

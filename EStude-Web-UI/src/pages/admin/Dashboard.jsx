@@ -6,6 +6,7 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -27,11 +28,13 @@ import schoolService from "../../services/schoolService";
 import classService from "../../services/classService";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import Pagination from "../../components/common/Pagination";
+import AdminAnalytics from "../../components/analytics/AdminAnalytics";
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -551,6 +554,20 @@ const Dashboard = () => {
                 ))}
           </ul>
         </div>
+      </div>
+
+      {/* Question Bank Analytics Section */}
+      <div className="mt-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <FileBarChart className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            Thống kê ngân hàng câu hỏi
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Phân tích chi tiết về câu hỏi, độ khó, và hiệu suất sử dụng
+          </p>
+        </div>
+        <AdminAnalytics />
       </div>
 
       {/* Modals */}

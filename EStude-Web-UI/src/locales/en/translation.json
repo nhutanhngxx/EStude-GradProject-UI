@@ -43,7 +43,8 @@
     "manageSchedules": "Manage Schedules",
     "schedules": "Teaching Schedule",
     "manageClasses": "Manage Classes",
-    "grades": "Grade Input"
+    "grades": "Grade Input",
+    "homeroomClass": "Homeroom Class"
   },
 
   "gradeLevel": {
@@ -483,6 +484,12 @@
       "filters": "Filters",
       "search": "Search questions...",
       "noData": "No data available"
+    }
+  },
+  "teacher": {
+    "homeroom": {
+      "title": "Homeroom Class",
+      "subtitle": "Manage homeroom student information"
     }
   }
 }
