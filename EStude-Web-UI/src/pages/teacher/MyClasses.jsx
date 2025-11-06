@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import teacherService from "../../services/teacherService";
+import classSubjectService from "../../services/classSubjectService";
 import ClassStudentModal from "./ClassStudentModal";
 import CreateAssignmentModal from "./CreateAssignmentModal";
 import {
@@ -57,9 +57,10 @@ export default function MyClasses() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await teacherService.getClassSubjectByTeacherId(
+        const result = await classSubjectService.getTeacherClassSubjects(
           user.userId
         );
+        console.log("Teacher's classes data:", result);
         if (result) setClasses(result);
       } catch (err) {
         console.error(err);

@@ -1,7 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTranslation } from "react-i18next";
-import { Mail, Phone, Calendar, User, Shield, LogOut, X } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  Calendar,
+  User,
+  Shield,
+  LogOut,
+  X,
+  Camera,
+} from "lucide-react";
+import userService from "../../services/userService";
+import { useToast } from "../../contexts/ToastContext";
 
 const Example = () => {
   const { t } = useTranslation();
@@ -15,13 +26,48 @@ const Example = () => {
 };
 
 const UserMenu = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const menuRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   if (!user) return null;
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input để có thể chọn lại cùng file
+    e.target.value = "";
+
+    try {
+      setUploading(true);
+      const updatedUser = await userService.updateAvatar(user.userId, file);
+
+      // Update user in context if updateUser function exists
+      if (updateUser && updatedUser.avatarPath) {
+        updateUser({ ...user, avatarPath: updatedUser.avatarPath });
+      }
+
+      showToast("Cập nhật avatar thành công!", "success");
+
+      // Reload page to reflect changes
+      window.location.reload();
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      showToast(error.message || "Lỗi khi cập nhật avatar", "error");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -42,9 +88,12 @@ const UserMenu = () => {
           onClick={() => setOpen((prev) => !prev)}
         >
           <img
-            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-              user.fullName || user.username
-            )}&background=random`}
+            src={
+              user.avatarPath ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                user.fullName || user.username
+              )}&background=random`
+            }
             alt="User Avatar"
             className="w-8 h-8 rounded-full"
           />
@@ -100,12 +149,42 @@ const UserMenu = () => {
         >
           {/* Header */}
           <div className="flex flex-col items-center mb-6 relative">
-            <img
-              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                user.fullName || user.username
-              )}&background=random&size=128`}
-              alt="User Avatar"
-              className="w-24 h-24 rounded-full shadow-md mb-3"
+            {/* Avatar with camera overlay */}
+            <div className="relative group mb-3">
+              <img
+                src={
+                  user.avatarPath ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                    user.fullName || user.username
+                  )}&background=random&size=128`
+                }
+                alt="User Avatar"
+                className="w-24 h-24 rounded-full shadow-md"
+              />
+              {/* Camera overlay - appears on hover */}
+              <div
+                onClick={handleAvatarClick}
+                className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer"
+              >
+                <Camera
+                  className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  size={24}
+                />
+              </div>
+              {/* Loading spinner */}
+              {uploading && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              )}
+            </div>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/gif"
+              onChange={handleAvatarChange}
+              className="hidden"
             />
             <h2 className="text-xl font-bold text-gray-800 dark:text-white">
               {user.fullName || user.username}

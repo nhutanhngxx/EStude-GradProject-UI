@@ -21,13 +21,21 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "save": "Save",
-    "na": "N/A"
+    "add": "Add",
+    "edit": "Edit",
+    "na": "N/A",
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "deleting": "Deleting..."
   },
   "sidebar": {
     "overview": "Overview",
     "schools": "Manage Schools",
     "users": "Manage Users",
     "classes": "Manage Classes",
+    "subjects": "Manage Subjects",
+    "topics": "Manage Topics",
+    "questionBank": "Question Bank",
     "reports": "Analytics & Reports",
     "notifications": "Notifications",
     "myClasses": "My Classes",
@@ -35,7 +43,8 @@
     "manageSchedules": "Manage Schedules",
     "schedules": "Teaching Schedule",
     "manageClasses": "Manage Classes",
-    "grades": "Grade Input"
+    "grades": "Grade Input",
+    "homeroomClass": "Homeroom Class"
   },
 
   "gradeLevel": {
@@ -408,5 +417,79 @@
     "sendError": "Failed to send notification.",
     "updateError": "Failed to update notification.",
     "deleteError": "Failed to delete notification."
+  },
+  "admin": {
+    "subjects": {
+      "title": "Manage Subjects",
+      "addNew": "Add Subject",
+      "edit": "Edit Subject",
+      "name": "Subject Name",
+      "description": "Description",
+      "actions": "Actions",
+      "search": "Search subjects...",
+      "noData": "No data available",
+      "nameRequired": "Please enter subject name",
+      "namePlaceholder": "e.g., Math, Physics, Chemistry",
+      "descriptionPlaceholder": "Textbook - Connecting knowledge with life",
+      "addSuccess": "Subject added successfully",
+      "updateSuccess": "Subject updated successfully",
+      "deleteSuccess": "Subject deleted successfully",
+      "fetchError": "Error loading subjects",
+      "saveError": "Error saving subject",
+      "deleteError": "Error deleting subject",
+      "deleteConfirm": "Confirm Delete",
+      "deleteMessage": "Are you sure you want to delete subject",
+      "deleteWarning": "This action cannot be undone!"
+    },
+    "topics": {
+      "title": "Manage Topics",
+      "addNew": "Add Topic",
+      "edit": "Edit Topic",
+      "name": "Topic Name",
+      "description": "Description",
+      "chapter": "Chapter",
+      "subject": "Subject",
+      "gradeLevel": "Grade Level",
+      "volume": "Volume",
+      "order": "Order",
+      "totalQuestions": "Total Questions",
+      "actions": "Actions",
+      "filters": "Filters",
+      "search": "Search topics...",
+      "noData": "No data available",
+      "selectSubject": "Select subject",
+      "selectSubjectFirst": "Please select a subject",
+      "allGrades": "All grades",
+      "allVolumes": "All volumes",
+      "nameRequired": "Please enter topic name",
+      "subjectRequired": "Please select a subject",
+      "namePlaceholder": "e.g., Propositions",
+      "chapterPlaceholder": "CHAPTER I: PROPOSITIONS AND SETS",
+      "descriptionPlaceholder": "Detailed description of the topic",
+      "addSuccess": "Topic added successfully",
+      "updateSuccess": "Topic updated successfully",
+      "deleteSuccess": "Topic deleted successfully",
+      "fetchError": "Error loading topics",
+      "fetchSubjectsError": "Error loading subjects",
+      "saveError": "Error saving topic",
+      "deleteError": "Error deleting topic",
+      "deleteConfirm": "Confirm Delete",
+      "deleteMessage": "Are you sure you want to delete topic",
+      "deleteWarning": "This action cannot be undone!"
+    },
+    "questionBank": {
+      "title": "Manage Question Bank",
+      "addNew": "Add Question",
+      "edit": "Edit Question",
+      "filters": "Filters",
+      "search": "Search questions...",
+      "noData": "No data available"
+    }
+  },
+  "teacher": {
+    "homeroom": {
+      "title": "Homeroom Class",
+      "subtitle": "Manage homeroom student information"
+    }
   }
 }

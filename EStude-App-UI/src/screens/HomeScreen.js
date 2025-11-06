@@ -24,6 +24,7 @@ import StudyOverviewCard from "../components/common/StudyOverviewCard";
 import TodayScheduleCard from "../components/common/TodayScheduleCard";
 import RecentAssignmentsCard from "../components/common/RecentAssignmentsCard";
 import CompetencyOverviewCard from "../components/common/CompetencyOverviewCard";
+import LearningRoadmapCard from "../components/common/LearningRoadmapCard";
 import studentStudyService from "../services/studentStudyService";
 import scheduleService from "../services/scheduleService";
 import aiService from "../services/aiService";
@@ -49,6 +50,8 @@ export default function HomeStudentScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [competencyStats, setCompetencyStats] = useState(null);
   const [loadingCompetency, setLoadingCompetency] = useState(true);
+  const [learningRoadmap, setLearningRoadmap] = useState(null);
+  const [loadingRoadmap, setLoadingRoadmap] = useState(true);
 
   const fetchAssignments = async () => {
     try {
@@ -279,12 +282,12 @@ export default function HomeStudentScreen({ navigation }) {
             }
 
             // Lưu tất cả accuracy và improvement để tính trung bình
-            subjectMap[subject].topics[normalizedTopicName].accuracyHistory.push(
-              topic.new_accuracy
-            );
-            subjectMap[subject].topics[normalizedTopicName].improvementHistory.push(
-              topic.improvement
-            );
+            subjectMap[subject].topics[
+              normalizedTopicName
+            ].accuracyHistory.push(topic.new_accuracy);
+            subjectMap[subject].topics[
+              normalizedTopicName
+            ].improvementHistory.push(topic.improvement);
             subjectMap[subject].topics[normalizedTopicName].count++;
           });
         });
@@ -304,7 +307,7 @@ export default function HomeStudentScreen({ navigation }) {
               avgImprovement: Math.round(avgImprovement * 10) / 10,
             };
           });
-          
+
           // Tính tỷ lệ đạt trung bình
           const totalAvgAccuracy = topicsList.reduce(
             (sum, t) => sum + t.avgAccuracy,
@@ -314,15 +317,11 @@ export default function HomeStudentScreen({ navigation }) {
             topicsList.length > 0 ? totalAvgAccuracy / topicsList.length : 0;
 
           // Đếm topics theo avgAccuracy
-          const mastered = topicsList.filter(
-            (t) => t.avgAccuracy >= 80
-          ).length;
+          const mastered = topicsList.filter((t) => t.avgAccuracy >= 80).length;
           const progressing = topicsList.filter((t) => {
             return t.avgAccuracy >= 50 && t.avgAccuracy < 80;
           }).length;
-          const needsWork = topicsList.filter(
-            (t) => t.avgAccuracy < 50
-          ).length;
+          const needsWork = topicsList.filter((t) => t.avgAccuracy < 50).length;
 
           return {
             avgAccuracy: Math.round(avgAccuracy * 10) / 10,
@@ -357,6 +356,98 @@ export default function HomeStudentScreen({ navigation }) {
     }
   };
 
+  const fetchLearningRoadmap = async () => {
+    try {
+      setLoadingRoadmap(true);
+
+      // Gọi API lấy roadmap LATEST (có resultId và full data)
+      const response = await aiService.getRoadmapLatest(token);
+
+      // Check if response is empty or user has no roadmap yet
+      if (!response || !response.resultId) {
+        // User chưa có roadmap - trạng thái bình thường cho user mới
+        console.log(
+          "ℹ️ No active roadmap found (new user or no assessments yet)"
+        );
+        setLearningRoadmap({
+          hasActiveRoadmap: false,
+        });
+        return;
+      }
+
+      console.log("✅ Roadmap Latest API Response:", response);
+
+      // Response structure:
+      // {
+      //   resultId: 44,
+      //   detailedAnalysis: { subject, phases, ... },
+      //   comment: "..."
+      // }
+
+      const resultId = response.resultId;
+      const detailedAnalysis = response.detailedAnalysis || {};
+      const subject = detailedAnalysis.subject || "Môn học";
+      const overallGoal =
+        detailedAnalysis.overall_goal || "Cải thiện kết quả học tập";
+
+      // Tính progress từ phases (nếu có)
+      let completionPercent = 0;
+      let completedTasks = 0;
+      let totalTasks = 0;
+      let currentPhaseName = "Bắt đầu học";
+
+      if (detailedAnalysis.phases && detailedAnalysis.phases.length > 0) {
+        detailedAnalysis.phases.forEach((phase, index) => {
+          if (phase.daily_tasks) {
+            phase.daily_tasks.forEach((day) => {
+              if (day.tasks) {
+                totalTasks += day.tasks.length;
+                day.tasks.forEach((task) => {
+                  if (task.completed) completedTasks++;
+                });
+              }
+            });
+          }
+          // Lấy phase đầu tiên chưa hoàn thành
+          if (index === 0 || completedTasks > 0) {
+            currentPhaseName =
+              phase.phase_name || `Giai đoạn ${phase.phase_number}`;
+          }
+        });
+        if (totalTasks > 0) {
+          completionPercent = Math.round((completedTasks / totalTasks) * 100);
+        }
+      }
+
+      setLearningRoadmap({
+        hasActiveRoadmap: true,
+        progress: completionPercent,
+        currentPhase: currentPhaseName,
+        tasksCompleted: completedTasks,
+        totalTasks: totalTasks,
+        roadmapId: `roadmap_${resultId}`,
+        subject: subject,
+        overallGoal: overallGoal,
+        resultId: resultId, // CRITICAL: Lưu để navigate
+      });
+
+      console.log("✅ Fetched roadmap data:", {
+        resultId: resultId,
+        subject: subject,
+        progress: completionPercent,
+        currentPhase: currentPhaseName,
+        totalTasks: totalTasks,
+      });
+    } catch (error) {
+      console.error("Error fetching roadmap:", error);
+      setLearningRoadmap({
+        hasActiveRoadmap: false,
+      });
+    } finally {
+      setLoadingRoadmap(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -366,6 +457,7 @@ export default function HomeStudentScreen({ navigation }) {
         fetchOverview(),
         fetchTodaySchedule(),
         fetchCompetencyStats(),
+        fetchLearningRoadmap(),
       ]);
       showToast("Dữ liệu đã được làm mới!", { type: "success" });
     } catch (error) {
@@ -381,6 +473,7 @@ export default function HomeStudentScreen({ navigation }) {
     fetchAttendance();
     fetchOverview();
     fetchTodaySchedule();
+    fetchLearningRoadmap();
   }, []);
 
   useFocusEffect(
@@ -389,11 +482,42 @@ export default function HomeStudentScreen({ navigation }) {
     }, [])
   );
 
+  const handleViewLearningRoadmap = () => {
+    console.log("🚀 handleViewLearningRoadmap called:", {
+      hasActiveRoadmap: learningRoadmap?.hasActiveRoadmap,
+      resultId: learningRoadmap?.resultId,
+      learningRoadmapState: learningRoadmap,
+    });
+
+    if (learningRoadmap?.hasActiveRoadmap && learningRoadmap?.resultId) {
+      // Có roadmap → navigate đến roadmap screen với resultId
+      // Screen sẽ tự fetch full roadmap data
+      console.log(
+        "✅ Navigate to AssessmentLearningRoadmap with resultId:",
+        learningRoadmap.resultId
+      );
+      navigation.navigate("AssessmentLearningRoadmap", {
+        resultId: learningRoadmap.resultId,
+        roadmap: null, // Không truyền data, để screen tự fetch
+        evaluation: null,
+      });
+    } else {
+      // Chưa có roadmap → navigate đến assessment để tạo
+      console.log("⚠️ No resultId, navigate to AssessmentSubjectSelection");
+      navigation.navigate("AssessmentSubjectSelection");
+    }
+  };
+
   const quickActions = [
     { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
     { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
     { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
-    // { id: "qa4", label: "Năng lực", iconName: "area-chart", color: "#9C27B0" },
+    {
+      id: "qa4",
+      label: "Đánh giá",
+      iconName: "check-square-o",
+      color: "#9C27B0",
+    },
   ];
 
   return (
@@ -432,7 +556,7 @@ export default function HomeStudentScreen({ navigation }) {
                       navigation.navigate("ScheduleList");
                       break;
                     case "qa4":
-                      navigation.navigate("CompetencyMap");
+                      navigation.navigate("AssessmentSubjectSelection");
                       break;
                   }
                 }}
@@ -488,6 +612,20 @@ export default function HomeStudentScreen({ navigation }) {
           <CompetencyOverviewCard
             stats={competencyStats}
             onPress={() => navigation.navigate("CompetencyMap")}
+          />
+        )}
+
+        {/* Lộ trình học tập */}
+        {!loadingRoadmap && (
+          <LearningRoadmapCard
+            hasActiveRoadmap={learningRoadmap?.hasActiveRoadmap || false}
+            progress={learningRoadmap?.progress || 0}
+            currentPhase={
+              learningRoadmap?.currentPhase || "Ôn lại kiến thức yếu"
+            }
+            tasksCompleted={learningRoadmap?.tasksCompleted || 0}
+            totalTasks={learningRoadmap?.totalTasks || 8}
+            onPress={handleViewLearningRoadmap}
           />
         )}
 

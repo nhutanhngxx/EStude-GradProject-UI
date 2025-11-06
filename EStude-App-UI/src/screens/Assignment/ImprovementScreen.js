@@ -156,7 +156,7 @@ export default function ImprovementScreen({ navigation, route }) {
     const layer3Payload = {
       submission_id: submissionIdForLayer3.toString(), // ✅ THÊM submission_id
       assignment_id: (quiz?.assignmentId || "practice").toString(),
-      subject: evaluation?.subject || quiz?.subject || "Chưa xác định",
+      subject: evaluation?.subject || quiz?.subject || "",
       topics: weakTopics,
       difficulty: "medium",
       num_questions: 5,
@@ -244,7 +244,7 @@ export default function ImprovementScreen({ navigation, route }) {
           <View style={styles.summaryBox}>
             {/* <Text style={styles.subjectTitle}>
               Đánh giá tiến bộ:{" "}
-              {evaluation?.subject || quiz?.subject || "Chưa xác định"}
+              {evaluation?.subject || quiz?.subject || ""}
             </Text> */}
 
             <View style={{ alignItems: "center", marginVertical: 10 }}>

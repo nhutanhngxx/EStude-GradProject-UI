@@ -138,25 +138,30 @@ const ManageClasses = () => {
   // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
-  // console.log("School ID của user: ", schoolId);
+  const isAdmin = user.admin === true; // Kiểm tra teacher có phải giáo vụ không
 
   // Load danh sách môn học
   useEffect(() => {
     const fetchSubjects = async () => {
-      const result = await subjectService.getAllSubjects();
-      // console.log("Subjects: ", result);
+      try {
+        const result = await subjectService.getAllSubjects();
+        console.log("All Subjects: ", result);
 
-      const filtered = result.filter(
-        (s) =>
-          Array.isArray(s.schools) &&
-          s.schools.some((sch) => sch.schoolId === schoolId)
-      );
+        const filtered = result.filter(
+          (s) =>
+            Array.isArray(s.schools) &&
+            s.schools.some((sch) => sch.schoolId === schoolId)
+        );
 
-      // console.log("Filtered Subjects: ", filtered);
-      setSubjects(filtered);
+        console.log("Filtered Subjects: ", filtered);
+        setSubjects(filtered);
+      } catch (error) {
+        console.error("Error fetching subjects:", error);
+        showToast("Lỗi khi tải danh sách môn học!", "error");
+      }
     };
 
-    if (schoolId) {
+    if (schoolId || isAdmin) {
       fetchSubjects();
     }
   }, [schoolId]);
@@ -178,30 +183,25 @@ const ManageClasses = () => {
       console.log("all class: ", allClasses);
 
       const allClassSubjects = await classSubjectService.getAllClassSubjects();
+      console.log("all classSubjects: ", allClassSubjects);
+
       if (!allClasses || !allClassSubjects) return;
 
       const classesWithSubjects = allClasses.map((cls) => {
-        const subjectsForClass = [
-          ...new Map(
-            allClassSubjects
-              .filter((cs) =>
-                cls.terms.some((t) => t.termId === cs.term?.termId)
-              )
-              .map((cs) => [
-                cs.subject.subjectId,
-                {
-                  classSubjectId: cs.classSubjectId,
-                  subjectId: cs.subject.subjectId,
-                  name: cs.subject.name,
-                  teacherId: cs.teacher?.userId ?? null,
-                  teacherName: cs.teacher?.fullName,
-                  termId: cs.term?.termId,
-                  termName: cs.term?.name,
-                },
-              ])
-          ).values(),
-        ];
+        // ✅ Keep all subjects with their terms (don't deduplicate)
+        const subjectsForClass = allClassSubjects
+          .filter((cs) => cls.terms.some((t) => t.termId === cs.term?.termId))
+          .map((cs) => ({
+            classSubjectId: cs.classSubjectId,
+            subjectId: cs.subject.subjectId,
+            name: cs.subject.name,
+            teacherId: cs.teacher?.userId ?? null,
+            teacherName: cs.teacher?.fullName,
+            termId: cs.term?.termId,
+            termName: cs.term?.name,
+          }));
 
+        console.log(`Subjects for class ${cls.name}:`, subjectsForClass);
         return { ...cls, subjects: subjectsForClass };
       });
 
@@ -211,7 +211,6 @@ const ManageClasses = () => {
       showToast("Lỗi khi tải dữ liệu lớp học!", "error");
     }
   }, [schoolId, showToast]);
-
   useEffect(() => {
     fetchClassesWithSubjects();
   }, [fetchClassesWithSubjects]);
@@ -258,14 +257,28 @@ const ManageClasses = () => {
     } else if (type === "edit" && cls) {
       setName(cls.name);
       setClassSize(cls.classSize || 0);
-      setSelectedSubjects(
-        cls.subjects?.map((s) => ({
+
+      // ✅ Group subjects by subjectId with teachers per term
+      const subjectsMap = new Map();
+
+      cls.subjects?.forEach((s) => {
+        if (!subjectsMap.has(s.subjectId)) {
+          subjectsMap.set(s.subjectId, {
+            subjectId: s.subjectId,
+            name: s.name,
+            termTeachers: {}, // { termId: { classSubjectId, teacherId, teacherName } }
+          });
+        }
+
+        const subjectData = subjectsMap.get(s.subjectId);
+        subjectData.termTeachers[s.termId] = {
           classSubjectId: s.classSubjectId,
-          subjectId: s.subjectId,
-          teacherId: s.teacherId ?? null,
-          teacherName: s.teacherName || "",
-        })) || []
-      );
+          teacherId: s.teacherId,
+          teacherName: s.teacherName,
+        };
+      });
+
+      setSelectedSubjects(Array.from(subjectsMap.values()));
       setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
       setEditableSemesters(
         cls.terms?.map((t, idx) => ({
@@ -346,24 +359,53 @@ const ManageClasses = () => {
       if (modalType === "edit" && selectedClass?.subjects) {
         for (const term of classResult.terms) {
           for (const subj of selectedSubjects) {
+            // Get teacher for this specific term
+            const termTeacher = subj.termTeachers?.[term.termId];
+            const newTeacherId = termTeacher?.teacherId ?? null;
+
+            // Find existing ClassSubject for this subject + term
             const existingSubject = selectedClass.subjects.find(
               (s) => s.subjectId === subj.subjectId && s.termId === term.termId
             );
 
-            // Cập nhật hoặc thêm mới classSubject
-            const payload = {
-              classId: classResult.classId,
-              subjectId: subj.subjectId,
-              teacherId: subj.teacherId ?? null,
-              termIds: [term.termId],
-            };
             if (existingSubject?.classSubjectId) {
-              payload.classSubjectId = existingSubject.classSubjectId;
+              // ✅ Subject exists in this term → UPDATE teacher if changed
+              const oldTeacherId = existingSubject.teacherId;
+
+              if (oldTeacherId !== newTeacherId) {
+                try {
+                  await classSubjectService.updateClassSubjectTeacher(
+                    existingSubject.classSubjectId,
+                    newTeacherId
+                  );
+                  console.log(
+                    `✅ Updated teacher for subject ${subj.subjectId} term ${term.termId}: ${oldTeacherId} → ${newTeacherId}`
+                  );
+                } catch (error) {
+                  console.error(`❌ Failed to update teacher:`, error);
+                  throw error;
+                }
+              } else {
+                console.log(
+                  `⏭️ No teacher change for subject ${subj.subjectId} in term ${term.termId}`
+                );
+              }
+            } else {
+              // ✅ New subject for this term → CREATE
+              const payload = {
+                classId: classResult.classId,
+                subjectId: subj.subjectId,
+                teacherId: newTeacherId,
+                termIds: [term.termId],
+              };
+              await classSubjectService.addClassSubject(payload);
+              console.log(
+                `✅ Added new subject ${subj.subjectId} to term ${term.termId} with teacher ${newTeacherId}`
+              );
             }
-            await classSubjectService.addClassSubject(payload);
           }
 
-          // Xóa các môn học không còn được chọn
+          // Remove subjects not selected anymore
           const subjectsToRemove = selectedClass.subjects.filter(
             (existingSubject) =>
               !selectedSubjects.some(
@@ -376,11 +418,14 @@ const ManageClasses = () => {
               await classSubjectService.deleteClassSubject(
                 subject.classSubjectId
               );
+              console.log(
+                `✅ Removed subject ${subject.subjectId} from term ${subject.termId}`
+              );
             }
           }
         }
       } else if (modalType === "add") {
-        // Thêm mới môn học cho lớp
+        // Add new subjects to class
         for (const subj of selectedSubjects) {
           for (const term of classResult.terms) {
             const exists = allClassSubjects.some(
@@ -391,10 +436,16 @@ const ManageClasses = () => {
             );
 
             if (!exists) {
+              // Get teacher for this term (if termTeachers structure exists)
+              const teacherId =
+                subj.termTeachers?.[term.termId]?.teacherId ??
+                subj.teacherId ??
+                null;
+
               const payload = {
                 classId: classResult.classId,
                 subjectId: subj.subjectId,
-                teacherId: subj.teacherId ?? null,
+                teacherId: teacherId,
                 termIds: [term.termId],
               };
               await classSubjectService.addClassSubject(payload);
@@ -450,12 +501,6 @@ const ManageClasses = () => {
       if (filterStatus === "ended") return isEnded;
       return true;
     });
-
-  const homeroomTeachers = teachers.filter((t) => t.homeroomTeacher);
-  const subjectTeachers = teachers;
-
-  console.log("homeroomTeachers: ", homeroomTeachers);
-  console.log("subjectTeachers: ", subjectTeachers);
 
   // Giao diện chính
   return (
@@ -564,7 +609,9 @@ const ManageClasses = () => {
                   </td> */}
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {c.subjects?.length ? (
-                      <span className="font-medium">{c.subjects.length}</span>
+                      <span className="font-medium">
+                        {new Set(c.subjects.map((s) => s.subjectId)).size}
+                      </span>
                     ) : (
                       <span className="text-gray-500 dark:text-gray-400">
                         0
@@ -620,428 +667,230 @@ const ManageClasses = () => {
           title={modalType === "add" ? "Thêm lớp mới" : "Thông tin lớp học"}
           onClose={closeModal}
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-[60vh]">
             <form
               id="classForm"
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSave();
               }}
-              className="flex-1 min-h-0" // Quan trọng: cho phép form co giãn
+              className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden"
             >
-              {/* Grid 2 cột - bằng nhau, khít */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                {/* Cột trái */}
-                <div className="flex flex-col min-h-0">
-                  <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-                    {/* Khối & Tên lớp */}
-                    <div className="flex gap-4">
-                      <div className="flex-[3]">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Khối
-                        </label>
-                        <select
-                          value={gradeLevel}
-                          onChange={(e) => setGradeLevel(e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                        >
-                          <option value="GRADE_6">Khối 6</option>
-                          <option value="GRADE_7">Khối 7</option>
-                          <option value="GRADE_8">Khối 8</option>
-                          <option value="GRADE_9">Khối 9</option>
-                          <option value="GRADE_10">Khối 10</option>
-                          <option value="GRADE_11">Khối 11</option>
-                          <option value="GRADE_12">Khối 12</option>
-                        </select>
-                      </div>
-                      <div className="flex-[7]">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Tên lớp
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="VD: 12A1"
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Sĩ số & GVCN */}
-                    <div className="flex gap-4">
-                      <div className="flex-[3]">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Sĩ số lớp
-                        </label>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={classSize}
-                          disabled
-                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                        />
-                      </div>
-                      <div className="flex-[7]">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Giáo viên chủ nhiệm
-                        </label>
-                        <select
-                          value={selectedTeacher}
-                          onChange={(e) => setSelectedTeacher(e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                        >
-                          <option value="">
-                            -- Chọn giáo viên chủ nhiệm --
-                          </option>
-                          {homeroomTeachers.map((t) => (
-                            <option key={t.userId} value={t.userId}>
-                              {t.fullName} ({t.teacherCode})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Danh sách học kỳ */}
-                    <div>
-                      <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                        Danh sách học kỳ
-                      </label>
-                      <div className="border rounded-lg border-gray-300 dark:border-gray-600 overflow-hidden">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-100 dark:bg-gray-700">
-                            <tr>
-                              <th className="px-3 py-2 text-left">Số học kỳ</th>
-                              <th className="px-3 py-2 text-left">Bắt đầu</th>
-                              <th className="px-3 py-2 text-left">Kết thúc</th>
-                              <th className="px-3 py-2 text-left">Hành động</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {editableSemesters.map((sem, index) => (
-                              <tr
-                                key={index}
-                                className="border-t border-gray-200 dark:border-gray-700"
+              <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
+                <select
+                  value={gradeLevel}
+                  onChange={(e) => setGradeLevel(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
+                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+                            focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                >
+                  <option value="GRADE_6">Khối 6</option>
+                  <option value="GRADE_7">Khối 7</option>
+                  <option value="GRADE_8">Khối 8</option>
+                  <option value="GRADE_9">Khối 9</option>
+                  <option value="GRADE_10">Khối 10</option>
+                  <option value="GRADE_11">Khối 11</option>
+                  <option value="GRADE_12">Khối 12</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Tên lớp"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
+                <input
+                  type="number"
+                  placeholder="Sĩ số lớp"
+                  value={classSize}
+                  disabled
+                  onChange={(e) => setClassSize(Number(e.target.value))}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                />
+                <select
+                  value={selectedTeacher}
+                  onChange={(e) => setSelectedTeacher(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 
+                          border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 
+                          focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                >
+                  <option value="">-- Chọn giáo viên chủ nhiệm --</option>
+                  {teachers
+                    .filter((t) => t.homeroomTeacher)
+                    .map((t) => (
+                      <option key={t.userId} value={t.userId}>
+                        {t.fullName}
+                      </option>
+                    ))}
+                </select>
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                    Danh sách học kỳ
+                  </label>
+                  <div className="overflow-x-auto border rounded-lg border-gray-300 dark:border-gray-600">
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Số học kỳ
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Bắt đầu
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Kết thúc
+                          </th>
+                          <th className="px-3 py-2 text-gray-900 dark:text-gray-100">
+                            Hành động
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {editableSemesters.map((sem, index) => (
+                          <tr
+                            key={index}
+                            className="border-b border-gray-200 dark:border-gray-700"
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="number"
+                                min={1}
+                                value={sem.termNumber}
+                                readOnly
+                                className="w-12 px-2 py-1 border rounded text-center bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="date"
+                                value={sem.beginDate}
+                                onChange={(e) =>
+                                  updateSemester(
+                                    index,
+                                    "beginDate",
+                                    e.target.value
+                                  )
+                                }
+                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <input
+                                type="date"
+                                value={sem.endDate}
+                                onChange={(e) =>
+                                  updateSemester(
+                                    index,
+                                    "endDate",
+                                    e.target.value
+                                  )
+                                }
+                                className="px-2 py-1 border rounded bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                              />
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                type="button"
+                                onClick={() => removeSemester(index)}
+                                className="text-red-600 dark:text-red-400 hover:underline"
                               >
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    value={sem.termNumber}
-                                    readOnly
-                                    className="w-12 px-2 py-1 border rounded text-center bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="date"
-                                    value={sem.beginDate}
-                                    onChange={(e) =>
-                                      updateSemester(
-                                        index,
-                                        "beginDate",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="px-2 py-1 border rounded w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <input
-                                    type="date"
-                                    value={sem.endDate}
-                                    onChange={(e) =>
-                                      updateSemester(
-                                        index,
-                                        "endDate",
-                                        e.target.value
-                                      )
-                                    }
-                                    className="px-2 py-1 border rounded w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                  />
-                                </td>
-                                <td className="px-3 py-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeSemester(index)}
-                                    className="text-red-600 dark:text-red-400 hover:underline text-sm"
-                                  >
-                                    Xóa
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addSemester}
-                        className="mt-2 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                      >
-                        + Thêm học kỳ
-                      </button>
-                    </div>
-
-                    {/* Danh sách môn học đã chọn */}
-                    <div>
-                      <label className="flex items-center gap-2 font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                        <BookUser size={16} />
-                        Danh sách môn học đã thêm
-                      </label>
-                      {selectedSubjects.length > 0 ? (
-                        <ul className="space-y-2 border rounded-lg p-2 max-h-48 overflow-y-auto border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">
-                          {selectedSubjects.map((subj) => {
-                            const subjectInfo = subjects.find(
-                              (s) => s.subjectId === subj.subjectId
-                            );
-                            const teacherInfo = teachers.find(
-                              (t) => t.userId === subj.teacherId
-                            );
-                            return (
-                              <li
-                                key={subj.subjectId}
-                                className="flex justify-between items-center text-sm bg-white dark:bg-gray-700 rounded-lg px-3 py-2 shadow-sm"
-                              >
-                                <div className="flex-1 flex justify-between gap-2">
-                                  <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                                    {subjectInfo?.name}
-                                  </span>
-                                  <span className="text-gray-500 dark:text-gray-400 truncate">
-                                    {teacherInfo
-                                      ? `${teacherInfo.fullName} (${teacherInfo.teacherCode})`
-                                      : "Chưa chọn"}
-                                  </span>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setSelectedSubjects((prev) =>
-                                      prev.filter(
-                                        (s) => s.subjectId !== subj.subjectId
-                                      )
-                                    )
-                                  }
-                                  className="text-red-500 dark:text-red-400 hover:underline text-xs ml-2"
-                                >
-                                  Xóa
-                                </button>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                          Chưa thêm môn học nào.
-                        </p>
-                      )}
-                    </div>
+                                Xóa
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+                  <button
+                    type="button"
+                    onClick={addSemester}
+                    className="mt-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                  >
+                    + Thêm học kỳ
+                  </button>
                 </div>
+              </div>
+              <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
+                <div>
+                  <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
+                    Môn học
+                  </label>
 
-                {/* Cột phải - Môn học & Giáo viên */}
-                <div className="flex flex-col min-h-0">
-                  <div className="flex-1 overflow-y-auto pl-2 space-y-4">
-                    <div>
-                      <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
-                        Môn học & Giáo viên phụ trách
-                      </label>
-
-                      {/* Ô tìm kiếm môn */}
-                      <input
-                        type="text"
-                        placeholder="Tìm môn học..."
-                        value={subjectSearch}
-                        onChange={(e) => setSubjectSearch(e.target.value)}
-                        className="w-full px-3 py-2 mb-3 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                      />
-
-                      {/* Danh sách môn */}
-                      <div className="space-y-3 max-h-[48vh] overflow-y-auto pr-1">
-                        {subjects
-                          .filter((s) =>
-                            s.name
-                              .toLowerCase()
-                              .includes(subjectSearch.toLowerCase())
-                          )
-                          .map((subj) => {
-                            const selected = selectedSubjects.find(
-                              (s) => s.subjectId === subj.subjectId
-                            );
-                            const teacher = teachers.find(
-                              (t) => t.userId === selected?.teacherId
-                            );
-
-                            return (
-                              <div
-                                key={subj.subjectId}
-                                className={`p-3 border rounded-lg transition-all ${
-                                  selected
-                                    ? "bg-green-50 dark:bg-green-900/30 border-green-400"
-                                    : "bg-gray-50 dark:bg-gray-800 border-gray-300 dark:border-gray-700"
-                                }`}
-                              >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <input
-                                      type="checkbox"
-                                      checked={!!selected}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedSubjects((prev) => [
-                                            ...prev,
-                                            {
-                                              subjectId: subj.subjectId,
-                                              teacherId: null,
-                                            },
-                                          ]);
-                                        } else {
-                                          setSelectedSubjects((prev) =>
-                                            prev.filter(
-                                              (s) =>
-                                                s.subjectId !== subj.subjectId
-                                            )
-                                          );
+                  {subjects ? (
+                    <div className="space-y-2 border p-2 rounded-lg border-gray-300 dark:border-gray-600">
+                      {subjects.map((subj) => {
+                        const selected = selectedSubjects.find(
+                          (s) => s.subjectId === subj.subjectId
+                        );
+                        return (
+                          <div
+                            key={subj.subjectId}
+                            className="flex items-center gap-2"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={!!selected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSubjects([
+                                    ...selectedSubjects,
+                                    {
+                                      subjectId: subj.subjectId,
+                                      teacherId: null,
+                                    },
+                                  ]);
+                                } else {
+                                  setSelectedSubjects(
+                                    selectedSubjects.filter(
+                                      (s) => s.subjectId !== subj.subjectId
+                                    )
+                                  );
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 dark:text-blue-400 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-200 dark:focus:ring-blue-400"
+                            />
+                            <span className="flex-1 text-gray-900 dark:text-gray-100">
+                              {subj.name}
+                            </span>
+                            <select
+                              value={selected?.teacherId ?? ""}
+                              onChange={(e) =>
+                                setSelectedSubjects(
+                                  selectedSubjects.map((s) =>
+                                    s.subjectId === subj.subjectId
+                                      ? {
+                                          ...s,
+                                          teacherId: e.target.value
+                                            ? Number(e.target.value)
+                                            : null,
                                         }
-                                      }}
-                                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-200"
-                                    />
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                      {subj.name}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {selected && (
-                                  <div className="mt-3">
-                                    {!teacher ||
-                                    editTeacher === subj.subjectId ? (
-                                      <>
-                                        <input
-                                          type="text"
-                                          placeholder="Tìm giáo viên..."
-                                          value={
-                                            teacherSearch[subj.subjectId] || ""
-                                          }
-                                          onChange={(e) =>
-                                            setTeacherSearch((prev) => ({
-                                              ...prev,
-                                              [subj.subjectId]: e.target.value,
-                                            }))
-                                          }
-                                          className="w-full px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                                        />
-                                        <div className="max-h-32 overflow-y-auto border rounded mt-1 border-gray-200 dark:border-gray-600">
-                                          {subjectTeachers
-                                            .filter((t) => {
-                                              const term = (
-                                                teacherSearch[subj.subjectId] ||
-                                                ""
-                                              ).toLowerCase();
-                                              return (
-                                                t.fullName
-                                                  .toLowerCase()
-                                                  .includes(term) ||
-                                                (t.teacherCode &&
-                                                  t.teacherCode
-                                                    .toLowerCase()
-                                                    .includes(term))
-                                              );
-                                            })
-                                            .map((t) => (
-                                              <div
-                                                key={t.userId}
-                                                onClick={() => {
-                                                  setSelectedSubjects((prev) =>
-                                                    prev.map((s) =>
-                                                      s.subjectId ===
-                                                      subj.subjectId
-                                                        ? {
-                                                            ...s,
-                                                            teacherId: t.userId,
-                                                          }
-                                                        : s
-                                                    )
-                                                  );
-                                                  setEditTeacher(null);
-                                                  setTeacherSearch((prev) => ({
-                                                    ...prev,
-                                                    [subj.subjectId]: "",
-                                                  }));
-                                                }}
-                                                className={`px-2 py-1.5 cursor-pointer text-sm transition-colors ${
-                                                  t.userId ===
-                                                  selected.teacherId
-                                                    ? "bg-blue-600 text-white"
-                                                    : "hover:bg-gray-100 dark:hover:bg-gray-700"
-                                                }`}
-                                              >
-                                                <span className="font-medium">
-                                                  {t.fullName}
-                                                </span>
-                                                <span className="text-xs ml-1">
-                                                  (
-                                                  {t.teacherCode ||
-                                                    "Chưa có mã"}
-                                                  )
-                                                </span>
-                                              </div>
-                                            ))}
-                                          {subjectTeachers.filter((t) => {
-                                            const term = (
-                                              teacherSearch[subj.subjectId] ||
-                                              ""
-                                            ).toLowerCase();
-                                            return (
-                                              t.fullName
-                                                .toLowerCase()
-                                                .includes(term) ||
-                                              (t.teacherCode &&
-                                                t.teacherCode
-                                                  .toLowerCase()
-                                                  .includes(term))
-                                            );
-                                          }).length === 0 && (
-                                            <div className="px-2 py-1 text-xs text-gray-500 italic">
-                                              Không tìm thấy giáo viên
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <div className="flex justify-between items-center text-sm">
-                                        <span className="text-green-700 dark:text-green-400">
-                                          GV:{" "}
-                                          <span className="font-semibold">
-                                            {teacher.fullName}
-                                          </span>{" "}
-                                          ({teacher.teacherCode})
-                                        </span>
-                                        <button
-                                          onClick={() =>
-                                            setEditTeacher(subj.subjectId)
-                                          }
-                                          className="text-blue-600 dark:text-blue-400 hover:underline text-xs flex items-center gap-1"
-                                        >
-                                          <Edit size={14} /> Sửa
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                      </div>
-
-                      {subjects.length === 0 && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                          Chưa có môn học nào.
-                        </p>
-                      )}
+                                      : s
+                                  )
+                                )
+                              }
+                              className="px-2 py-1 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                              disabled={!selected}
+                            >
+                              <option value="">
+                                {selected?.teacherName ||
+                                  "-- Chọn giáo viên --"}
+                              </option>
+                              {teachers.map((t) => (
+                                <option key={t.userId} value={t.userId}>
+                                  {t.fullName} - {t.teacherCode}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  ) : (
+                    <span className="text-gray-500 dark:text-gray-400 italic">
+                      Hiện tại chưa có môn học nào.
+                    </span>
+                  )}
                 </div>
               </div>
             </form>

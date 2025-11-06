@@ -51,12 +51,6 @@ export default function ExamDoingScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
 
-  // 🎯 States cho Practice Settings Modal
-  const [showPracticeModal, setShowPracticeModal] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState(null);
-  const [numQuestions, setNumQuestions] = useState("5");
-  const [difficulty, setDifficulty] = useState("easy");
-
   // console.log("exam: ", exam);
 
   const autoSubmittedRef = useRef(false);
@@ -175,13 +169,13 @@ export default function ExamDoingScreen({ navigation, route }) {
         );
 
         const aiPayload = {
-          submission_id: submissionId.toString(), // ✅ THÊM submission_id
-          assignment_id: exam.assignmentId.toString(),
+          submission_id: submissionId.toString(), // ✅ submission_id
+          assessment_id: exam.assignmentId?.toString() || "UNKNOWN", // ✅ assessment_id (không phải assignment_id)
           student_name: user.fullName || user.name || "Học sinh chưa đặt tên",
           subject:
             `${classSubject?.subjectName} ${
               classSubject?.gradeLevel?.match(/\d+/)?.[0] || ""
-            }`.trim() || "Chưa xác định",
+            }`.trim() || "",
           questions: exam.questions.map((q, idx) => {
             const selected = answers[q.questionId] || [];
             const chosenOpt = Array.isArray(selected) ? selected[0] : selected;
@@ -194,6 +188,7 @@ export default function ExamDoingScreen({ navigation, route }) {
 
             return {
               question_id: Number(q.questionId ?? q.question_id ?? idx + 1),
+              topic: q.topic?.name || q.topicName || "", // THÊM topic
               question: q.questionText,
               options: q.options.map((o) => o.optionText),
               correct_answer: correctIndex + 1,
@@ -256,341 +251,8 @@ export default function ExamDoingScreen({ navigation, route }) {
     }
   };
 
-  // 🎯 Mở modal chọn settings cho bài luyện tập
-  const handleOpenPracticeModal = (rawTopic) => {
-    let topic = rawTopic;
-    if (!topic) {
-      showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {
-        type: "error",
-      });
-      return;
-    }
-    if (typeof topic === "object") {
-      topic = topic.topic ?? topic.name ?? topic.label ?? null;
-    }
-    topic = typeof topic === "string" ? topic.trim() : null;
-
-    if (!topic || topic.toLowerCase() === "không xác định") {
-      showToast("Chủ đề không rõ — không thể tạo bài luyện tập tự động.", {
-        type: "warning",
-      });
-      return;
-    }
-
-    // Lưu topic và mở modal
-    setSelectedTopic(topic);
-    setNumQuestions("5"); // Reset về default
-    setDifficulty("easy"); // Reset về default
-    setShowPracticeModal(true);
-  };
-
-  // 🚀 Tạo bài luyện tập với settings đã chọn
-  const handleGeneratePractice = async () => {
-    if (!selectedTopic) return;
-
-    const topic = selectedTopic;
-
-    // Chuẩn hoá topic: nếu là object, lấy thuộc tính phù hợp
-    // let topic = rawTopic;
-    // if (!topic) {
-    //   showToast("Chủ đề không hợp lệ, không thể tạo bài luyện tập.", {
-    //     type: "error",
-    //   });
-    //   return;
-    // }
-    // // Nếu weak_topics là object như {topic: 'X'} hoặc {name:'X'}
-    // if (typeof topic === "object") {
-    //   topic = topic.topic ?? topic.name ?? topic.label ?? null;
-    // }
-    // topic = typeof topic === "string" ? topic.trim() : null;
-
-    // if (!topic || topic.toLowerCase() === "không xác định") {
-    //   showToast("Chủ đề không rõ — không thể tạo bài luyện tập tự động.", {
-    //     type: "warning",
-    //   });
-    //   return;
-    // }
-
-    // ✅ Lấy submission_id từ submittedResult
-    const submissionIdForLayer3 = submittedResult?.submissionId;
-
-    if (!submissionIdForLayer3) {
-      showToast("Lỗi: Không tìm thấy submission_id để tạo bài luyện tập.", {
-        type: "error",
-      });
-      return;
-    }
-
-    // 🔥 GỌI API LẤY FEEDBACK THỰC TẾ TỪ ASSIGNMENT
-    let referenceQuestions = [];
-    try {
-      const assignmentId = exam.assignmentId;
-      console.log(
-        "🔍 Fetching feedback from API for assignmentId:",
-        assignmentId
-      );
-
-      const feedbackResults = await aiService.getAIFeedbackByAssignmentId(
-        assignmentId,
-        token
-      );
-
-      if (
-        feedbackResults &&
-        Array.isArray(feedbackResults) &&
-        feedbackResults.length > 0
-      ) {
-        // Lấy feedback mới nhất
-        const latestFeedback = feedbackResults.reduce((latest, current) => {
-          return current.resultId > latest.resultId ? current : latest;
-        }, feedbackResults[0]);
-
-        console.log("✅ Latest feedback retrieved:", latestFeedback.resultId);
-
-        // Lọc feedback theo topic
-        if (latestFeedback?.detailedAnalysis?.feedback) {
-          latestFeedback.detailedAnalysis.feedback
-            .filter((f) => f.topic?.toLowerCase().includes(topic.toLowerCase()))
-            .forEach((f) => {
-              referenceQuestions.push({
-                question: f.question || "",
-                topic: f.topic || topic,
-                explanation: f.explanation || f.feedback || "",
-              });
-            });
-        }
-      }
-    } catch (error) {
-      console.error("❌ Error fetching feedback from API:", error);
-      // Không throw error, tiếp tục với fallback
-    }
-
-    // Nếu không có reference questions từ API, tạo một default
-    if (referenceQuestions.length === 0) {
-      console.warn("⚠️ No reference questions from API, using fallback");
-      referenceQuestions.push({
-        question: `Câu hỏi mẫu về ${topic}`,
-        topic: topic,
-        explanation: `Đây là câu hỏi liên quan đến chủ đề ${topic}`,
-      });
-    }
-
-    // 🎯 Sử dụng settings từ modal
-    const numQuestionsInt = parseInt(numQuestions) || 5;
-
-    const layer3Payload = {
-      submission_id: submissionIdForLayer3.toString(), // ✅ BẮT BUỘC
-      subject: exam.classSubject.subject.name,
-      topics: [topic],
-      difficulty: difficulty, // ✅ Từ modal
-      num_questions: numQuestionsInt, // ✅ Từ modal
-      reference_questions: referenceQuestions, // ✅ THÊM reference_questions
-    };
-
-    console.log("📤 Layer3 Payload:", JSON.stringify(layer3Payload, null, 2));
-
-    try {
-      setAiLoading(true);
-      setShowPracticeModal(false); // Đóng modal trước khi gọi API
-
-      const layer3Result = await aiService.layer3(layer3Payload, token);
-      console.log("Layer3 raw result:", layer3Result);
-
-      // Hỗ trợ cả dạng { data: { questions: [...] } } hoặc raw { questions: [...] }
-      const quizData = layer3Result?.data ?? layer3Result;
-      console.log("quizData: ", quizData);
-
-      // Kiểm tra hợp lệ trước khi navigate
-      if (
-        !quizData ||
-        !Array.isArray(quizData.questions) ||
-        quizData.questions.length === 0
-      ) {
-        showToast("Không tạo được bài luyện tập (API trả về rỗng).", {
-          type: "error",
-        });
-        setAiLoading(false);
-        return;
-      }
-
-      // Bảo đảm mỗi câu có questionId và option structure phù hợp
-      // (bạn có thể chuẩn hoá/casting ở đây nếu backend trả khác)
-      navigation.navigate("PracticeQuiz", {
-        quiz: {
-          ...quizData,
-          submissionId: submittedResult?.submissionId, // ✅ THÊM submissionId vào quiz
-        },
-        previousFeedback: {
-          resultId:
-            submittedResult?.data?.result_id ||
-            submittedResult?.result_id ||
-            "local-layer1",
-          detailedAnalysis: aiResult?.detailedAnalysis || null,
-        },
-        submissionId: submittedResult?.submissionId, // ✅ THÊM submissionId vào params
-      });
-
-      setAiLoading(false);
-    } catch (error) {
-      console.error("Lỗi gọi Layer 3:", error);
-      showToast("Lỗi khi tạo bài luyện tập.", { type: "error" });
-      setAiLoading(false);
-    }
-  };
-
   return (
     <View style={styles.container}>
-      {/* 🎯 Practice Settings Modal */}
-      <Modal
-        visible={showPracticeModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowPracticeModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={styles.modalOverlay}>
-              <TouchableWithoutFeedback>
-                <View style={styles.modalContainer}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Cài đặt bài luyện tập</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setShowPracticeModal(false);
-                      }}
-                    >
-                      <Ionicons name="close-circle" size={28} color="#999" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <ScrollView
-                    style={styles.modalBody}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    <Text style={styles.topicLabel}>
-                      📚 Chủ đề:{" "}
-                      <Text style={styles.topicValue}>{selectedTopic}</Text>
-                    </Text>
-
-                    {/* Số câu hỏi */}
-                    <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>🔢 Số câu hỏi:</Text>
-                      <TextInput
-                        style={styles.numberInput}
-                        value={numQuestions}
-                        onChangeText={setNumQuestions}
-                        keyboardType="numeric"
-                        maxLength={2}
-                        placeholder="5"
-                        returnKeyType="done"
-                        onSubmitEditing={Keyboard.dismiss}
-                      />
-                    </View>
-
-                    {/* Mức độ */}
-                    <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>📊 Mức độ:</Text>
-                      <View style={styles.difficultyButtons}>
-                        {[
-                          {
-                            key: "easy",
-                            label: "Dễ",
-                            icon: "happy-outline",
-                            color: "#4caf50",
-                          },
-                          {
-                            key: "medium",
-                            label: "Trung bình",
-                            icon: "sunny-outline",
-                            color: "#ff9800",
-                          },
-                          {
-                            key: "hard",
-                            label: "Khó",
-                            icon: "flame-outline",
-                            color: "#f44336",
-                          },
-                          {
-                            key: "mixed",
-                            label: "Hỗn hợp",
-                            icon: "shuffle-outline",
-                            color: "#9c27b0",
-                          },
-                        ].map((item) => (
-                          <TouchableOpacity
-                            key={item.key}
-                            style={[
-                              styles.difficultyBtn,
-                              difficulty === item.key && {
-                                backgroundColor: item.color,
-                                borderColor: item.color,
-                              },
-                            ]}
-                            onPress={() => {
-                              Keyboard.dismiss();
-                              setDifficulty(item.key);
-                            }}
-                          >
-                            <Ionicons
-                              name={item.icon}
-                              size={18}
-                              color={
-                                difficulty === item.key ? "#fff" : item.color
-                              }
-                            />
-                            <Text
-                              style={[
-                                styles.difficultyText,
-                                difficulty === item.key &&
-                                  styles.difficultyTextActive,
-                              ]}
-                            >
-                              {item.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  </ScrollView>
-
-                  <View style={styles.modalFooter}>
-                    <TouchableOpacity
-                      style={styles.cancelBtn}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        setShowPracticeModal(false);
-                      }}
-                    >
-                      <Text style={styles.cancelBtnText}>Hủy</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.confirmBtn}
-                      onPress={() => {
-                        Keyboard.dismiss();
-                        handleGeneratePractice();
-                      }}
-                    >
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color="#fff"
-                      />
-                      <Text style={styles.confirmBtnText}>
-                        Tạo bài luyện tập
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.examTitle}>{exam?.title ?? "Bài kiểm tra"}</Text>
@@ -910,7 +572,7 @@ export default function ExamDoingScreen({ navigation, route }) {
               </View>
 
               {/* Chủ đề yếu */}
-              {recommendations.weak_topics?.length > 0 && (
+              {/* {recommendations.weak_topics?.length > 0 && (
                 <View style={styles.aiWeakCard}>
                   <View style={styles.aiSummaryHeader}>
                     <Ionicons
@@ -922,22 +584,18 @@ export default function ExamDoingScreen({ navigation, route }) {
                     <Text style={styles.sectionTitle}>Chủ đề yếu</Text>
                   </View>
                   {recommendations.weak_topics.map((t, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => handleOpenPracticeModal(t.topic)}
-                      style={styles.actionButton}
-                    >
+                    <View key={idx} style={styles.weakTopicItem}>
                       <Ionicons
-                        name="book-outline"
+                        name="alert-circle-outline"
                         size={18}
-                        color={themeColors.primary}
+                        color={themeColors.danger}
                         style={{ marginRight: 6 }}
                       />
-                      <Text style={styles.actionText}>Ôn tập {t.topic}</Text>
-                    </TouchableOpacity>
+                      <Text style={styles.weakTopicText}>{t.topic}</Text>
+                    </View>
                   ))}
                 </View>
-              )}
+              )} */}
             </>
           ) : (
             <View style={styles.aiSummary}>
@@ -1206,132 +864,18 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eee",
   },
 
-  // 🎯 Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    width: "90%",
-    maxWidth: 400,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#222",
-  },
-  modalBody: {
-    padding: 20,
-  },
-  topicLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 20,
-    padding: 12,
-    backgroundColor: "#f0f7f0",
-    borderRadius: 8,
-  },
-  topicValue: {
-    color: themeColors.secondary,
-    fontWeight: "700",
-  },
-  settingGroup: {
-    marginBottom: 20,
-  },
-  settingLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 10,
-  },
-  numberInput: {
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontWeight: "600",
-    textAlign: "center",
-    backgroundColor: "#f9f9f9",
-  },
-  difficultyButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  difficultyBtn: {
+  weakTopicItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff3e0",
     borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#e0e0e0",
-    backgroundColor: "#f9f9f9",
-    minWidth: "48%",
-    justifyContent: "center",
+    marginBottom: 8,
   },
-  difficultyText: {
+  weakTopicText: {
     fontSize: 14,
+    color: "#333",
     fontWeight: "600",
-    marginLeft: 6,
-    color: "#666",
-  },
-  difficultyTextActive: {
-    color: "#fff",
-  },
-  modalFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    gap: 10,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f5",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cancelBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#666",
-  },
-  confirmBtn: {
-    flex: 2,
-    flexDirection: "row",
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: themeColors.secondary,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  confirmBtnText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
   },
 });

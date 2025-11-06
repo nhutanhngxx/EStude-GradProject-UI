@@ -20,6 +20,7 @@ import teacherService from "../../services/teacherService";
 import assignmentService from "../../services/assignmentService";
 import classSubjectService from "../../services/classSubjectService";
 import subjectGradeService from "../../services/subjectGradeService";
+import homeroomService from "../../services/homeroomService";
 import { useToast } from "../../contexts/ToastContext";
 import { ThemeContext } from "../../contexts/ThemeContext";
 import {
@@ -34,6 +35,8 @@ import {
   BarChart,
 } from "lucide-react";
 import Pagination from "../../components/common/Pagination";
+import TeacherAnalytics from "../../components/analytics/TeacherAnalytics";
+import HomeroomAnalytics from "../../components/analytics/HomeroomAnalytics";
 
 ChartJS.register(
   CategoryScale,
@@ -57,6 +60,7 @@ const TeacherDashboard = () => {
   const [assignments, setAssignments] = useState([]);
   const [weeklySchedules, setWeeklySchedules] = useState([]);
   const [gradeStats, setGradeStats] = useState([]);
+  const [homeroomClassId, setHomeroomClassId] = useState(null);
   const [activityFilter, setActivityFilter] = useState("today");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentAssignmentPage, setCurrentAssignmentPage] = useState(1);
@@ -77,6 +81,76 @@ const TeacherDashboard = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
   const teacherId = user.userId;
+
+  // Debug: Check if user has homeroom class
+  console.log("👤 User data:", user);
+  console.log("🏫 Is Homeroom Teacher:", user.homeroomTeacher);
+  console.log("👨‍🏫 Teacher ID:", teacherId);
+
+  // Fetch homeroom class ID if user is homeroom teacher
+  useEffect(() => {
+    const fetchHomeroomClass = async () => {
+      console.log(
+        "🚀 useEffect triggered - homeroomTeacher:",
+        user.homeroomTeacher,
+        "teacherId:",
+        teacherId
+      );
+
+      if (!user.homeroomTeacher || !teacherId) {
+        console.log(
+          "❌ Skipping fetch - homeroomTeacher:",
+          user.homeroomTeacher,
+          "teacherId:",
+          teacherId
+        );
+        return;
+      }
+
+      try {
+        console.log("🔍 Fetching homeroom class for teacher:", teacherId);
+        const homeroomData = await homeroomService.getHomeroomStudents();
+
+        console.log("📦 Homeroom API response:", homeroomData);
+        console.log("📦 Response type:", typeof homeroomData);
+        console.log("📦 Is Array?:", Array.isArray(homeroomData));
+
+        // API returns an array with class data
+        if (Array.isArray(homeroomData) && homeroomData.length > 0) {
+          const homeroomClass = homeroomData[0];
+          console.log("📦 Homeroom class data:", homeroomClass);
+
+          const classId = homeroomClass?.classId;
+
+          if (classId) {
+            setHomeroomClassId(classId);
+            console.log("✅ Homeroom Class ID found:", classId);
+            console.log("✅ Class name:", homeroomClass.name);
+            console.log("✅ Student count:", homeroomClass.students?.length);
+          } else {
+            console.log(
+              "⚠️ No classId found in homeroom data. Keys:",
+              Object.keys(homeroomClass || {})
+            );
+          }
+        } else if (Array.isArray(homeroomData) && homeroomData.length === 0) {
+          console.log(
+            "⚠️ API returned empty array - Teacher has no homeroom class assigned"
+          );
+        } else {
+          console.log("⚠️ Unexpected response format:", homeroomData);
+        }
+      } catch (error) {
+        console.error("❌ Error fetching homeroom class:", error);
+        console.error(
+          "❌ Error details:",
+          error.response?.data || error.message
+        );
+      }
+    };
+
+    fetchHomeroomClass();
+  }, [user.homeroomTeacher, teacherId]);
 
   // Phân trang cho học sinh
   const handlePageChange = (page) => {
@@ -277,12 +351,10 @@ const TeacherDashboard = () => {
         );
 
         // console.log("assignmentPromises: ", assignmentPromises);
-        
 
         const assignmentResults = await Promise.all(assignmentPromises);
         setAssignments(assignmentResults.flat());
         console.log("ass: ", assignmentResults);
-        
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu:", error);
         showToast("Không thể tải dữ liệu!", "error");
@@ -418,28 +490,28 @@ const TeacherDashboard = () => {
     //   bgDark: "dark:bg-red-900",
     //   showDetails: true,
     // },
-    {
-      title: "ĐTB môn theo lớp",
-      value: (() => {
-        const validGrades = gradeStats.filter(
-          (stat) => stat.averageGrade !== "N/A" && !isNaN(stat.averageGrade)
-        );
-        if (validGrades.length === 0) return "N/A";
-        const total = validGrades.reduce(
-          (sum, stat) => sum + Number(stat.averageGrade),
-          0
-        );
-        return (total / validGrades.length).toFixed(1);
-      })(),
-      icon: (
-        <BarChart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-      ),
-      path: "",
-      note: gradeStats.length === 0 ? "*Chưa có dữ liệu điểm" : "",
-      bgLight: "bg-purple-100",
-      bgDark: "dark:bg-purple-900",
-      showDetails: true,
-    },
+    // {
+    //   title: "ĐTB môn theo lớp",
+    //   value: (() => {
+    //     const validGrades = gradeStats.filter(
+    //       (stat) => stat.averageGrade !== "N/A" && !isNaN(stat.averageGrade)
+    //     );
+    //     if (validGrades.length === 0) return "N/A";
+    //     const total = validGrades.reduce(
+    //       (sum, stat) => sum + Number(stat.averageGrade),
+    //       0
+    //     );
+    //     return (total / validGrades.length).toFixed(1);
+    //   })(),
+    //   icon: (
+    //     <BarChart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+    //   ),
+    //   path: "",
+    //   note: gradeStats.length === 0 ? "*Chưa có dữ liệu điểm" : "",
+    //   bgLight: "bg-purple-100",
+    //   bgDark: "dark:bg-purple-900",
+    //   showDetails: true,
+    // },
   ];
 
   const newStudentsData = getNewStudentsByMonth();
@@ -1038,6 +1110,33 @@ const TeacherDashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Teacher Analytics Section */}
+      <div className="mb-6">
+        <TeacherAnalytics teacherId={teacherId} />
+      </div>
+
+      {/* Homeroom Analytics Section - Conditionally render if teacher has homeroom class */}
+      {console.log(
+        "🎯 Rendering decision - homeroomClassId:",
+        homeroomClassId,
+        "Type:",
+        typeof homeroomClassId
+      )}
+      {homeroomClassId ? (
+        <div className="mb-6">
+          {console.log(
+            "✅ Rendering HomeroomAnalytics with classId:",
+            homeroomClassId
+          )}
+          <HomeroomAnalytics classId={homeroomClassId} teacherId={teacherId} />
+        </div>
+      ) : (
+        console.log(
+          "❌ NOT rendering HomeroomAnalytics - homeroomClassId is:",
+          homeroomClassId
+        )
+      )}
     </div>
   );
 };

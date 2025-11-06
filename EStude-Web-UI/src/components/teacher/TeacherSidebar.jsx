@@ -10,6 +10,7 @@ import {
   Book,
   Clipboard,
   Edit,
+  UserCheck,
 } from "lucide-react";
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
@@ -20,13 +21,11 @@ export default function TeacherSidebar() {
   const [open, setOpen] = useState(true);
   const { darkMode } = useContext(ThemeContext);
   const { t, i18n } = useTranslation();
-  const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
 
   useEffect(() => {
     const savedLang = localStorage.getItem("language");
     if (savedLang && savedLang !== i18n.language) {
       i18n.changeLanguage(savedLang);
-      setCurrentLang(savedLang);
     }
   }, [i18n]);
 
@@ -57,6 +56,11 @@ export default function TeacherSidebar() {
       key: "grades",
       path: "/teacher/grades",
       icon: <Edit size={20} />,
+    },
+    {
+      key: "homeroomClass",
+      path: "/teacher/homeroom-class",
+      icon: <UserCheck size={20} />,
     },
     ...(isAdmin
       ? [

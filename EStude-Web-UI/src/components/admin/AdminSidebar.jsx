@@ -8,6 +8,9 @@ import {
   FileBarChart,
   Bell,
   School,
+  BookOpen,
+  BookMarked,
+  HelpCircle,
 } from "lucide-react";
 import bannerLight from "../../assets/banner-light.png";
 import bannerDark from "../../assets/banner-dark.png";
@@ -18,13 +21,11 @@ export default function AdminSidebar() {
   const [open, setOpen] = useState(true);
   const { darkMode } = useContext(ThemeContext);
   const { t, i18n } = useTranslation();
-  const [currentLang, setCurrentLang] = useState(i18n.language || "vi");
 
   useEffect(() => {
     const savedLang = localStorage.getItem("language");
     if (savedLang && savedLang !== i18n.language) {
       i18n.changeLanguage(savedLang);
-      setCurrentLang(savedLang);
     }
   }, [i18n]);
 
@@ -51,10 +52,26 @@ export default function AdminSidebar() {
       icon: <GraduationCap size={20} />,
     },
     {
-      key: "reports",
-      path: "/admin/statistics-reports",
-      icon: <FileBarChart size={20} />,
+      key: "subjects",
+      path: "/admin/subjects",
+      icon: <BookOpen size={20} />,
     },
+    {
+      key: "topics",
+      path: "/admin/topics",
+      icon: <BookMarked size={20} />,
+    },
+    {
+      key: "questionBank",
+      path: "/admin/question-bank",
+      icon: <HelpCircle size={20} />,
+    },
+    // ✅ Ẩn tab Phân tích & Báo cáo
+    // {
+    //   key: "reports",
+    //   path: "/admin/statistics-reports",
+    //   icon: <FileBarChart size={20} />,
+    // },
     {
       key: "notifications",
       path: "/admin/notifications",

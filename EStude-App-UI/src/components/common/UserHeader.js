@@ -6,7 +6,10 @@ import bannerLight from "../../assets/images/banner-light.png";
 export default function UserHeader() {
   const { user } = useContext(AuthContext);
 
-  const avatarUri = user?.avatarPath
+  // Ưu tiên avatarUrl (từ backend S3) trước, sau đó mới đến avatarPath (local)
+  const avatarUri = user?.avatarUrl
+    ? { uri: user.avatarUrl }
+    : user?.avatarPath
     ? { uri: user.avatarPath }
     : {
         uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(

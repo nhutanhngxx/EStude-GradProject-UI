@@ -32,6 +32,13 @@ import ImprovementScreen from "./src/screens/Assignment/ImprovementScreen";
 import PracticeReviewDetailScreen from "./src/screens/Assignment/PracticeReviewDetailScreen";
 import CompetencyMapScreen from "./src/screens/CompetencyMapScreen";
 import SubjectCompetencyDetailScreen from "./src/screens/SubjectCompetencyDetailScreen";
+import AssessmentSubjectSelectionScreen from "./src/screens/Assessment/AssessmentSubjectSelectionScreen";
+import AssessmentTopicSelectionScreen from "./src/screens/Assessment/AssessmentTopicSelectionScreen";
+import AssessmentQuizScreen from "./src/screens/Assessment/AssessmentQuizScreen";
+import AssessmentResultScreen from "./src/screens/Assessment/AssessmentResultScreen";
+import AssessmentReviewScreen from "./src/screens/Assessment/AssessmentReviewScreen";
+import AssessmentImprovementScreen from "./src/screens/Assessment/AssessmentImprovementScreen";
+import AssessmentLearningRoadmapScreen from "./src/screens/Assessment/AssessmentLearningRoadmapScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -172,6 +179,70 @@ function AppNavigator() {
             name="SubjectCompetencyDetail"
             component={SubjectCompetencyDetailScreen}
             options={{ title: "Chi tiết năng lực", headerShown: true }}
+          />
+
+          <Stack.Screen
+            name="AssessmentSubjectSelection"
+            component={AssessmentSubjectSelectionScreen}
+            options={{
+              title: "Chọn môn học đánh giá",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentTopicSelection"
+            component={AssessmentTopicSelectionScreen}
+            options={{
+              title: "Chọn chủ đề đánh giá",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentQuiz"
+            component={AssessmentQuizScreen}
+            options={{
+              title: "Bài đánh giá",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentResult"
+            component={AssessmentResultScreen}
+            options={{
+              title: "Kết quả đánh giá",
+              headerTitleAlign: "center",
+              headerLeft: () => null, // Disable back button
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentReview"
+            component={AssessmentReviewScreen}
+            options={{
+              title: "Xem chi tiết",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentImprovementScreen"
+            component={AssessmentImprovementScreen}
+            options={{
+              title: "Đánh giá tiến bộ",
+              headerTitleAlign: "center",
+            }}
+          />
+
+          <Stack.Screen
+            name="AssessmentLearningRoadmap"
+            component={AssessmentLearningRoadmapScreen}
+            options={{
+              title: "Lộ trình học tập",
+              headerTitleAlign: "center",
+            }}
           />
         </>
       )}

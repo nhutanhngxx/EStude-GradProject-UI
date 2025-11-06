@@ -47,7 +47,7 @@ export default function Pagination({
   const pageNumbers = getPageNumbers();
 
   return (
-    <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10">
+    <div className="fixed bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 shadow-lg z-10">
       <div className="flex flex-wrap gap-2 justify-center items-center">
         {/* Nút về trang đầu */}
         <button

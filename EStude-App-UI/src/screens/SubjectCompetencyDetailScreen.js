@@ -32,8 +32,10 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
 
   // Hàm tính status từ avgImprovement (theo yêu cầu mới)
   const getImprovementStatus = (avgImprovement) => {
-    if (avgImprovement >= 20) return { status: "Tiến bộ rõ rệt", color: "#4CAF50" };
-    if (avgImprovement >= 5) return { status: "Có cải thiện", color: "#2196F3" };
+    if (avgImprovement >= 20)
+      return { status: "Tiến bộ rõ rệt", color: "#4CAF50" };
+    if (avgImprovement >= 5)
+      return { status: "Có cải thiện", color: "#2196F3" };
     if (avgImprovement >= -4) return { status: "Ổn định", color: "#9E9E9E" };
     if (avgImprovement >= -19) return { status: "Giảm nhẹ", color: "#FF9800" };
     return { status: "Cần cải thiện gấp", color: "#F44336" };
@@ -46,13 +48,11 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
     return { label: "Cơ bản", color: "#F44336" };
   };
 
-  const sortedTopics = [...subjectData.topics].sort(
-    (a, b) => {
-      const accA = a.avgAccuracy || 0;
-      const accB = b.avgAccuracy || 0;
-      return accB - accA;
-    }
-  );
+  const sortedTopics = [...subjectData.topics].sort((a, b) => {
+    const accA = a.avgAccuracy || 0;
+    const accB = b.avgAccuracy || 0;
+    return accB - accA;
+  });
 
   const sortedEvaluations = [...subjectData.evaluations].sort(
     (a, b) => new Date(b.generatedAt) - new Date(a.generatedAt)
@@ -209,9 +209,11 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
               // Hiển thị avgAccuracy (trung bình)
               const displayAccuracy = topic.avgAccuracy || 0;
               const level = getAccuracyLevel(displayAccuracy);
-              
+
               // Tính status từ avgImprovement
-              const improvementStatus = getImprovementStatus(topic.avgImprovement || 0);
+              const improvementStatus = getImprovementStatus(
+                topic.avgImprovement || 0
+              );
 
               return (
                 <View key={index} style={styles.topicCard}>
@@ -223,7 +225,12 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                         { backgroundColor: `${improvementStatus.color}15` },
                       ]}
                     >
-                      <Text style={[styles.statusText, { color: improvementStatus.color }]}>
+                      <Text
+                        style={[
+                          styles.statusText,
+                          { color: improvementStatus.color },
+                        ]}
+                      >
                         {improvementStatus.status}
                       </Text>
                     </View>
@@ -257,33 +264,235 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                   {/* Improvement Trend */}
                   {topic.improvementHistory.length > 0 && (
                     <View style={styles.trendContainer}>
-                      <Text style={styles.trendLabel}>Xu hướng cải thiện:</Text>
-                      <View style={styles.trendBars}>
-                        {topic.improvementHistory.slice(-5).map((imp, idx) => {
-                          const height =
-                            Math.abs(imp) > 0
-                              ? Math.min(Math.abs(imp), 100)
-                              : 5;
-                          const barColor =
-                            imp > 0
-                              ? "#4CAF50"
-                              : imp < 0
-                              ? "#F44336"
-                              : "#9E9E9E";
+                      <Text style={styles.trendLabel}>
+                        Xu hướng cải thiện theo thời gian:
+                      </Text>
 
-                          return (
-                            <View
-                              key={idx}
-                              style={[
-                                styles.trendBar,
-                                {
-                                  height: height / 2,
-                                  backgroundColor: barColor,
-                                },
-                              ]}
-                            />
-                          );
-                        })}
+                      {/* Line Chart */}
+                      <View style={styles.lineChartContainer}>
+                        {/* Y-axis labels */}
+                        <View style={styles.yAxisLabels}>
+                          <Text style={styles.yAxisLabel}>100%</Text>
+                          <Text style={styles.yAxisLabel}>0%</Text>
+                          <Text style={styles.yAxisLabel}>-100%</Text>
+                        </View>
+
+                        {/* Chart area */}
+                        <View style={styles.chartArea}>
+                          {/* Grid lines */}
+                          <View style={styles.gridLine} />
+                          <View
+                            style={[styles.gridLine, styles.gridLineZero]}
+                          />
+                          <View style={styles.gridLine} />
+
+                          {/* SVG-like line path using Views */}
+                          <View style={styles.lineChartPoints}>
+                            {topic.improvementHistory
+                              .slice(-6)
+                              .map((imp, idx, arr) => {
+                                // Normalize value to 0-100 range for positioning
+                                // -100% to +100% range → 0 to 100 for bottom position
+                                // If imp = 100%, bottom should be 100%
+                                // If imp = 0%, bottom should be 50%
+                                // If imp = -100%, bottom should be 0%
+                                const normalizedValue =
+                                  ((imp + 100) / 200) * 100;
+                                const bottomPosition = Math.max(
+                                  0,
+                                  Math.min(100, normalizedValue)
+                                );
+
+                                const pointColor =
+                                  imp > 5
+                                    ? "#4CAF50"
+                                    : imp < -5
+                                    ? "#F44336"
+                                    : "#FF9800";
+
+                                // Calculate angle for connecting line
+                                let lineAngle = 0;
+                                let lineLength = 0;
+                                if (idx < arr.length - 1) {
+                                  const nextImp = arr[idx + 1];
+                                  const nextNormalized =
+                                    ((nextImp + 20) / 40) * 100;
+                                  const nextBottom = Math.max(
+                                    0,
+                                    Math.min(100, nextNormalized)
+                                  );
+                                  const deltaY = nextBottom - bottomPosition;
+                                  const deltaX = 100 / arr.length; // percentage width per point
+                                  lineAngle =
+                                    Math.atan2(deltaY, deltaX) *
+                                    (180 / Math.PI);
+                                  lineLength = Math.sqrt(
+                                    deltaY * deltaY + deltaX * deltaX
+                                  );
+                                }
+
+                                return (
+                                  <View key={idx} style={styles.pointColumn}>
+                                    {/* Data point */}
+                                    <View
+                                      style={[
+                                        styles.dataPoint,
+                                        {
+                                          bottom: `${bottomPosition}%`,
+                                          backgroundColor: "#fff",
+                                          borderColor: pointColor,
+                                        },
+                                      ]}
+                                    />
+
+                                    {/* Value label - positioned smartly */}
+                                    <View
+                                      style={[
+                                        styles.pointValueContainer,
+                                        {
+                                          bottom: `${bottomPosition}%`,
+                                          // Shift up or down based on position to avoid overlap
+                                          marginBottom:
+                                            bottomPosition > 50 ? -20 : 15,
+                                        },
+                                      ]}
+                                    >
+                                      <Text
+                                        style={[
+                                          styles.pointValue,
+                                          { color: pointColor },
+                                        ]}
+                                      >
+                                        {imp > 0 ? "+" : ""}
+                                        {imp.toFixed(1)}%
+                                      </Text>
+                                    </View>
+                                  </View>
+                                );
+                              })}
+                          </View>
+
+                          {/* Connecting lines as separate overlay - DIAGONAL LINES */}
+                          <View style={styles.lineOverlay}>
+                            {topic.improvementHistory
+                              .slice(-6)
+                              .map((imp, idx, arr) => {
+                                if (idx >= arr.length - 1) return null;
+
+                                const normalizedValue =
+                                  ((imp + 100) / 200) * 100;
+                                const bottomPosition = Math.max(
+                                  0,
+                                  Math.min(100, normalizedValue)
+                                );
+
+                                const nextImp = arr[idx + 1];
+                                const nextNormalized =
+                                  ((nextImp + 100) / 200) * 100;
+                                const nextBottom = Math.max(
+                                  0,
+                                  Math.min(100, nextNormalized)
+                                );
+
+                                // Line color follows the NEXT point (destination)
+                                const lineColor =
+                                  nextImp > 5
+                                    ? "#4CAF50"
+                                    : nextImp < -5
+                                    ? "#F44336"
+                                    : "#FF9800";
+
+                                // Calculate diagonal line correctly
+                                // Segment width in percentage
+                                const segmentWidthPercent = 100 / arr.length;
+                                // Height difference in percentage
+                                // Note: In CSS 'bottom', higher value = higher position
+                                // So if nextBottom < bottomPosition, we need negative angle (go down)
+                                const deltaYPercent =
+                                  nextBottom - bottomPosition;
+
+                                // Calculate actual pixel values (chart area is ~120px height)
+                                const chartHeightPx = 120;
+                                const chartWidthPx = width - 100; // approximate
+                                const segmentWidthPx =
+                                  chartWidthPx / arr.length;
+                                // IMPORTANT: Negate deltaY because CSS 'bottom' is inverted from typical Y-axis
+                                const deltaYPx =
+                                  -(deltaYPercent / 100) * chartHeightPx;
+
+                                // Calculate line length and angle
+                                const lineLength = Math.sqrt(
+                                  segmentWidthPx * segmentWidthPx +
+                                    deltaYPx * deltaYPx
+                                );
+                                const angle =
+                                  Math.atan2(deltaYPx, segmentWidthPx) *
+                                  (180 / Math.PI);
+
+                                return (
+                                  <View
+                                    key={`line-${idx}`}
+                                    style={[
+                                      styles.connectingLine,
+                                      {
+                                        left: `${
+                                          (idx * 100) / arr.length +
+                                          50 / arr.length
+                                        }%`,
+                                        bottom: `${bottomPosition}%`,
+                                        width: lineLength,
+                                        height: 3,
+                                        backgroundColor: lineColor,
+                                        opacity: 0.9,
+                                        transform: [{ rotate: `${angle}deg` }],
+                                        transformOrigin: "left center",
+                                      },
+                                    ]}
+                                  />
+                                );
+                              })}
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* X-axis time labels */}
+                      <View style={styles.xAxisLabels}>
+                        {topic.improvementHistory.slice(-6).map((_, idx) => (
+                          <Text key={idx} style={styles.xAxisLabel}>
+                            T{idx}
+                          </Text>
+                        ))}
+                      </View>
+
+                      {/* Legend */}
+                      <View style={styles.chartLegend}>
+                        <View style={styles.legendItem}>
+                          <View
+                            style={[
+                              styles.legendDot,
+                              { backgroundColor: "#4CAF50" },
+                            ]}
+                          />
+                          <Text style={styles.legendText}>Tốt (&gt;5%)</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View
+                            style={[
+                              styles.legendDot,
+                              { backgroundColor: "#FF9800" },
+                            ]}
+                          />
+                          <Text style={styles.legendText}>Ổn định</Text>
+                        </View>
+                        <View style={styles.legendItem}>
+                          <View
+                            style={[
+                              styles.legendDot,
+                              { backgroundColor: "#F44336" },
+                            ]}
+                          />
+                          <Text style={styles.legendText}>Giảm (&lt;-5%)</Text>
+                        </View>
                       </View>
                     </View>
                   )}
@@ -415,7 +624,7 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                     </View>
                   )}
 
-                  {evalData?.next_action && (
+                  {/* {evalData?.next_action && (
                     <TouchableOpacity
                       style={styles.viewActionButton}
                       onPress={() => {
@@ -431,7 +640,7 @@ export default function SubjectCompetencyDetailScreen({ route, navigation }) {
                         color="#00cc66"
                       />
                     </TouchableOpacity>
-                  )}
+                  )} */}
                 </View>
               );
             })}
@@ -641,7 +850,130 @@ const styles = StyleSheet.create({
   trendLabel: {
     fontSize: 12,
     color: "#666",
+    marginBottom: 12,
+    fontWeight: "600",
+  },
+  lineChartContainer: {
+    flexDirection: "row",
+    height: 120,
     marginBottom: 8,
+  },
+  yAxisLabels: {
+    width: 40,
+    justifyContent: "space-between",
+    paddingRight: 8,
+  },
+  yAxisLabel: {
+    fontSize: 10,
+    color: "#999",
+    textAlign: "right",
+  },
+  chartArea: {
+    flex: 1,
+    position: "relative",
+    justifyContent: "space-between",
+  },
+  gridLine: {
+    height: 1,
+    backgroundColor: "#f0f0f0",
+    width: "100%",
+  },
+  gridLineZero: {
+    backgroundColor: "#ddd",
+    height: 1.5,
+  },
+  lineChartPoints: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  lineOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1,
+  },
+  connectingLine: {
+    position: "absolute",
+    height: 3,
+    borderRadius: 1.5,
+  },
+  pointColumn: {
+    flex: 1,
+    position: "relative",
+    alignItems: "center",
+  },
+  dataPoint: {
+    position: "absolute",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 3,
+    backgroundColor: "#fff",
+    zIndex: 3,
+  },
+  pointValueContainer: {
+    position: "absolute",
+    alignItems: "center",
+    zIndex: 4,
+    minWidth: 45,
+  },
+  pointValue: {
+    fontSize: 9,
+    fontWeight: "700",
+    backgroundColor: "#fff",
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  connectLine: {
+    position: "absolute",
+    width: "100%",
+    height: 2,
+    left: "50%",
+    zIndex: 1,
+  },
+  xAxisLabels: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingLeft: 40,
+    marginTop: 4,
+  },
+  xAxisLabel: {
+    fontSize: 10,
+    color: "#999",
+    flex: 1,
+    textAlign: "center",
+  },
+  chartLegend: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#f0f0f0",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    color: "#666",
   },
   trendBars: {
     flexDirection: "row",

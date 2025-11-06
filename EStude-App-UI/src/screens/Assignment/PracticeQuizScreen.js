@@ -134,7 +134,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
   useEffect(() => {
     if (!quiz) return;
     navigation.setOptions({
-      title: `Bài luyện tập: ${quiz.subject || "Chưa xác định"}`,
+      title: `Bài luyện tập: ${quiz.subject || ""}`,
       headerLeft: () => (
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -199,7 +199,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
         : undefined, // ✅ THÊM submission_id
       assignment_id: String(quizData.assignmentId || "practice"),
       student_name: user?.fullName || user?.name || "Học sinh",
-      subject: quizData.subject || "Chưa xác định",
+      subject: quizData.subject || "",
       questions: (quizData.questions || []).map((q, idx) => {
         const key = q.questionId;
         const selected = answers[key] || [];
@@ -281,7 +281,7 @@ export default function PracticeQuizScreen({ navigation, route }) {
             : "Sai. " +
               (q.options.find((o) => o.isCorrect)?.explanation ||
                 "Không có giải thích."),
-          topic: safeGet(q.topic, "Chưa xác định"),
+          topic: safeGet(q.topic, ""),
           difficulty_level: safeGet(q.difficulty_level, "Trung bình"),
         };
       });

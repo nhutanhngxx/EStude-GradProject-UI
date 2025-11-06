@@ -56,6 +56,20 @@ const endpoints = {
 
   // Lấy TẤT CẢ Improvement của user
   getAllUserImprovements: "/api/ai/me/improvement",
+
+  // Layer 5: Learning Roadmap Generation
+  getFeedbackLatest: "/api/ai/me/feedback/latest",
+  getImprovementLatest: "/api/ai/me/improvement/latest",
+  generateLearningRoadmap: "/api/ai/generate-learning-roadmap",
+  getRoadmapLatest: "/api/ai/me/roadmap/latest",
+  getAllRoadmaps: "/api/ai/me/roadmap", // Get all roadmaps (array)
+
+  // Layer 5: Progress Tracking APIs (NEW - Nov 2025)
+  getRoadmapLatestSummary: "/api/ai/me/roadmap/latest/summary",
+  getRoadmapProgress: "/api/ai/me/roadmap/progress/{resultId}",
+  markTaskComplete: "/api/ai/me/roadmap/{resultId}/task/{taskId}/complete",
+  getNextTasks: "/api/ai/me/roadmap/{resultId}/next-tasks",
+  skipTask: "/api/ai/me/roadmap/{resultId}/task/{taskId}/skip",
 };
 
 const aiService = {
@@ -563,6 +577,366 @@ const aiService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy tất cả improvement của user:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Layer 5: Lấy feedback mới nhất (câu hỏi làm sai)
+   * @param {string} token - JWT token
+   */
+  getFeedbackLatest: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getFeedbackLatest}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get Feedback Latest failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy feedback mới nhất:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Layer 5: Lấy improvement mới nhất (đánh giá tiến bộ)
+   * @param {string} token - JWT token
+   */
+  getImprovementLatest: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getImprovementLatest}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get Improvement Latest failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy improvement mới nhất:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Layer 5: Tạo lộ trình học tập cá nhân hóa
+   * @param {Object} payload - { submission_id, student_id, subject, evaluation_data, incorrect_questions, learning_style, available_time_per_day }
+   * @param {string} token - JWT token
+   */
+  generateLearningRoadmap: async (payload, token) => {
+    try {
+      console.log("📤 Generate Learning Roadmap API Call:", {
+        url: `${config.BASE_URL}${endpoints.generateLearningRoadmap}`,
+        payload: payload,
+        hasToken: !!token,
+      });
+
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.generateLearningRoadmap}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      console.log("📥 Generate Roadmap Response Status:", response.status);
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("❌ Generate Roadmap failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorBody: errText,
+        });
+        return null;
+      }
+
+      const result = await response.json();
+      console.log("✅ Generate Roadmap success:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Generate Roadmap Exception:", {
+        message: error.message,
+        error: error,
+      });
+      return null;
+    }
+  },
+
+  /**
+   * Layer 5: Lấy lộ trình học tập mới nhất
+   * @param {string} token - JWT token
+   */
+  getRoadmapLatest: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getRoadmapLatest}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      if (!response.ok) {
+        console.error("Get Roadmap Latest failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy roadmap mới nhất:", error);
+      return null;
+    }
+  },
+
+  // ==================== PROGRESS TRACKING APIs (NEW) ====================
+
+  /**
+   * Lấy tất cả roadmaps (lịch sử)
+   * @param {string} token - JWT token
+   * @returns {Array} Mảng các roadmap objects
+   */
+  getAllRoadmaps: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getAllRoadmaps}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Get All Roadmaps failed:", response.status);
+        return [];
+      }
+
+      const result = await response.json();
+      console.log("✅ All Roadmaps API Response:", result);
+      // Backend có thể trả về {data: [...]} hoặc trực tiếp [...]
+      return Array.isArray(result) ? result : result.data || [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách roadmaps:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Lấy summary roadmap mới nhất (dùng cho HomeScreen card)
+   * @param {string} token - JWT token
+   * @returns {Object} { roadmap_id, subject, overall_goal, current_phase, progress }
+   */
+  getRoadmapLatestSummary: async (token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getRoadmapLatestSummary}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("No active roadmap found");
+          return null;
+        }
+        console.error("Get Roadmap Summary failed:", response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      console.log(
+        "✅ Roadmap Summary API Response:",
+        JSON.stringify(result, null, 2)
+      );
+      return result.data || result; // Handle both {data: ...} and direct response
+    } catch (error) {
+      console.error("Lỗi khi lấy roadmap summary:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Lấy full roadmap với progress (dùng cho RoadmapScreen)
+   * @param {number} resultId - AI Analysis Result ID
+   * @param {string} token - JWT token
+   * @returns {Object} Full roadmap data với calculated_progress
+   */
+  getRoadmapProgress: async (resultId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getRoadmapProgress.replace(
+          "{resultId}",
+          resultId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Get Roadmap Progress failed:", response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy roadmap progress:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Đánh dấu task hoàn thành
+   * @param {number} resultId - AI Analysis Result ID
+   * @param {string} taskId - Task ID (e.g., "task_1_1")
+   * @param {Object} completionData - { actual_time_spent_minutes, score, accuracy }
+   * @param {string} token - JWT token
+   * @returns {Object} { success, message, updated_progress }
+   */
+  markTaskComplete: async (resultId, taskId, completionData, token) => {
+    try {
+      console.log("📤 Mark Task Complete:", {
+        resultId,
+        taskId,
+        completionData,
+      });
+
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.markTaskComplete
+          .replace("{resultId}", resultId)
+          .replace("{taskId}", taskId)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(completionData),
+        }
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("❌ Mark Task Complete failed:", {
+          status: response.status,
+          errorBody: errText,
+        });
+        return null;
+      }
+
+      const result = await response.json();
+      console.log("✅ Task marked complete:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Mark Task Complete Exception:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Bỏ qua task
+   * @param {number} resultId - AI Analysis Result ID
+   * @param {string} taskId - Task ID
+   * @param {string} token - JWT token
+   * @returns {Object} { success, message, updated_progress }
+   */
+  skipTask: async (resultId, taskId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.skipTask
+          .replace("{resultId}", resultId)
+          .replace("{taskId}", taskId)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Skip Task failed:", response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi skip task:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Lấy 3 tasks tiếp theo cần làm
+   * @param {number} resultId - AI Analysis Result ID
+   * @param {string} token - JWT token
+   * @returns {Object} { success, next_tasks: [...] }
+   */
+  getNextTasks: async (resultId, token) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getNextTasks.replace(
+          "{resultId}",
+          resultId
+        )}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Get Next Tasks failed:", response.status);
+        return null;
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy next tasks:", error);
       return null;
     }
   },
