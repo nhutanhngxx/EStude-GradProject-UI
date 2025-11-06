@@ -250,8 +250,8 @@ const ManageSchools = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
-            <School className="w-6 h-6 text-green-800" />
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <School className="w-8 h-8 text-green-600 dark:text-gray-400" />
             {t("manageSchools.title")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">

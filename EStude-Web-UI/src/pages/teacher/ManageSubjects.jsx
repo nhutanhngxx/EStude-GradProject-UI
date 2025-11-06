@@ -149,27 +149,27 @@ export default function ManageSubjects() {
     }
   };
 
-  const handleDeleteSubject = async (subjectId) => {
-    const ok = await confirm(
-      "Xóa môn học vĩnh viễn!",
-      "Việc xóa môn học sẽ ảnh hưởng tới hệ thống (lớp học, bài tập, thống kê...). Bạn có chắc chắn?"
-    );
+  // const handleDeleteSubject = async (subjectId) => {
+  //   const ok = await confirm(
+  //     "Xóa môn học vĩnh viễn!",
+  //     "Việc xóa môn học sẽ ảnh hưởng tới hệ thống (lớp học, bài tập, thống kê...). Bạn có chắc chắn?"
+  //   );
 
-    if (!ok) return;
+  //   if (!ok) return;
 
-    try {
-      const success = await subjectService.deleteSubject(subjectId);
-      if (success) {
-        setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
-        showToast("Xóa môn học thành công!", "success");
-      } else {
-        showToast("Xóa môn học thất bại!", "error");
-      }
-    } catch (error) {
-      console.error("Lỗi khi xóa môn học:", error);
-      showToast("Lỗi khi xóa môn học!", "error");
-    }
-  };
+  //   try {
+  //     const success = await subjectService.deleteSubject(subjectId);
+  //     if (success) {
+  //       setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
+  //       showToast("Xóa môn học thành công!", "success");
+  //     } else {
+  //       showToast("Xóa môn học thất bại!", "error");
+  //     }
+  //   } catch (error) {
+  //     console.error("Lỗi khi xóa môn học:", error);
+  //     showToast("Lỗi khi xóa môn học!", "error");
+  //   }
+  // };
 
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
@@ -311,7 +311,7 @@ export default function ManageSubjects() {
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
-          <button
+          {/* <button
             onClick={() => {
               setIsFormOpen(true);
               resetForm();
@@ -340,7 +340,7 @@ export default function ManageSubjects() {
             accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
             className="hidden"
             onChange={handleFileChange}
-          />
+          /> */}
         </div>
       </div>
 
@@ -392,7 +392,7 @@ export default function ManageSubjects() {
                           >
                             <Eye size={16} /> Xem
                           </button>
-                          <button
+                          {/* <button
                             className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:underline text-sm"
                             title="Xóa"
                             onClick={() =>
@@ -400,7 +400,7 @@ export default function ManageSubjects() {
                             }
                           >
                             <Trash2 size={16} /> Xóa
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>
@@ -447,7 +447,7 @@ export default function ManageSubjects() {
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600 shadow-lg">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {selectedSubject ? "Sửa môn học" : "Thêm môn học"}
+                {selectedSubject && "Xem chi tiết môn học"}
               </h2>
               <button
                 onClick={() => setIsFormOpen(false)}
@@ -477,12 +477,12 @@ export default function ManageSubjects() {
               >
                 Hủy
               </button>
-              <button
+              {/* <button
                 onClick={handleSaveSubject}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
               >
                 Lưu
-              </button>
+              </button> */}
             </div>
           </div>
         </div>

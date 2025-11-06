@@ -431,12 +431,12 @@ const ManageAccounts = () => {
   };
 
   return (
-    <div className="p-6 pb-20 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+    <div className="p-6 pb-20 bg-transparent dark:bg-gray-800 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
-            <Users className="w-6 h-6 text-green-800" />
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <Users className="w-8 h-8 text-green-600 dark:text-gray-400" />
             {t("manageAccounts.title")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
