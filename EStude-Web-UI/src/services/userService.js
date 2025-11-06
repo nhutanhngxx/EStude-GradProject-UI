@@ -92,7 +92,7 @@ const userService = {
         // Network error or CORS
         if (fetchError.message === "Failed to fetch") {
           console.error(
-            "❌ [Upload Avatar] Network error - CORS or Backend không phản hồi"
+            " [Upload Avatar] Network error - CORS or Backend không phản hồi"
           );
           throw new Error(
             "Không thể kết nối với server. Vui lòng kiểm tra:\n1. Backend đang chạy tại " +

@@ -77,7 +77,7 @@ const topicService = {
       console.log("Assessment questions received:", result);
       return result;
     } catch (error) {
-      console.error("Error generating assessment questions:", error);
+      // console.error("Error generating assessment questions:", error);
       throw error;
     }
   },

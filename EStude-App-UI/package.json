@@ -24,7 +24,10 @@
     "@react-navigation/native-stack": "6.9.12",
     "@stomp/stompjs": "^7.2.0",
     "expo": "~53.0.22",
+    "expo-constants": "~17.1.7",
     "expo-dev-client": "~5.2.4",
+    "expo-image-picker": "^17.0.8",
+    "expo-network": "~7.1.5",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -34,9 +37,7 @@
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "^0.20.0",
-    "sockjs-client": "^1.6.1",
-    "expo-constants": "~17.1.7",
-    "expo-network": "~7.1.5"
+    "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
