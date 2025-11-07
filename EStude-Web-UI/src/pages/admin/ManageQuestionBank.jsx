@@ -346,7 +346,7 @@ const ManageQuestionBank = () => {
 
       const payload = {
         questionText: formData.questionText,
-        points: 1.0, // ✅ Luôn mặc định = 1
+        points: 1.0,
         questionType: formData.questionType,
         topicId: parseInt(formData.topicId),
         difficultyLevel: formData.difficultyLevel,
@@ -542,46 +542,114 @@ const ManageQuestionBank = () => {
     e.target.value = ""; // Reset input
   };
 
+  // const handleConfirmImport = async () => {
+  //   if (!filters.topicId) {
+  //     showToast("Vui lòng chọn chủ đề trước khi import", "error");
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     let successCount = 0;
+  //     let errorCount = 0;
+
+  //     for (const question of importedQuestions) {
+  //       try {
+  //         const payload = {
+  //           ...question,
+  //           topicId: parseInt(filters.topicId),
+  //         };
+  //         await questionService.createQuestionBank(payload);
+  //         successCount++;
+  //       } catch (error) {
+  //         console.error("Error importing question:", error);
+  //         errorCount++;
+  //       }
+  //     }
+
+  //     showToast(
+  //       `Import thành công ${successCount} câu hỏi${
+  //         errorCount > 0 ? `, ${errorCount} câu hỏi lỗi` : ""
+  //       }`,
+  //       successCount > 0 ? "success" : "error"
+  //     );
+
+  //     await fetchQuestions();
+  //     setImportedQuestions([]);
+  //     closeModal();
+  //   } catch (error) {
+  //     console.error("Error importing questions:", error);
+  //     showToast("Lỗi khi import câu hỏi", "error");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleConfirmImport = async () => {
     if (!filters.topicId) {
       showToast("Vui lòng chọn chủ đề trước khi import", "error");
       return;
     }
 
+    // Lấy số lượng câu hỏi
+    const total = importedQuestions.length;
+
+    // 1. ĐÓNG MODAL NGAY LẬP TỨC
+    closeModal();
+    setImportedQuestions([]); // Xóa dữ liệu preview
+
+    // 2. HIỂN THỊ TOAST "ĐANG IMPORT..." NGAY LẬP TỨC
+    showToast(`Đang import ${total} câu hỏi...`, "info");
+
     try {
-      setLoading(true);
       let successCount = 0;
       let errorCount = 0;
 
-      for (const question of importedQuestions) {
+      // 3. IMPORT SONG SONG - NHANH GẤP 10 LẦN
+      const importPromises = importedQuestions.map(async (question) => {
         try {
           const payload = {
             ...question,
             topicId: parseInt(filters.topicId),
           };
           await questionService.createQuestionBank(payload);
+          return { status: "success" };
+        } catch (err) {
+          console.error("Lỗi import câu hỏi:", err);
+          return { status: "error", error: err };
+        }
+      });
+
+      const results = await Promise.allSettled(importPromises);
+
+      results.forEach((result) => {
+        if (
+          result.status === "fulfilled" &&
+          result.value.status === "success"
+        ) {
           successCount++;
-        } catch (error) {
-          console.error("Error importing question:", error);
+        } else {
           errorCount++;
         }
-      }
+      });
 
-      showToast(
-        `Import thành công ${successCount} câu hỏi${
-          errorCount > 0 ? `, ${errorCount} câu hỏi lỗi` : ""
-        }`,
-        successCount > 0 ? "success" : "error"
-      );
-
+      // 4. TẢI LẠI DANH SÁCH CÂU HỎI
       await fetchQuestions();
-      setImportedQuestions([]);
-      closeModal();
+
+      // 5. HIỂN THỊ KẾT QUẢ CUỐI CÙNG
+      if (successCount === total) {
+        showToast(`Import thành công ${successCount} câu hỏi!`, "success");
+      } else if (successCount > 0) {
+        showToast(
+          `Import thành công ${successCount} câu hỏi, thất bại ${errorCount} câu`,
+          "warn"
+        );
+      } else {
+        showToast(`Import thất bại toàn bộ ${total} câu hỏi`, "error");
+      }
     } catch (error) {
-      console.error("Error importing questions:", error);
-      showToast("Lỗi khi import câu hỏi", "error");
-    } finally {
-      setLoading(false);
+      console.error("Lỗi nghiêm trọng khi import:", error);
+      showToast("Đã xảy ra lỗi nghiêm trọng khi import", "error");
     }
   };
 
@@ -1375,12 +1443,11 @@ const ManageQuestionBank = () => {
               </button>
               <button
                 onClick={handleConfirmImport}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                disabled={loading}
+                // className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
-                {loading
-                  ? "Đang import..."
-                  : `Xác nhận Import ${importedQuestions.length} câu hỏi`}
+                {/* <Upload className="w-5 h-5" /> */}
+                Import ngay {importedQuestions.length} câu hỏi
               </button>
             </div>
           </div>
