@@ -33,7 +33,7 @@ const ManageSubjects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -181,7 +181,7 @@ const ManageSubjects = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="bg-transparent dark:bg-gray-900 p-6">
       {/* <div className="max-w-7xl mx-auto"> */}
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -224,7 +224,7 @@ const ManageSubjects = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-20">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-12">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
@@ -267,16 +267,16 @@ const ManageSubjects = () => {
                   key={subject.subjectId}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                  <td className="px-6 py-2 text-sm text-gray-900 dark:text-gray-100">
                     {subject.subjectId}
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                  <td className="px-6 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
                     {subject.name}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                  <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400">
                     {subject.description || "-"}
                   </td>
-                  <td className="px-6 py-4 text-center">
+                  <td className="px-6 py-2 text-center">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => openModal("edit", subject)}

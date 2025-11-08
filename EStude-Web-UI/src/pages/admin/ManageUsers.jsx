@@ -10,7 +10,7 @@ import Pagination from "../../components/common/Pagination";
 import ConfirmModal from "../../components/common/ConfirmModal";
 
 const Badge = ({ text, color }) => (
-  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${color}`}>
+  <span className={`px-3 py-2 text-xs font-semibold rounded-full ${color}`}>
     {text}
   </span>
 );
@@ -78,7 +78,7 @@ const ManageAccounts = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const itemsPerPage = 7;
+  const itemsPerPage = 8;
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -496,37 +496,46 @@ const ManageAccounts = () => {
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
         <table className="w-full table-fixed text-sm">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-4 py-3 text-left w-40">Trường</th>
-              <th className="px-4 py-3 text-left w-32">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-40">
+                Trường
+              </th>
+
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                 {t("manageAccounts.loginCode")}
               </th>
-              <th className="px-4 py-3 text-left w-64">
+
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-64">
                 {t("manageAccounts.user")}
               </th>
-              <th className="px-4 py-3 text-left w-32">
+
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                 {t("manageAccounts.role")}
               </th>
-              <th className="px-4 py-3 text-left w-32">
+
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                 {t("manageAccounts.phone")}
               </th>
-              <th className="px-4 py-3 text-left w-32">
+
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                 {t("manageAccounts.dob")}
               </th>
-              <th className="px-4 py-3 text-left w-32">
+
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
                 {t("manageAccounts.actions")}
               </th>
             </tr>
           </thead>
+
           <tbody>
             {currentUsers.map((u) => (
               <tr
                 key={u.userId}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
-                <td className="px-4 py-3">{u?.school?.schoolName}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">{u?.school?.schoolName}</td>
+                <td className="px-4 py-2">
                   {u.role === "ADMIN"
                     ? u.adminCode
                     : u.role === "TEACHER"
@@ -535,7 +544,7 @@ const ManageAccounts = () => {
                     ? u.studentCode
                     : "-"}
                 </td>
-                <td className="px-4 py-3 flex items-center gap-3">
+                <td className="px-4 py-2 flex items-center gap-3">
                   <Avatar name={u.fullName} />
                   <div>
                     <div className="font-medium">{u.fullName}</div>
@@ -544,7 +553,7 @@ const ManageAccounts = () => {
                     </div>
                   </div>
                 </td>
-                <td>
+                <td className="px-4 py-2">
                   <Badge
                     text={roleLabels[u.role] || u.role}
                     color={
@@ -558,8 +567,8 @@ const ManageAccounts = () => {
                     }
                   />
                 </td>
-                <td className="px-4 py-3">{u.numberPhone}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2">{u.numberPhone}</td>
+                <td className="px-4 py-2">
                   {u.dob
                     ? new Intl.DateTimeFormat("vi-VN", {
                         day: "2-digit",
@@ -568,7 +577,7 @@ const ManageAccounts = () => {
                       }).format(new Date(u.dob))
                     : ""}
                 </td>
-                <td className="px-4 py-3 flex gap-2">
+                <td className="px-4 py-2 flex gap-2">
                   <button
                     onClick={() => openModal("view", u)}
                     className="text-indigo-600 dark:text-indigo-400 hover:underline"

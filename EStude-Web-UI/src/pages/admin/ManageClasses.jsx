@@ -317,31 +317,38 @@ const ManageClassesAdmin = () => {
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-[800px] w-full table-fixed text-sm text-left border-collapse">
-          <thead className="bg-gray-50 dark:bg-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-4 py-3 w-[30%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[30%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Trường
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Khối
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Tên lớp học
               </th>
-              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[20%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Giáo viên chủ nhiệm
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Sĩ số
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Môn học
               </th>
-              <th className="px-4 py-3 w-[7%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[7%] text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Tùy chọn
               </th>
             </tr>
           </thead>
+
           <tbody>
             {[...filteredClasses]
               .sort((a, b) => a.name.localeCompare(b.name, "vi"))

@@ -552,7 +552,7 @@ const ManageTopics = () => {
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             <Download className="w-5 h-5" />
-            Template
+            Tải file mẫu
           </button>
           <button
             onClick={handleImportClick}
@@ -560,7 +560,7 @@ const ManageTopics = () => {
             disabled={importing}
           >
             <Upload className="w-5 h-5" />
-            {importing ? "Đang import..." : "Import Excel"}
+            {importing ? "Đang import..." : "Nhập từ Excel"}
           </button>
           <input
             ref={fileInputRef}
@@ -683,14 +683,14 @@ const ManageTopics = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto mb-16">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-24">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   ID
-                </th>
+                </th> */}
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   {t("admin.topics.name") || "Tên chủ đề"}
                 </th>
@@ -752,9 +752,9 @@ const ManageTopics = () => {
                     key={topic.topicId}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
-                    <td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
+                    {/* <td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
                       {topic.topicId}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
                       {topic.name}
                     </td>

@@ -1,4 +1,11 @@
-import React, { useContext, useEffect, useState, useMemo } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  Suspense,
+  lazy,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { Bar } from "react-chartjs-2";
 import {
@@ -361,10 +368,6 @@ const Dashboard = () => {
       modalType: "newUsers",
     },
   ];
-
-  const createReport = () => {
-    alert(t("dashboard.reportCreated"));
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return t("common.na");
