@@ -432,18 +432,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#fff",
+    backgroundColor: "#00cc66",
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
+    color: "#fff", // chữ trắng
   },
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: "#f5f5f5",
   },
   loadingContainer: {
     flex: 1,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   overviewCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#f0fff0", // nhẹ nhàng xanh lá nhạt
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -489,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 8,
+    color: "#00cc66", // tiêu đề xanh lá
   },
   overviewStats: {
     flexDirection: "row",
@@ -500,7 +502,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#00cc66",
+    color: "#00cc66", // số liệu chính xanh lá
   },
   statLabel: {
     fontSize: 12,
@@ -511,10 +513,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 12,
-    color: "#333",
+    color: "#00cc66",
   },
   subjectCard: {
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff", // nền trắng
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -538,7 +540,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
-    color: "#333",
+    color: "#00cc66", // tên môn xanh lá
   },
   competencyRow: {
     flexDirection: "row",
@@ -562,20 +564,21 @@ const styles = StyleSheet.create({
   accuracyValue: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
+    color: "#00cc66",
   },
   progressBarContainer: {
     marginBottom: 12,
   },
   progressBarBg: {
     height: 8,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#e0f2e9", // xanh nhạt
     borderRadius: 4,
     overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
     borderRadius: 4,
+    backgroundColor: "#00cc66", // fill xanh lá
   },
   topicsBreakdown: {
     flexDirection: "row",
@@ -603,3 +606,4 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
 });
+
