@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Eye, PlusCircle, Save, Trash2, User, Users, X } from "lucide-react";
+import {
+  Eye,
+  PlusCircle,
+  Save,
+  Trash2,
+  User,
+  Users,
+  X,
+  Search,
+} from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
@@ -18,10 +27,131 @@ const Badge = ({ text, color }) => (
   </span>
 );
 
+// Component SearchableSelect để tìm kiếm giáo viên
+const SearchableSelect = ({ teachers, value, onChange, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = React.useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter teachers based on search term
+  const filteredTeachers = teachers.filter((teacher) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      teacher.fullName.toLowerCase().includes(search) ||
+      teacher.teacherCode.toLowerCase().includes(search)
+    );
+  });
+
+  // Get selected teacher display text
+  const selectedTeacher = teachers.find((t) => t.userId === value);
+  const displayText = selectedTeacher
+    ? `${selectedTeacher.fullName} (${selectedTeacher.teacherCode})`
+    : placeholder;
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-2 py-1 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-left focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 flex items-center justify-between"
+      >
+        <span className={value ? "" : "text-gray-400 dark:text-gray-500"}>
+          {displayText}
+        </span>
+        <svg
+          className={`w-4 h-4 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tên hoặc mã..."
+                className="w-full pl-8 pr-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+
+          {/* Options list */}
+          <div className="overflow-y-auto max-h-48 scrollbar-hide">
+            <button
+              type="button"
+              onClick={() => {
+                onChange("");
+                setIsOpen(false);
+                setSearchTerm("");
+              }}
+              className="w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
+            >
+              -- Chọn giáo viên --
+            </button>
+            {filteredTeachers.length > 0 ? (
+              filteredTeachers.map((teacher) => (
+                <button
+                  key={teacher.userId}
+                  type="button"
+                  onClick={() => {
+                    onChange(teacher.userId);
+                    setIsOpen(false);
+                    setSearchTerm("");
+                  }}
+                  className={`w-full px-3 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    value === teacher.userId
+                      ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                      : "text-gray-900 dark:text-gray-100"
+                  }`}
+                >
+                  {teacher.fullName} ({teacher.teacherCode})
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-center">
+                Không tìm thấy giáo viên
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-10/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-10/12 max-w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-600 scrollbar-hide">
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
@@ -663,7 +793,7 @@ const ManageClasses = () => {
               }}
               className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 overflow-hidden"
             >
-              <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
+              <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2 scrollbar-hide">
                 <select
                   value={gradeLevel}
                   onChange={(e) => setGradeLevel(e.target.value)}
@@ -798,14 +928,14 @@ const ManageClasses = () => {
                   </button>
                 </div>
               </div>
-              <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2">
+              <div className="space-y-4 flex flex-col h-full overflow-y-auto pl-2 scrollbar-hide">
                 <div>
                   <label className="block font-semibold mb-2 text-gray-700 dark:text-gray-200">
                     Môn học và Giáo viên theo Học kỳ
                   </label>
 
                   {subjects && subjects.length > 0 ? (
-                    <div className="space-y-3 border p-3 rounded-lg border-gray-300 dark:border-gray-600 max-h-[500px] overflow-y-auto">
+                    <div className="space-y-3 border p-3 rounded-lg border-gray-300 dark:border-gray-600 max-h-[500px] overflow-y-auto scrollbar-hide">
                       {subjects.map((subj) => {
                         const selected = selectedSubjects.find(
                           (s) => s.subjectId === subj.subjectId
@@ -861,45 +991,36 @@ const ManageClasses = () => {
                                       <span className="text-sm text-gray-600 dark:text-gray-400 w-20">
                                         HK{term.termNumber}:
                                       </span>
-                                      <select
-                                        value={termTeacher?.teacherId ?? ""}
-                                        onChange={(e) => {
-                                          const newTeacherId = e.target.value
-                                            ? Number(e.target.value)
-                                            : null;
+                                      <div className="flex-1">
+                                        <SearchableSelect
+                                          teachers={teachers}
+                                          value={termTeacher?.teacherId ?? ""}
+                                          onChange={(newTeacherId) => {
+                                            const teacherId = newTeacherId
+                                              ? Number(newTeacherId)
+                                              : null;
 
-                                          setSelectedSubjects(
-                                            selectedSubjects.map((s) =>
-                                              s.subjectId === subj.subjectId
-                                                ? {
-                                                    ...s,
-                                                    termTeachers: {
-                                                      ...s.termTeachers,
-                                                      [term.termId]: {
-                                                        teacherId: newTeacherId,
-                                                        classSubjectId:
-                                                          termTeacher?.classSubjectId,
+                                            setSelectedSubjects(
+                                              selectedSubjects.map((s) =>
+                                                s.subjectId === subj.subjectId
+                                                  ? {
+                                                      ...s,
+                                                      termTeachers: {
+                                                        ...s.termTeachers,
+                                                        [term.termId]: {
+                                                          teacherId: teacherId,
+                                                          classSubjectId:
+                                                            termTeacher?.classSubjectId,
+                                                        },
                                                       },
-                                                    },
-                                                  }
-                                                : s
-                                            )
-                                          );
-                                        }}
-                                        className="flex-1 px-2 py-1 text-sm border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                                      >
-                                        <option value="">
-                                          -- Chọn giáo viên --
-                                        </option>
-                                        {teachers.map((t) => (
-                                          <option
-                                            key={t.userId}
-                                            value={t.userId}
-                                          >
-                                            {t.fullName} ({t.teacherCode})
-                                          </option>
-                                        ))}
-                                      </select>
+                                                    }
+                                                  : s
+                                              )
+                                            );
+                                          }}
+                                          placeholder="-- Chọn giáo viên --"
+                                        />
+                                      </div>
                                     </div>
                                   );
                                 })}
