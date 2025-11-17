@@ -20,11 +20,11 @@ import { AuthContext } from "../../contexts/AuthContext";
 import topicService from "../../services/topicService";
 
 const themeColors = {
-  primary: "#9C27B0",
-  secondary: "#7B1FA2",
-  background: "#F5F5F5",
-  card: "#FFFFFF",
-  text: "#333333",
+  primary: "#00cc66",      // xanh lá chủ đạo
+  secondary: "#33cc77",    // xanh lá nhạt hơn
+  background: "#e6f5ea",   // nền xanh rất nhạt / trắng pha xanh
+  card: "#FFFFFF",          // màu card vẫn trắng
+  text: "#006633",          // text màu xanh đậm
 };
 
 export default function AssessmentTopicSelectionScreen({ route, navigation }) {
@@ -239,7 +239,7 @@ export default function AssessmentTopicSelectionScreen({ route, navigation }) {
                     keyboardShouldPersistTaps="handled"
                   >
                     <Text style={styles.topicLabel}>
-                      📚 Số chủ đề đã chọn:{" "}
+                      Số chủ đề đã chọn:{" "}
                       <Text style={styles.topicValue}>
                         {selectedTopics.length}
                       </Text>
@@ -247,7 +247,7 @@ export default function AssessmentTopicSelectionScreen({ route, navigation }) {
 
                     {/* Số câu hỏi */}
                     <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>🔢 Số câu hỏi:</Text>
+                      <Text style={styles.settingLabel}>Số câu hỏi:</Text>
                       <TextInput
                         style={styles.numberInput}
                         value={numQuestions}
@@ -265,7 +265,7 @@ export default function AssessmentTopicSelectionScreen({ route, navigation }) {
 
                     {/* Mức độ */}
                     <View style={styles.settingGroup}>
-                      <Text style={styles.settingLabel}>📊 Mức độ:</Text>
+                      <Text style={styles.settingLabel}>Mức độ:</Text>
                       <View style={styles.difficultyButtons}>
                         {[
                           {

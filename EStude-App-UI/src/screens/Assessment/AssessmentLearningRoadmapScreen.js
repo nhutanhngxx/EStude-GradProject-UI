@@ -18,17 +18,21 @@ import aiService from "../../services/aiService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const themeColors = {
-  primary: "#7C3AED",
-  secondary: "#6D28D9",
-  accent: "#FFD60A",
-  success: "#4CAF50",
-  warning: "#FF9800",
-  error: "#F44336",
-  background: "#fff",
-  card: "#f9f9f9",
-  text: "#333",
-  textLight: "#666",
+  primary: "#4CAF50",       // Xanh lá chủ đạo
+  secondary: "#43A047",     // Xanh lá đậm hơn để phối
+  accent: "#B2FF59",        // Xanh neon accent nổi bật
+
+  success: "#4CAF50",       // Thành công = màu chủ đạo
+  warning: "#FFB300",       // Vàng cảnh báo
+  error: "#E53935",         // Đỏ cảnh báo
+
+  background: "#FFFFFF",    // Nền trắng
+  card: "#F4FFF5",          // Trắng pha xanh rất nhẹ, tạo chiều sâu
+
+  text: "#1B5E20",          // Xanh lá đậm (dễ đọc)
+  textLight: "#4C8C4A",     // Xanh lá nhạt hơn cho subtitle
 };
+
 
 const { width } = Dimensions.get("window");
 
@@ -42,6 +46,7 @@ const { width } = Dimensions.get("window");
  * - route.params.evaluation: Dữ liệu đánh giá từ Layer 4
  * - route.params.resultId: AI Analysis Result ID (dùng để update progress)
  */
+
 export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const { roadmap: initialRoadmap, evaluation, resultId } = route.params;
   const { showToast } = useToast();
@@ -596,6 +601,13 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                               <Text style={styles.resourcesTitle}>
                                 Tài liệu học tập:
                               </Text>
+                              <View style={styles.aiNoteBox}>
+                                <Ionicons name="information-circle-outline" size={18} color="#1565c0" />
+                                <Text style={styles.aiNoteText}>
+                                  Lộ trình được thiết kế bởi AI, nên có thể một số đường dẫn tài liệu
+                                  bị sai. Học sinh có thể tự tìm tài liệu theo tên hiển thị.
+                                </Text>
+                              </View>
                               {subtopic.learning_resources.map(
                                 (resource, resIndex) => (
                                   <TouchableOpacity
@@ -608,8 +620,8 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                         resource.type === "VIDEO"
                                           ? "play-circle"
                                           : resource.type === "ARTICLE"
-                                          ? "document-text"
-                                          : "game-controller"
+                                            ? "document-text"
+                                            : "game-controller"
                                       }
                                       size={20}
                                       color={themeColors.primary}
@@ -619,8 +631,8 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                         {resource.title}
                                       </Text>
                                       <Text style={styles.resourceMeta}>
-                                        {resource.type} •{" "}
-                                        {resource.duration_minutes} phút
+                                        {resource.type}
+                                        {/* •{" "}{resource.duration_minutes} phút */}
                                       </Text>
                                     </View>
                                     <Ionicons
@@ -774,10 +786,10 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                     task.type === "WATCH_VIDEO"
                                       ? "play"
                                       : task.type === "PRACTICE"
-                                      ? "pencil"
-                                      : task.type === "ASSESSMENT"
-                                      ? "clipboard"
-                                      : "book"
+                                        ? "pencil"
+                                        : task.type === "ASSESSMENT"
+                                          ? "clipboard"
+                                          : "book"
                                   }
                                   size={12}
                                   color={themeColors.textLight}
@@ -2299,4 +2311,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
+
+  aiNoteBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 10,
+    backgroundColor: "#e3f2fd",    // xanh nhẹ
+    borderLeftWidth: 4,
+    borderLeftColor: "#1565c0",
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+
+  aiNoteText: {
+    flex: 1,
+    color: "#0d47a1",
+    fontSize: 13,
+  },
+
 });

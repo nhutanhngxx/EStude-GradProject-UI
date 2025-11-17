@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
 export default function RecentAssignmentsCard({
@@ -74,13 +75,18 @@ export default function RecentAssignmentsCard({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{title}</Text>
+        <View style={styles.headerLeft}>
+          <Ionicons name="document-text-outline" size={22} color="#4CAF50" />
+          <Text style={styles.cardTitle}>{title}</Text>
+        </View>
+
         {onPressDetail && (
           <TouchableOpacity onPress={onPressDetail}>
             <Text style={styles.link}>Xem chi tiết</Text>
           </TouchableOpacity>
         )}
       </View>
+
       <FlatList
         data={assignments}
         keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
@@ -107,11 +113,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
+    alignItems: "center",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#333",
+    color: "#1B5E20",
+    marginLeft: 8,
   },
   link: {
     color: "#007bff",

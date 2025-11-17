@@ -33,7 +33,7 @@ const ManageSubjects = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = 12;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -181,129 +181,138 @@ const ManageSubjects = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {t("admin.subjects.title") || "Quản lý Môn học"}
-            </h1>
-          </div>
-          <button
-            onClick={() => openModal("add")}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            <PlusCircle className="w-5 h-5" />
-            {t("admin.subjects.addNew") || "Thêm môn học"}
-          </button>
+    <div className="bg-transparent dark:bg-gray-900 p-6">
+      {/* <div className="max-w-7xl mx-auto"> */}
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        {/* <div className="flex items-center gap-3">
+          <BookOpen className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {t("admin.subjects.title") || "Quản lý Môn học"}
+          </h1>
+        </div> */}
+        <div>
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <BookOpen className="w-8 h-8 text-green-600 dark:text-gray-400" />
+            {t("admin.subjects.title") || "Quản lý Môn học"}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {/* {t("manageClasses.subtitle")} */}
+          </p>
         </div>
+        <button
+          onClick={() => openModal("add")}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <PlusCircle className="w-5 h-5" />
+          {t("admin.subjects.addNew") || "Thêm môn học"}
+        </button>
+      </div>
 
-        {/* Search */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder={t("admin.subjects.search") || "Tìm kiếm môn học..."}
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder={t("admin.subjects.search") || "Tìm kiếm môn học..."}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-12">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                ID
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                {t("admin.subjects.name") || "Tên môn học"}
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                {t("admin.subjects.description") || "Mô tả"}
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                {t("admin.subjects.actions") || "Thao tác"}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                >
+                  {t("common.loading") || "Đang tải..."}
+                </td>
+              </tr>
+            ) : currentSubjects.length === 0 ? (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                >
+                  {t("admin.subjects.noData") || "Không có dữ liệu"}
+                </td>
+              </tr>
+            ) : (
+              currentSubjects.map((subject) => (
+                <tr
+                  key={subject.subjectId}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <td className="px-6 py-2 text-sm text-gray-900 dark:text-gray-100">
+                    {subject.subjectId}
+                  </td>
+                  <td className="px-6 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {subject.name}
+                  </td>
+                  <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400">
+                    {subject.description || "-"}
+                  </td>
+                  <td className="px-6 py-2 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => openModal("edit", subject)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title={t("common.edit") || "Sửa"}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openModal("delete", subject)}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                        title={t("common.delete") || "Xóa"}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            totalItems={filteredSubjects.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
           />
         </div>
-
-        {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-20">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.name") || "Tên môn học"}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.description") || "Mô tả"}
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.actions") || "Thao tác"}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    {t("common.loading") || "Đang tải..."}
-                  </td>
-                </tr>
-              ) : currentSubjects.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    {t("admin.subjects.noData") || "Không có dữ liệu"}
-                  </td>
-                </tr>
-              ) : (
-                currentSubjects.map((subject) => (
-                  <tr
-                    key={subject.subjectId}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                      {subject.subjectId}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {subject.name}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                      {subject.description || "-"}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => openModal("edit", subject)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title={t("common.edit") || "Sửa"}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openModal("delete", subject)}
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title={t("common.delete") || "Xóa"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination
-              totalItems={filteredSubjects.length}
-              itemsPerPage={itemsPerPage}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
-      </div>
+      )}
+      {/* </div> */}
 
       {/* Add/Edit Modal */}
       {(modalType === "add" || modalType === "edit") && (

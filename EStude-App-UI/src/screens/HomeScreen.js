@@ -88,9 +88,8 @@ export default function HomeStudentScreen({ navigation }) {
                 beginDate: classSubject?.beginDate || "2025-09-05",
                 endDate: classSubject?.endDate || "2026-01-15",
                 teacherName,
-                description: `${classSubject?.subject?.name || "Không rõ"} - ${
-                  classSubject?.className || "Không rõ"
-                }`,
+                description: `${classSubject?.subject?.name || "Không rõ"} - ${classSubject?.className || "Không rõ"
+                  }`,
               };
 
               return {
@@ -217,18 +216,17 @@ export default function HomeStudentScreen({ navigation }) {
         const formatted = todaySchedules.map((s) => ({
           id: s.scheduleId,
           subject: s.classSubject?.subjectName || "Không rõ",
-          time: `Tiết ${s.startPeriod}${
-            s.endPeriod && s.endPeriod !== s.startPeriod
-              ? `-${s.endPeriod}`
-              : ""
-          }`,
+          time: `Tiết ${s.startPeriod}${s.endPeriod && s.endPeriod !== s.startPeriod
+            ? `-${s.endPeriod}`
+            : ""
+            }`,
           room: s.room || "Không rõ",
           status:
             s.status === "SCHEDULED"
               ? "upcoming"
               : s.status === "ONGOING"
-              ? "in_progress"
-              : "done",
+                ? "in_progress"
+                : "done",
         }));
 
         setTodayPlan(formatted);
@@ -508,17 +506,13 @@ export default function HomeStudentScreen({ navigation }) {
     }
   };
 
-  const quickActions = [
-    { id: "qa1", label: "Môn học", iconName: "book", color: "#4CAF50" },
-    { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#FF9800" },
-    { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#2196F3" },
-    {
-      id: "qa4",
-      label: "Đánh giá",
-      iconName: "check-square-o",
-      color: "#9C27B0",
-    },
-  ];
+const quickActions = [
+  { id: "qa1", label: "Môn học", iconName: "book", color: "#00cc66" },      // xanh lá chủ đạo
+  // { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#00cc66" }, // nếu dùng
+  { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#66d98c" }, // xanh lá nhạt hơn
+  { id: "qa4", label: "Đánh giá", iconName: "check-square-o", color: "#00994d" }, // xanh lá đậm
+];
+
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -538,7 +532,14 @@ export default function HomeStudentScreen({ navigation }) {
 
         {/* Tác vụ nhanh */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Các tác vụ nhanh</Text>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5
+          }}>
+            <Ionicons name="flash" size={22} color="#4CAF50" />
+            <Text style={[styles.cardTitle, {color: "#1B5E20"}]}>Các tác vụ nhanh</Text>
+          </View>
           <View style={styles.quickActionRow}>
             {quickActions.map((action) => (
               <TouchableOpacity
@@ -663,7 +664,14 @@ export default function HomeStudentScreen({ navigation }) {
           />
         ) : (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Lịch học hôm nay</Text>
+            <View style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5
+            }}>
+              <Ionicons name="calendar" size={22} color="#4CAF50" />
+              <Text style={[styles.cardTitle, { color: "#1B5E20" }]}>Lịch học hôm nay</Text>
+            </View>
             <Text style={{ color: "#777", marginTop: 8 }}>
               Không có lịch học hôm nay
             </Text>
@@ -728,7 +736,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 8,
+    // marginBottom: 8,
   },
   link: { color: "#007bff" },
   statsRow: {

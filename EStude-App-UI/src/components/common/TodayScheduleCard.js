@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TodayScheduleCard({
   title,
@@ -9,7 +10,11 @@ export default function TodayScheduleCard({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle}>{title}</Text>
+        <View style={styles.headerLeft}>
+          <Ionicons name="calendar" size={22} color="#4CAF50" />
+          <Text style={styles.cardTitle}>{title}</Text>
+        </View>
+
         {onPressDetail && (
           <TouchableOpacity style={styles.detailButton} onPress={onPressDetail}>
             <Text style={styles.link}>Xem chi tiết</Text>
@@ -25,6 +30,7 @@ export default function TodayScheduleCard({
               {item.time} • {item.room}
             </Text>
           </View>
+
           <Text
             style={[
               styles.statusBadge,
@@ -56,11 +62,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 12,
+    alignItems: "center",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#333",
+    color: "#1B5E20",
+    marginLeft: 8,
   },
   link: { color: "#007bff", fontWeight: "500" },
   planItem: {
@@ -77,7 +89,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
-    color: "#fff",
     fontSize: 12,
   },
 });

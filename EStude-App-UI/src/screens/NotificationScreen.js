@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { AuthContext } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -25,10 +26,10 @@ export default function NotificationScreen() {
   const avatarUri = user?.avatarPath
     ? { uri: user.avatarPath }
     : {
-        uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          user?.fullName || user?.username || "Unknown"
-        )}&background=random&size=128`,
-      };
+      uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+        user?.fullName || user?.username || "Unknown"
+      )}&background=random&size=128`,
+    };
 
   const tabs = ["Tất cả", "Bài tập", "Điểm danh", "Hệ thống"];
 
@@ -168,10 +169,13 @@ export default function NotificationScreen() {
 
           {/* Loading State */}
           {loading && (
-            <View style={styles.loading}>
-              <Text>Đang tải thông báo...</Text>
-            </View>
+            <ActivityIndicator
+              size="large"
+              color="#00cc66"
+              style={{ marginTop: 16 }}
+            />
           )}
+
 
           {/* Error State */}
           {error && (

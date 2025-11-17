@@ -7,6 +7,18 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
     return null;
   }
 
+  const colors = {
+    primary: "#4CAF50",
+    secondary: "#43A047",
+    accent: "#B2FF59",
+    warning: "#FFB300",
+    error: "#E53935",
+    text: "#1B5E20",
+    textLight: "#4C8C4A",
+    card: "#F4FFF5",
+    border: "#E0F2E9",
+  };
+
   const getAverageAccuracy = () => {
     if (stats.subjectStats.length === 0) return 0;
     const total = stats.subjectStats.reduce((sum, s) => sum + s.avgAccuracy, 0);
@@ -15,27 +27,27 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
 
   const getCompetencyLevel = (accuracy) => {
     if (accuracy >= 80)
-      return { level: "Vững vàng", color: "#4CAF50", icon: "trophy" };
+      return { level: "Vững vàng", color: colors.primary, icon: "trophy" };
     if (accuracy >= 60)
-      return { level: "Nâng cao", color: "#2196F3", icon: "trending-up" };
+      return { level: "Nâng cao", color: colors.secondary, icon: "trending-up" };
     if (accuracy >= 40)
-      return { level: "Trung bình", color: "#FF9800", icon: "school" };
-    return { level: "Cơ bản", color: "#F44336", icon: "book-outline" };
+      return { level: "Trung bình", color: colors.warning, icon: "school" };
+    return { level: "Cơ bản", color: colors.error, icon: "book-outline" };
   };
 
   const avgAccuracy = getAverageAccuracy();
   const competency = getCompetencyLevel(avgAccuracy);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={[styles.card, { backgroundColor: "#fff" }]} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <MaterialCommunityIcons
             name="map-marker-path"
             size={20}
-            color="#00cc66"
+            color={colors.primary}
           />
-          <Text style={styles.title}>Bản đồ Năng lực</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Bản đồ Năng lực</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#999" />
       </View>
@@ -52,34 +64,38 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
               {competency.level}
             </Text>
           </View>
-          <Text style={styles.averageValue}>{avgAccuracy}%</Text>
-          <Text style={styles.averageLabel}>Tỷ lệ đạt trung bình</Text>
+          <Text style={[styles.averageValue, { color: colors.primary }]}>
+            {avgAccuracy}%
+          </Text>
+          <Text style={[styles.averageLabel, { color: colors.textLight }]}>
+            Tỷ lệ đạt trung bình
+          </Text>
         </View>
 
-        <View style={styles.statsGrid}>
+        <View style={[styles.statsGrid, { borderTopColor: colors.border }]}>
           <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: "#4CAF50" }]}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>
               {stats.totalMastered}
             </Text>
-            <Text style={styles.statLabel}>Chủ đề vững</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>Chủ đề vững</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: "#2196F3" }]}>
+            <Text style={[styles.statValue, { color: colors.secondary }]}>
               {stats.totalProgressing}
             </Text>
-            <Text style={styles.statLabel}>Tiến bộ</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>Tiến bộ</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={[styles.statValue, { color: "#FF9800" }]}>
+            <Text style={[styles.statValue, { color: colors.warning }]}>
               {stats.totalNeedsWork}
             </Text>
-            <Text style={styles.statLabel}>Cần luyện</Text>
+            <Text style={[styles.statLabel, { color: colors.textLight }]}>Cần luyện</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <Text style={[styles.footerText, { color: "#777" }]}>
           Theo dõi {stats.totalSubjects} môn học • {stats.totalTopics} chủ đề
         </Text>
       </View>
@@ -89,14 +105,13 @@ export default function CompetencyOverviewCard({ stats, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
   },
   header: {
@@ -113,7 +128,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
-    color: "#333",
   },
   content: {
     alignItems: "center",
@@ -134,11 +148,9 @@ const styles = StyleSheet.create({
   averageValue: {
     fontSize: 36,
     fontWeight: "bold",
-    color: "#00cc66",
   },
   averageLabel: {
     fontSize: 12,
-    color: "#666",
     marginTop: 4,
   },
   statsGrid: {
@@ -147,7 +159,6 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
   },
   statBox: {
     alignItems: "center",
@@ -158,18 +169,15 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    color: "#666",
     marginTop: 4,
   },
   footer: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
   },
   footerText: {
     fontSize: 12,
-    color: "#999",
     textAlign: "center",
   },
 });

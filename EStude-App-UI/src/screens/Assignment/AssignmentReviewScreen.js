@@ -235,7 +235,11 @@ export default function ExamReviewScreen({ route, navigation }) {
               color={themeColors.primary}
             />
             <Text style={styles.aiScoreLabel}>Điểm của bạn</Text>
-            <Text style={styles.aiScoreValue}>{submission.score ?? "-"}</Text>
+            <Text style={styles.aiScoreValue}>
+              {submission.score !== undefined && submission.score !== null
+                ? submission.score.toFixed(2)
+                : "-"}
+            </Text>
 
             {aiResult?.detailedAnalysis?.summary && (
               <View style={styles.summaryBox}>

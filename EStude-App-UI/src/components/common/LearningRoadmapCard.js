@@ -25,10 +25,10 @@ export default function LearningRoadmapCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="map" size={24} color="#7C3AED" />
-          <Text style={styles.title}>Lộ trình học tập</Text>
+          <Ionicons name="map" size={24} color="#4CAF50" />
+          <Text style={[styles.title, {color: "#1B5E20"}]}>Lộ trình học tập</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#999" />
+        <Ionicons name="chevron-forward" size={20} color="#666" />
       </View>
 
       {hasActiveRoadmap ? (
@@ -49,7 +49,7 @@ export default function LearningRoadmapCard({
           {/* Current Phase */}
           <View style={styles.phaseSection}>
             <View style={styles.phaseLabel}>
-              <Ionicons name="flag" size={14} color="#FF9800" />
+              <Ionicons name="flag" size={14} color="#4CAF50" />
               <Text style={styles.phaseLabelText}>Giai đoạn hiện tại</Text>
             </View>
             <Text style={styles.phaseText} numberOfLines={1}>
@@ -67,7 +67,7 @@ export default function LearningRoadmapCard({
             </View>
             <TouchableOpacity style={styles.continueButton} onPress={onPress}>
               <Text style={styles.continueButtonText}>Tiếp tục học</Text>
-              <Ionicons name="arrow-forward" size={14} color="#7C3AED" />
+              <Ionicons name="arrow-forward" size={14} color="#4CAF50" />
             </TouchableOpacity>
           </View>
         </View>
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   progressValue: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#7C3AED",
+    color: "#4CAF50",
   },
   progressBarContainer: {
     height: 8,
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: "100%",
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#4CAF50",
     borderRadius: 4,
   },
   phaseSection: {
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: "#F3F0FF",
+    backgroundColor: "#E8F5E9",
     borderRadius: 8,
   },
   continueButtonText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#7C3AED",
+    color: "#4CAF50",
     marginRight: 4,
   },
   emptyContent: {
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: "#7C3AED",
+    backgroundColor: "#4CAF50",
     borderRadius: 8,
   },
   createButtonText: {

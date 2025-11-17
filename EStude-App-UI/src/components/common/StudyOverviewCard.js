@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import ProgressBar from "./ProgressBar";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function StudyOverviewCard({
   gpa,
@@ -21,7 +22,14 @@ export default function StudyOverviewCard({
     <View style={styles.card}>
       {onPressDetail ? (
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>Tổng quan học tập</Text>
+          <View style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5
+          }}>
+            <Ionicons name="flash" size={22} color="#4CAF50" />
+            <Text style={[styles.cardTitle, { color: "#1B5E20" }]}>Tổng quan học tập</Text>
+          </View>
           <TouchableOpacity onPress={onPressDetail}>
             <Text style={styles.link}>Xem chi tiết</Text>
           </TouchableOpacity>
@@ -98,7 +106,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: "700",
-    marginBottom: 12,
     color: "#333",
   },
   link: {

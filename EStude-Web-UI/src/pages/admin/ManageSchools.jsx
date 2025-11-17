@@ -250,8 +250,8 @@ const ManageSchools = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
-            <School className="w-6 h-6 text-green-800" />
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <School className="w-8 h-8 text-green-600 dark:text-gray-400" />
             {t("manageSchools.title")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -286,34 +286,43 @@ const ManageSchools = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto mb-20">
         <table className="w-full table-fixed text-sm">
-          <thead className="bg-gray-100 dark:bg-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-4 py-3 text-left w-20">{t("fields.code")}</th>
-              <th className="px-4 py-3 text-left w-48">{t("fields.name")}</th>
-              <th className="px-4 py-3 text-left w-72">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">
+                {t("fields.code")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-48">
+                {t("fields.name")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-72">
                 {t("fields.address")}
               </th>
-              <th className="px-4 py-3 text-left w-48">{t("fields.email")}</th>
-              <th className="px-4 py-3 text-left w-32">{t("fields.phone")}</th>
-              <th className="px-4 py-3 text-left w-24">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-48">
+                {t("fields.email")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32">
+                {t("fields.phone")}
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
                 {t("common.actions")}
               </th>
             </tr>
           </thead>
+
           <tbody>
             {currentSchools.map((s) => (
               <tr
                 key={s.id}
                 className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
               >
-                <td className="px-4 py-3">{s.code}</td>
-                <td className="px-4 py-3">{s.name}</td>
-                <td className="px-4 py-3">{s.address}</td>
-                <td className="px-4 py-3">{s.email}</td>
-                <td className="px-4 py-3">{s.phone}</td>
-                <td className="px-4 py-3 flex gap-2">
+                <td className="px-4 py-2">{s.code}</td>
+                <td className="px-4 py-2">{s.name}</td>
+                <td className="px-4 py-2">{s.address}</td>
+                <td className="px-4 py-2">{s.email}</td>
+                <td className="px-4 py-2">{s.phone}</td>
+                <td className="px-4 py-2 flex justify-center gap-2">
                   <button
                     onClick={() => openModal("view", s)}
                     className="text-indigo-600 dark:text-indigo-400 hover:underline"

@@ -1,4 +1,11 @@
-import React, { useContext, useEffect, useState, useMemo } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  Suspense,
+  lazy,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { Bar } from "react-chartjs-2";
 import {
@@ -362,10 +369,6 @@ const Dashboard = () => {
     },
   ];
 
-  const createReport = () => {
-    alert(t("dashboard.reportCreated"));
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return t("common.na");
     return new Date(dateString).toLocaleString("vi-VN", {
@@ -423,12 +426,12 @@ const Dashboard = () => {
   }, [logs, modalType, t]);
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 dark:bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="p-4 sm:p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
-            <Home className="w-6 h-6 text-green-800" />
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <Home className="w-8 h-8 text-green-600 dark:text-gray-400" />
             {t("dashboard.overview")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">

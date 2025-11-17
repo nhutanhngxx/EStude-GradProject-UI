@@ -537,283 +537,283 @@ const ManageTopics = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <BookMarked className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {t("admin.topics.title") || "Quản lý Chủ đề"}
-            </h1>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleDownloadTemplate}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Download className="w-5 h-5" />
-              Template
-            </button>
-            <button
-              onClick={handleImportClick}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-              disabled={importing}
-            >
-              <Upload className="w-5 h-5" />
-              {importing ? "Đang import..." : "Import Excel"}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImportExcel}
-              className="hidden"
-            />
-            <button
-              onClick={() => openModal("add")}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <PlusCircle className="w-5 h-5" />
-              {t("admin.topics.addNew") || "Thêm chủ đề"}
-            </button>
-          </div>
+      {/* <div className="max-w-7xl mx-auto"> */}
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <BookMarked className="w-8 h-8 text-green-600 dark:text-gray-400" />
+            {t("admin.topics.title") || "Quản lý Chủ đề"}
+          </h1>
         </div>
-
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {t("admin.topics.filters") || "Bộ lọc"}
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t("admin.topics.subject") || "Môn học"}{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={filters.subjectId}
-                onChange={(e) => {
-                  // Convert sang number nếu có giá trị, giữ nguyên empty string nếu chọn "Chọn môn học"
-                  const value = e.target.value ? parseInt(e.target.value) : "";
-                  console.log(
-                    "🔍 [Filter onChange] Selected subjectId:",
-                    value,
-                    "Type:",
-                    typeof value
-                  );
-                  setFilters({ ...filters, subjectId: value });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">
-                  {t("admin.topics.selectSubject") || "Chọn môn học"}
-                </option>
-                {subjects.map((subject) => (
-                  <option key={subject.subjectId} value={subject.subjectId}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t("admin.topics.gradeLevel") || "Khối lớp"}
-              </label>
-              <select
-                value={filters.gradeLevel}
-                onChange={(e) => {
-                  setFilters({ ...filters, gradeLevel: e.target.value });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">
-                  {t("admin.topics.allGrades") || "Tất cả khối"}
-                </option>
-                {GRADE_LEVELS.map((grade) => (
-                  <option key={grade.value} value={grade.value}>
-                    {grade.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t("admin.topics.volume") || "Tập sách"}
-              </label>
-              <select
-                value={filters.volume}
-                onChange={(e) => {
-                  setFilters({ ...filters, volume: e.target.value });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">
-                  {t("admin.topics.allVolumes") || "Tất cả tập"}
-                </option>
-                {VOLUMES.map((volume) => (
-                  <option key={volume.value} value={volume.value}>
-                    {volume.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-6">
+        <div className="flex gap-2">
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Download className="w-5 h-5" />
+            Tải file mẫu
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            disabled={importing}
+          >
+            <Upload className="w-5 h-5" />
+            {importing ? "Đang import..." : "Nhập từ Excel"}
+          </button>
           <input
-            type="text"
-            placeholder={t("admin.topics.search") || "Tìm kiếm chủ đề..."}
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImportExcel}
+            className="hidden"
+          />
+          <button
+            onClick={() => openModal("add")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <PlusCircle className="w-5 h-5" />
+            {t("admin.topics.addNew") || "Thêm chủ đề"}
+          </button>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {t("admin.topics.filters") || "Bộ lọc"}
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t("admin.topics.subject") || "Môn học"}{" "}
+              <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={filters.subjectId}
+              onChange={(e) => {
+                // Convert sang number nếu có giá trị, giữ nguyên empty string nếu chọn "Chọn môn học"
+                const value = e.target.value ? parseInt(e.target.value) : "";
+                console.log(
+                  "🔍 [Filter onChange] Selected subjectId:",
+                  value,
+                  "Type:",
+                  typeof value
+                );
+                setFilters({ ...filters, subjectId: value });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">
+                {t("admin.topics.selectSubject") || "Chọn môn học"}
+              </option>
+              {subjects.map((subject) => (
+                <option key={subject.subjectId} value={subject.subjectId}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t("admin.topics.gradeLevel") || "Khối lớp"}
+            </label>
+            <select
+              value={filters.gradeLevel}
+              onChange={(e) => {
+                setFilters({ ...filters, gradeLevel: e.target.value });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">
+                {t("admin.topics.allGrades") || "Tất cả khối"}
+              </option>
+              {GRADE_LEVELS.map((grade) => (
+                <option key={grade.value} value={grade.value}>
+                  {grade.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t("admin.topics.volume") || "Tập sách"}
+            </label>
+            <select
+              value={filters.volume}
+              onChange={(e) => {
+                setFilters({ ...filters, volume: e.target.value });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">
+                {t("admin.topics.allVolumes") || "Tất cả tập"}
+              </option>
+              {VOLUMES.map((volume) => (
+                <option key={volume.value} value={volume.value}>
+                  {volume.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder={t("admin.topics.search") || "Tìm kiếm chủ đề..."}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-24">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+              <tr>
+                {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  ID
+                </th> */}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.name") || "Tên chủ đề"}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.chapter") || "Chương"}
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.subject") || "Môn học"}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.gradeLevel") || "Khối"}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.volume") || "Tập"}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.order") || "Thứ tự"}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.totalQuestions") || "Số câu hỏi"}
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.topics.actions") || "Thao tác"}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {loading ? (
+                <tr>
+                  <td
+                    colSpan="9"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    {t("common.loading") || "Đang tải..."}
+                  </td>
+                </tr>
+              ) : !filters.subjectId ? (
+                <tr>
+                  <td
+                    colSpan="9"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    {t("admin.topics.selectSubjectFirst") ||
+                      "Vui lòng chọn môn học"}
+                  </td>
+                </tr>
+              ) : currentTopics.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="9"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    {t("admin.topics.noData") || "Không có dữ liệu"}
+                  </td>
+                </tr>
+              ) : (
+                currentTopics.map((topic) => (
+                  <tr
+                    key={topic.topicId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {/* <td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
+                      {topic.topicId}
+                    </td> */}
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {topic.name}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {topic.chapter || "-"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                      {topic.subjectName || getSubjectName(topic.subjectId)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                      {getGradeLabel(topic.gradeLevel)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                      {topic.volume}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                      {topic.orderIndex}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
+                      {topic.totalQuestions || 0}
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => openModal("edit", topic)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title={t("common.edit") || "Sửa"}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openModal("delete", topic)}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title={t("common.delete") || "Xóa"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            totalItems={filteredTopics.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
           />
         </div>
-
-        {/* Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto mb-16">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    ID
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.name") || "Tên chủ đề"}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.chapter") || "Chương"}
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.subject") || "Môn học"}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.gradeLevel") || "Khối"}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.volume") || "Tập"}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.order") || "Thứ tự"}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.totalQuestions") || "Số câu hỏi"}
-                  </th>
-                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t("admin.topics.actions") || "Thao tác"}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {loading ? (
-                  <tr>
-                    <td
-                      colSpan="9"
-                      className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                    >
-                      {t("common.loading") || "Đang tải..."}
-                    </td>
-                  </tr>
-                ) : !filters.subjectId ? (
-                  <tr>
-                    <td
-                      colSpan="9"
-                      className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                    >
-                      {t("admin.topics.selectSubjectFirst") ||
-                        "Vui lòng chọn môn học"}
-                    </td>
-                  </tr>
-                ) : currentTopics.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan="9"
-                      className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                    >
-                      {t("admin.topics.noData") || "Không có dữ liệu"}
-                    </td>
-                  </tr>
-                ) : (
-                  currentTopics.map((topic) => (
-                    <tr
-                      key={topic.topicId}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100">
-                        {topic.topicId}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {topic.name}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {topic.chapter || "-"}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {topic.subjectName || getSubjectName(topic.subjectId)}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
-                        {getGradeLabel(topic.gradeLevel)}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
-                        {topic.volume}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
-                        {topic.orderIndex}
-                      </td>
-                      <td className="px-4 py-4 text-sm text-center text-gray-600 dark:text-gray-400">
-                        {topic.totalQuestions || 0}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => openModal("edit", topic)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                            title={t("common.edit") || "Sửa"}
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => openModal("delete", topic)}
-                            className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                            title={t("common.delete") || "Xóa"}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination
-              totalItems={filteredTopics.length}
-              itemsPerPage={itemsPerPage}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        )}
-      </div>
+      )}
+      {/* </div> */}
 
       {/* Add/Edit Modal */}
       {(modalType === "add" || modalType === "edit") && (

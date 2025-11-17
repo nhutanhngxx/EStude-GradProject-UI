@@ -172,6 +172,11 @@ export default function DetailStudyScreen() {
         {/* Content */}
         {activeTab === "Tổng quan" && overview && (
           <View>
+            {activeTab === "Tổng quan" && !overview && (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Không có dữ liệu học tập</Text>
+              </View>
+            )}
             <StudyOverviewCard
               gpa={overview.gpa}
               rank={overview.rank}
@@ -190,8 +195,8 @@ export default function DetailStudyScreen() {
                     filter === "all"
                       ? "Tất cả"
                       : filter === "atRisk"
-                      ? "Môn rủi ro"
-                      : "Môn hoàn thành"
+                        ? "Môn rủi ro"
+                        : "Môn hoàn thành"
                   }
                   onSelect={(item) => {
                     if (item === "Tất cả") setFilter("all");
@@ -213,10 +218,10 @@ export default function DetailStudyScreen() {
                     sort === "default"
                       ? "Mặc định"
                       : sort === "gpa"
-                      ? "GPA giảm dần"
-                      : sort === "progress"
-                      ? "Tiến độ giảm dần"
-                      : "Môn rủi ro trước"
+                        ? "GPA giảm dần"
+                        : sort === "progress"
+                          ? "Tiến độ giảm dần"
+                          : "Môn rủi ro trước"
                   }
                   onSelect={(item) => {
                     if (item === "Mặc định") setSort("default");
@@ -227,6 +232,7 @@ export default function DetailStudyScreen() {
                 />
               </View>
             </View>
+
             {filteredSubjects.map((subject, index) => {
               const subjectPercent = Math.round(
                 ((subject.completed ?? 0) / (subject.total || 1)) * 100
@@ -274,6 +280,16 @@ export default function DetailStudyScreen() {
 
         {activeTab === "Tổng kết" && (
           <View>
+            {/* {filteredSubjects.length === 0 && (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Không có môn học phù hợp</Text>
+              </View>
+            )} */}
+            {termKeys.length === 0 && (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyText}>Không có dữ liệu tổng kết</Text>
+              </View>
+            )}
             {termKeys.map((term) => {
               const termSubjects = groupedSubjects[term].subjects;
               const summary = calculateSummary(termSubjects);
@@ -687,4 +703,24 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#27ae60", // màu nhấn mạnh cho kết quả
   },
+
+  emptyBox: {
+  backgroundColor: "#fff",
+  padding: 20,
+  borderRadius: 12,
+  alignItems: "center",
+  justifyContent: "center",
+  marginVertical: 20,
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 4,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 3,
+},
+emptyText: {
+  fontSize: 15,
+  color: "#777",
+  fontStyle: "italic",
+},
+
 });

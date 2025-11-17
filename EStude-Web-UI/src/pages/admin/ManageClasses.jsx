@@ -35,7 +35,7 @@ const Badge = ({
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-5/6 max-w-6xl overflow-y-auto border border-gray-200 dark:border-gray-700 animate-fade-in">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-11/12 h-[90%] overflow-y-auto border border-gray-200 dark:border-gray-700 animate-fade-in">
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
@@ -287,8 +287,8 @@ const ManageClassesAdmin = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-green-800 dark:text-white flex items-center gap-2 mb-3">
-            <GraduationCap className="w-6 h-6 text-green-800" />
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <GraduationCap className="w-8 h-8 text-green-600 dark:text-gray-400" />
             {t("manageClasses.title")}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -317,31 +317,38 @@ const ManageClassesAdmin = () => {
       {/* Table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
         <table className="min-w-[800px] w-full table-fixed text-sm text-left border-collapse">
-          <thead className="bg-gray-50 dark:bg-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
             <tr>
-              <th className="px-4 py-3 w-[30%] text-gray-900 dark:text-gray-100">
+              <th className="px-4 py-3 w-[30%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Trường
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Khối
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Tên lớp học
               </th>
-              <th className="px-4 py-3 w-[20%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[20%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Giáo viên chủ nhiệm
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Sĩ số
               </th>
-              <th className="px-4 py-3 w-[10%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[10%] text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Môn học
               </th>
-              <th className="px-4 py-3 w-[7%] text-gray-900 dark:text-gray-100">
+
+              <th className="px-4 py-3 w-[7%] text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Tùy chọn
               </th>
             </tr>
           </thead>
+
           <tbody>
             {[...filteredClasses]
               .sort((a, b) => a.name.localeCompare(b.name, "vi"))

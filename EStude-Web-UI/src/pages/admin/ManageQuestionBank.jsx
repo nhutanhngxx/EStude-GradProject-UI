@@ -346,7 +346,7 @@ const ManageQuestionBank = () => {
 
       const payload = {
         questionText: formData.questionText,
-        points: 1.0, // ✅ Luôn mặc định = 1
+        points: 1.0,
         questionType: formData.questionType,
         topicId: parseInt(formData.topicId),
         difficultyLevel: formData.difficultyLevel,
@@ -542,46 +542,114 @@ const ManageQuestionBank = () => {
     e.target.value = ""; // Reset input
   };
 
+  // const handleConfirmImport = async () => {
+  //   if (!filters.topicId) {
+  //     showToast("Vui lòng chọn chủ đề trước khi import", "error");
+  //     return;
+  //   }
+
+  //   try {
+  //     setLoading(true);
+  //     let successCount = 0;
+  //     let errorCount = 0;
+
+  //     for (const question of importedQuestions) {
+  //       try {
+  //         const payload = {
+  //           ...question,
+  //           topicId: parseInt(filters.topicId),
+  //         };
+  //         await questionService.createQuestionBank(payload);
+  //         successCount++;
+  //       } catch (error) {
+  //         console.error("Error importing question:", error);
+  //         errorCount++;
+  //       }
+  //     }
+
+  //     showToast(
+  //       `Import thành công ${successCount} câu hỏi${
+  //         errorCount > 0 ? `, ${errorCount} câu hỏi lỗi` : ""
+  //       }`,
+  //       successCount > 0 ? "success" : "error"
+  //     );
+
+  //     await fetchQuestions();
+  //     setImportedQuestions([]);
+  //     closeModal();
+  //   } catch (error) {
+  //     console.error("Error importing questions:", error);
+  //     showToast("Lỗi khi import câu hỏi", "error");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const handleConfirmImport = async () => {
     if (!filters.topicId) {
       showToast("Vui lòng chọn chủ đề trước khi import", "error");
       return;
     }
 
+    // Lấy số lượng câu hỏi
+    const total = importedQuestions.length;
+
+    // 1. ĐÓNG MODAL NGAY LẬP TỨC
+    closeModal();
+    setImportedQuestions([]); // Xóa dữ liệu preview
+
+    // 2. HIỂN THỊ TOAST "ĐANG IMPORT..." NGAY LẬP TỨC
+    showToast(`Đang import ${total} câu hỏi...`, "info");
+
     try {
-      setLoading(true);
       let successCount = 0;
       let errorCount = 0;
 
-      for (const question of importedQuestions) {
+      // 3. IMPORT SONG SONG - NHANH GẤP 10 LẦN
+      const importPromises = importedQuestions.map(async (question) => {
         try {
           const payload = {
             ...question,
             topicId: parseInt(filters.topicId),
           };
           await questionService.createQuestionBank(payload);
+          return { status: "success" };
+        } catch (err) {
+          console.error("Lỗi import câu hỏi:", err);
+          return { status: "error", error: err };
+        }
+      });
+
+      const results = await Promise.allSettled(importPromises);
+
+      results.forEach((result) => {
+        if (
+          result.status === "fulfilled" &&
+          result.value.status === "success"
+        ) {
           successCount++;
-        } catch (error) {
-          console.error("Error importing question:", error);
+        } else {
           errorCount++;
         }
-      }
+      });
 
-      showToast(
-        `Import thành công ${successCount} câu hỏi${
-          errorCount > 0 ? `, ${errorCount} câu hỏi lỗi` : ""
-        }`,
-        successCount > 0 ? "success" : "error"
-      );
-
+      // 4. TẢI LẠI DANH SÁCH CÂU HỎI
       await fetchQuestions();
-      setImportedQuestions([]);
-      closeModal();
+
+      // 5. HIỂN THỊ KẾT QUẢ CUỐI CÙNG
+      if (successCount === total) {
+        showToast(`Import thành công ${successCount} câu hỏi!`, "success");
+      } else if (successCount > 0) {
+        showToast(
+          `Import thành công ${successCount} câu hỏi, thất bại ${errorCount} câu`,
+          "warn"
+        );
+      } else {
+        showToast(`Import thất bại toàn bộ ${total} câu hỏi`, "error");
+      }
     } catch (error) {
-      console.error("Error importing questions:", error);
-      showToast("Lỗi khi import câu hỏi", "error");
-    } finally {
-      setLoading(false);
+      console.error("Lỗi nghiêm trọng khi import:", error);
+      showToast("Đã xảy ra lỗi nghiêm trọng khi import", "error");
     }
   };
 
@@ -613,317 +681,317 @@ const ManageQuestionBank = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 dark:bg-gray-900 pt-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <HelpCircle className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {t("admin.questionBank.title") || "Quản lý Ngân hàng Câu hỏi"}
-            </h1>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={handleDownloadTemplate}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-              title="Tải file mẫu Excel"
-            >
-              <Download className="w-5 h-5" />
-              Tải file mẫu
-            </button>
-            <button
-              onClick={handleImportClick}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
-              title="Import từ Excel"
-            >
-              <Upload className="w-5 h-5" />
-              Import Excel
-            </button>
-            <input
-              id="import-excel-input"
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleImportExcel}
-              className="hidden"
-            />
-            <button
-              onClick={() => openModal("add")}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <PlusCircle className="w-5 h-5" />
-              {t("admin.questionBank.addNew") || "Thêm câu hỏi"}
-            </button>
-          </div>
+    <div className="p-4 sm:p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
+      {/* <div className="max-w-7xl mx-auto"> */}
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-3xl font-bold text-green-800 dark:text-gray-200 flex items-center gap-2 mb-3">
+            <HelpCircle className="w-8 h-8 text-green-800 dark:text-gray-200 " />
+            {t("admin.questionBank.title") || "Quản lý Ngân hàng Câu hỏi"}
+          </h1>
         </div>
-
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {t("admin.questionBank.filters") || "Bộ lọc"}
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Môn học <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={filters.subjectId}
-                onChange={(e) => {
-                  setFilters({
-                    ...filters,
-                    subjectId: e.target.value,
-                    topicId: "",
-                  });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Chọn môn học</option>
-                {subjects.map((subject) => (
-                  <option key={subject.subjectId} value={subject.subjectId}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Khối lớp
-              </label>
-              <select
-                value={filters.gradeLevel}
-                onChange={(e) => {
-                  setFilters({
-                    ...filters,
-                    gradeLevel: e.target.value,
-                    topicId: "",
-                  });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!filters.subjectId}
-              >
-                <option value="">Tất cả</option>
-                {GRADE_LEVELS.map((grade) => (
-                  <option key={grade.value} value={grade.value}>
-                    {grade.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Tập sách
-              </label>
-              <select
-                value={filters.volume}
-                onChange={(e) => {
-                  setFilters({
-                    ...filters,
-                    volume: e.target.value,
-                    topicId: "",
-                  });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!filters.subjectId}
-              >
-                <option value="">Tất cả</option>
-                {VOLUMES.map((volume) => (
-                  <option key={volume.value} value={volume.value}>
-                    {volume.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Chủ đề <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={filters.topicId}
-                onChange={(e) => {
-                  setFilters({ ...filters, topicId: e.target.value });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!filters.subjectId}
-              >
-                <option value="">Chọn chủ đề</option>
-                {topics.map((topic) => (
-                  <option key={topic.topicId} value={topic.topicId}>
-                    {topic.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Độ khó
-              </label>
-              <select
-                value={filters.difficulty}
-                onChange={(e) => {
-                  setFilters({ ...filters, difficulty: e.target.value });
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                disabled={!filters.topicId}
-              >
-                <option value="">Tất cả</option>
-                {DIFFICULTY_LEVELS.map((level) => (
-                  <option key={level.value} value={level.value}>
-                    {level.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="mb-6">
+        <div className="flex gap-3">
+          <button
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Tải file mẫu Excel"
+          >
+            <Download className="w-5 h-5" />
+            Tải file mẫu
+          </button>
+          <button
+            onClick={handleImportClick}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Import từ Excel"
+          >
+            <Upload className="w-5 h-5" />
+            Import Excel
+          </button>
           <input
-            type="text"
-            placeholder="Tìm kiếm câu hỏi..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={!filters.topicId}
+            id="import-excel-input"
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={handleImportExcel}
+            className="hidden"
           />
+          <button
+            onClick={() => openModal("add")}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <PlusCircle className="w-5 h-5" />
+            {t("admin.questionBank.addNew") || "Thêm câu hỏi"}
+          </button>
         </div>
+      </div>
 
-        {/* Question Count */}
-        {filters.topicId && (
-          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-            Tổng số câu hỏi:{" "}
-            <span className="font-semibold">{filteredQuestions.length}</span>
+      {/* Filters */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Filter className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            {t("admin.questionBank.filters") || "Bộ lọc"}
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Môn học <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={filters.subjectId}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  subjectId: e.target.value,
+                  topicId: "",
+                });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Chọn môn học</option>
+              {subjects.map((subject) => (
+                <option key={subject.subjectId} value={subject.subjectId}>
+                  {subject.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
 
-        {/* Questions List */}
-        <div className="space-y-4 mb-16">
-          {loading ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
-              Đang tải...
-            </div>
-          ) : !filters.topicId ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
-              Vui lòng chọn môn học và chủ đề
-            </div>
-          ) : currentQuestions.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
-              Không có câu hỏi nào
-            </div>
-          ) : (
-            currentQuestions.map((question, index) => (
-              <div
-                key={question.questionId}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                        #{startIndex + index + 1}
-                      </span>
-                      {getDifficultyBadge(question.difficultyLevel)}
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {getQuestionTypeLabel(question.questionType)}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {question.points} điểm
-                      </span>
-                    </div>
-                    <p className="text-gray-900 dark:text-gray-100 font-medium">
-                      {question.questionText}
-                    </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Khối lớp
+            </label>
+            <select
+              value={filters.gradeLevel}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  gradeLevel: e.target.value,
+                  topicId: "",
+                });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!filters.subjectId}
+            >
+              <option value="">Tất cả</option>
+              {GRADE_LEVELS.map((grade) => (
+                <option key={grade.value} value={grade.value}>
+                  {grade.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tập sách
+            </label>
+            <select
+              value={filters.volume}
+              onChange={(e) => {
+                setFilters({
+                  ...filters,
+                  volume: e.target.value,
+                  topicId: "",
+                });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!filters.subjectId}
+            >
+              <option value="">Tất cả</option>
+              {VOLUMES.map((volume) => (
+                <option key={volume.value} value={volume.value}>
+                  {volume.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Chủ đề <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={filters.topicId}
+              onChange={(e) => {
+                setFilters({ ...filters, topicId: e.target.value });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!filters.subjectId}
+            >
+              <option value="">Chọn chủ đề</option>
+              {topics.map((topic) => (
+                <option key={topic.topicId} value={topic.topicId}>
+                  {topic.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Độ khó
+            </label>
+            <select
+              value={filters.difficulty}
+              onChange={(e) => {
+                setFilters({ ...filters, difficulty: e.target.value });
+                setCurrentPage(1);
+              }}
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={!filters.topicId}
+            >
+              <option value="">Tất cả</option>
+              {DIFFICULTY_LEVELS.map((level) => (
+                <option key={level.value} value={level.value}>
+                  {level.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Tìm kiếm câu hỏi..."
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={!filters.topicId}
+        />
+      </div>
+
+      {/* Question Count */}
+      {filters.topicId && (
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+          Tổng số câu hỏi:{" "}
+          <span className="font-semibold">{filteredQuestions.length}</span>
+        </div>
+      )}
+
+      {/* Questions List */}
+      <div className="space-y-4 mb-16">
+        {loading ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
+            Đang tải...
+          </div>
+        ) : !filters.topicId ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
+            Vui lòng chọn môn học và chủ đề
+          </div>
+        ) : currentQuestions.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
+            Không có câu hỏi nào
+          </div>
+        ) : (
+          currentQuestions.map((question, index) => (
+            <div
+              key={question.questionId}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                      #{startIndex + index + 1}
+                    </span>
+                    {getDifficultyBadge(question.difficultyLevel)}
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {getQuestionTypeLabel(question.questionType)}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {question.points} điểm
+                    </span>
                   </div>
-                  <div className="flex gap-2 ml-4">
-                    <button
-                      onClick={() => openModal("view", question)}
-                      className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Xem chi tiết"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openModal("edit", question)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                      title="Sửa"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => openModal("delete", question)}
-                      className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Xóa"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  <p className="text-gray-900 dark:text-gray-100 font-medium">
+                    {question.questionText}
+                  </p>
                 </div>
+                <div className="flex gap-2 ml-4">
+                  <button
+                    onClick={() => openModal("view", question)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title="Xem chi tiết"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openModal("edit", question)}
+                    className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                    title="Sửa"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openModal("delete", question)}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Xóa"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
-                {question.options && question.options.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {question.options.map((option) => (
-                      <div
-                        key={option.optionId}
-                        className={`flex items-start gap-2 p-2 rounded ${
+              {question.options && question.options.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {question.options.map((option) => (
+                    <div
+                      key={option.optionId}
+                      className={`flex items-start gap-2 p-2 rounded ${
+                        option.isCorrect
+                          ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                          : "bg-gray-50 dark:bg-gray-700/50"
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                        {String.fromCharCode(65 + option.optionOrder - 1)}.
+                      </span>
+                      <span
+                        className={`text-sm flex-1 ${
                           option.isCorrect
-                            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                            : "bg-gray-50 dark:bg-gray-700/50"
+                            ? "text-green-900 dark:text-green-300 font-medium"
+                            : "text-gray-700 dark:text-gray-300"
                         }`}
                       >
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          {String.fromCharCode(65 + option.optionOrder - 1)}.
+                        {option.optionText}
+                      </span>
+                      {option.isCorrect && (
+                        <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+                          ✓ Đáp án đúng
                         </span>
-                        <span
-                          className={`text-sm flex-1 ${
-                            option.isCorrect
-                              ? "text-green-900 dark:text-green-300 font-medium"
-                              : "text-gray-700 dark:text-gray-300"
-                          }`}
-                        >
-                          {option.optionText}
-                        </span>
-                        {option.isCorrect && (
-                          <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
-                            ✓ Đáp án đúng
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-6">
-            <Pagination
-              totalItems={filteredQuestions.length}
-              itemsPerPage={itemsPerPage}
-              currentPage={currentPage}
-              onPageChange={setCurrentPage}
-            />
-          </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-6">
+          <Pagination
+            totalItems={filteredQuestions.length}
+            itemsPerPage={itemsPerPage}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      )}
+      {/* </div> */}
 
       {/* View Modal */}
       {modalType === "view" && selectedQuestion && (
@@ -1375,12 +1443,11 @@ const ManageQuestionBank = () => {
               </button>
               <button
                 onClick={handleConfirmImport}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                disabled={loading}
+                // className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg shadow-md transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
               >
-                {loading
-                  ? "Đang import..."
-                  : `Xác nhận Import ${importedQuestions.length} câu hỏi`}
+                {/* <Upload className="w-5 h-5" /> */}
+                Import ngay {importedQuestions.length} câu hỏi
               </button>
             </div>
           </div>
