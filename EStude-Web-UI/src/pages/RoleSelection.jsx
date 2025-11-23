@@ -10,8 +10,45 @@ export default function RoleSelection() {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const roles = [
-    { name: "Giáo viên", value: "teacher" },
-    { name: "Admin", value: "admin" },
+    {
+      name: "Học sinh",
+      value: "student",
+      color: "blue",
+      lightBg: "bg-white",
+      lightText: "text-blue-700",
+      lightBorder: "border-blue-200",
+      lightHover: "hover:bg-blue-50",
+      darkBg: "dark:bg-gray-800",
+      darkText: "dark:text-blue-400",
+      darkBorder: "dark:border-blue-700",
+      darkHover: "dark:hover:bg-blue-900",
+    },
+    {
+      name: "Giáo viên",
+      value: "teacher",
+      color: "green",
+      lightBg: "bg-white",
+      lightText: "text-green-700",
+      lightBorder: "border-green-200",
+      lightHover: "hover:bg-green-50",
+      darkBg: "dark:bg-gray-800",
+      darkText: "dark:text-green-400",
+      darkBorder: "dark:border-green-700",
+      darkHover: "dark:hover:bg-green-900",
+    },
+    {
+      name: "Admin",
+      value: "admin",
+      color: "red",
+      lightBg: "bg-white",
+      lightText: "text-red-700",
+      lightBorder: "border-red-200",
+      lightHover: "hover:bg-red-50",
+      darkBg: "dark:bg-gray-800",
+      darkText: "dark:text-red-400",
+      darkBorder: "dark:border-red-700",
+      darkHover: "dark:hover:bg-red-900",
+    },
   ];
 
   return (
@@ -31,23 +68,27 @@ export default function RoleSelection() {
       <img
         src={darkMode ? bannerDark : bannerLight}
         alt="EStude Banner"
-        className="w-[400px] sm:w-[500px] mb-8"
+        className="w-[260px] sm:w-[400px] lg:w-[500px] mb-6 sm:mb-8"
       />
-      <h1 className="text-4xl font-extrabold tracking-wide">Bạn là ai?</h1>
+      <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-wide text-center">
+        Bạn là ai?
+      </h1>
 
-      <p className="mt-2 text-lg opacity-90 mb-6">
+      <p className="mt-2 text-base sm:text-lg opacity-90 mb-6 text-center">
         Chọn vai trò để đăng nhập vào hệ thống
       </p>
 
-      <div className="grid gap-6 sm:grid-cols-2 max-w-lg w-full">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 w-full max-w-xs sm:max-w-4xl">
         {roles.map((role) => (
           <button
             key={role.value}
             onClick={() => navigate(`/login?role=${role.value}`)}
-            className="bg-white text-green-700 h-24 w-full rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all flex flex-col items-center justify-center gap-2 border border-green-200 hover:bg-green-50 dark:bg-gray-800 dark:text-green-400 dark:border-green-700 dark:hover:bg-green-900"
+            className={`${role.lightBg} ${role.lightText} h-20 sm:h-24 w-full rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all flex flex-col items-center justify-center gap-1 sm:gap-2 border ${role.lightBorder} ${role.lightHover} ${role.darkBg} ${role.darkText} ${role.darkBorder} ${role.darkHover}`}
           >
-            <span className="text-xl font-semibold">{role.name}</span>
-            <span className="text-sm text-gray-500 dark:text-gray-300">
+            <span className="text-lg sm:text-xl font-semibold">
+              {role.name}
+            </span>
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 px-2 text-center">
               Đăng nhập với tư cách {role.name.toLowerCase()}
             </span>
           </button>

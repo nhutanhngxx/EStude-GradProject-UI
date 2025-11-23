@@ -72,7 +72,10 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
       showToast("Đang tạo lộ trình học tập...", { type: "info" });
 
       // Bước 1: Lấy feedback mới nhất (câu hỏi làm sai)
+      console.log("📥 Fetching latest feedback...");
       const feedbackResponse = await aiService.getFeedbackLatest(token);
+      console.log("📊 Feedback response:", feedbackResponse);
+
       if (!feedbackResponse || !feedbackResponse.detailedAnalysis) {
         showToast("Không thể lấy thông tin câu hỏi sai!", { type: "error" });
         return;
@@ -80,36 +83,71 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
 
       // Bước 2: Lấy improvement mới nhất (đã có sẵn từ evaluation params)
       const improvementData = evaluation;
+      console.log("📈 Improvement data:", improvementData);
 
       // Bước 3: Chuẩn bị payload cho Layer 5
       const feedbackData = feedbackResponse.detailedAnalysis;
+      console.log("🔍 Feedback data:", feedbackData);
+      console.log(
+        "🔍 Feedback array:",
+        feedbackData.feedback ? feedbackData.feedback.length : "undefined"
+      );
 
       // Transform incorrect questions từ feedback
       const incorrectQuestions = feedbackData.feedback
-        .filter((item) => !item.is_correct)
-        .map((item) => ({
-          question_id: item.question_id,
-          topic: item.topic,
-          subtopic: item.subtopic,
-          difficulty:
-            item.difficulty_level === "Dễ"
-              ? "EASY"
-              : item.difficulty_level === "Trung bình"
-              ? "MEDIUM"
-              : "HARD",
-          question_text: item.question,
-          student_answer: item.student_answer,
-          correct_answer: item.correct_answer,
-          error_type: "CONCEPT_MISUNDERSTANDING", // Default value
-        }));
+        ? feedbackData.feedback
+            .filter((item) => !item.is_correct)
+            .map((item) => ({
+              question_id: item.question_id,
+              topic: item.topic || "Không xác định",
+              subtopic: item.subtopic || "Chung",
+              difficulty:
+                item.difficulty_level === "Dễ"
+                  ? "EASY"
+                  : item.difficulty_level === "Trung bình"
+                  ? "MEDIUM"
+                  : "HARD",
+              question_text: item.question || "",
+              student_answer: item.student_answer || "",
+              correct_answer: item.correct_answer || "",
+              error_type: "CONCEPT_MISUNDERSTANDING", // Default value
+            }))
+        : [];
+
+      console.log(
+        "❌ Incorrect questions count:",
+        incorrectQuestions.length,
+        incorrectQuestions
+      );
+
+      // Validation: Kiểm tra nếu không có câu sai
+      if (incorrectQuestions.length === 0) {
+        showToast(
+          "Không tìm thấy câu hỏi sai để tạo lộ trình. Hãy làm thêm bài đánh giá!",
+          { type: "warning" }
+        );
+        return;
+      }
 
       const payload = {
-        submission_id: feedbackData.submission_id,
+        submission_id: feedbackData.submission_id || evaluation.submission_id,
         student_id: user.userId,
-        subject: feedbackData.subject,
+        subject: feedbackData.subject || evaluation.subject,
         evaluation_data: {
-          topics: improvementData.topics || [],
-          overall_improvement: improvementData.overall_improvement || {},
+          topics: (improvementData.topics || []).map((topic) => ({
+            topic: topic.topic,
+            improvement: topic.improvement || 0,
+            status: topic.status || "Ổn định",
+            previous_accuracy: topic.previous_accuracy || 0.1, // Min 0.1 nếu 0
+            new_accuracy: topic.new_accuracy || 0.1, // Min 0.1 nếu 0
+          })),
+          overall_improvement: {
+            improvement: improvementData.overall_improvement?.improvement || 0,
+            previous_average:
+              improvementData.overall_improvement?.previous_average || 0.1,
+            new_average:
+              improvementData.overall_improvement?.new_average || 0.1,
+          },
         },
         incorrect_questions: incorrectQuestions,
         learning_style: "VISUAL", // TODO: Có thể lấy từ user profile
@@ -117,6 +155,8 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
       };
 
       console.log("📤 Generating Roadmap with payload:", payload);
+      console.log("📤 Full Payload JSON:");
+      console.log(JSON.stringify(payload, null, 2));
 
       // Bước 4: POST để tạo roadmap
       const generateResponse = await aiService.generateLearningRoadmap(
@@ -124,7 +164,15 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
         token
       );
 
+      console.log("📥 Generate Roadmap Response:", generateResponse);
+
       if (!generateResponse || !generateResponse.success) {
+        console.error(
+          "❌ Generate Roadmap failed:",
+          generateResponse
+            ? JSON.stringify(generateResponse, null, 2)
+            : "No response"
+        );
         showToast("Không thể tạo lộ trình học tập!", { type: "error" });
         return;
       }

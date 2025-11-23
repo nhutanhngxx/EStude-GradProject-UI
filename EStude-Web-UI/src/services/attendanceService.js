@@ -166,6 +166,56 @@ const attendanceService = {
       return null;
     }
   },
+
+  // API cho học sinh
+  getAttendanceByStudent: async (studentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}/api/students/${studentId}/attendance`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        console.error("Lấy lịch sử điểm danh thất bại:", response.status);
+        return [];
+      }
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy lịch sử điểm danh học sinh:", error);
+      return [];
+    }
+  },
+
+  getAttendanceSessionByClassSubjectForStudent: async (
+    classSubjectId,
+    studentId
+  ) => {
+    try {
+      const url = `${config.BASE_URL}/api/attendance/sessions/class-subject/${classSubjectId}?studentId=${studentId}`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Lấy danh sách session điểm danh thất bại:",
+          response.status
+        );
+        return [];
+      }
+
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách session điểm danh:", error);
+      return [];
+    }
+  },
 };
 
 export default attendanceService;

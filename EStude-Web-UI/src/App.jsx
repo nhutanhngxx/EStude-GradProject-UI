@@ -31,10 +31,25 @@ import TeacherMyClasses from "./pages/teacher/MyClasses";
 import TeacherHomeroomClass from "./pages/teacher/HomeroomClass";
 
 import StudentLayout from "./layouts/StudentLayout";
-import StudentDashboard from "./pages/student/Dashboard";
-import StudentManageClasses from "./pages/student/ManageClasses";
-import StudentReports from "./pages/student/Reports";
+import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentSubjects from "./pages/student/StudentSubjects";
+import StudentSubjectDetail from "./pages/student/StudentSubjectDetail";
+import StudentAssignments from "./pages/student/StudentAssignments";
+import StudentAssignmentDetail from "./pages/student/StudentAssignmentDetail";
+import StudentAssignmentQuiz from "./pages/student/StudentAssignmentQuiz";
+import StudentAssignmentResult from "./pages/student/StudentAssignmentResult";
 import StudentNotifications from "./pages/student/Notifications";
+import StudentAssessment from "./pages/student/StudentAssessment";
+import StudentAssessmentTopics from "./pages/student/StudentAssessmentTopics";
+import StudentAssessmentQuiz from "./pages/student/StudentAssessmentQuiz";
+import StudentAssessmentResult from "./pages/student/StudentAssessmentResult";
+import StudentAssessmentImprovement from "./pages/student/StudentAssessmentImprovement";
+import StudentSchedule from "./pages/student/StudentSchedule";
+import StudentCompetencyMap from "./pages/student/StudentCompetencyMap";
+import StudentLearningRoadmap from "./pages/student/StudentLearningRoadmap";
+import StudentStatistics from "./pages/student/StudentStatistics";
+import DetailStudy from "./pages/student/DetailStudy";
+import SubjectCompetencyDetail from "./pages/student/SubjectCompetencyDetail";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -91,15 +106,56 @@ function App() {
         </Route>
 
         {/* Student */}
-        {/* <Route element={<ProtectedRoute allowedRoles={["STUDENT"]} />}>
+        <Route element={<ProtectedRoute allowedRoles={["STUDENT"]} />}>
           <Route path="/student" element={<StudentLayout />}>
             <Route index element={<StudentDashboard />} />
             <Route path="dashboard" element={<StudentDashboard />} />
-            <Route path="classes" element={<StudentManageClasses />} />
-            <Route path="statistics-reports" element={<StudentReports />} />
+            <Route path="subjects" element={<StudentSubjects />} />
+            <Route
+              path="subjects/:classSubjectId"
+              element={<StudentSubjectDetail />}
+            />
+            <Route
+              path="assignments/:id"
+              element={<StudentAssignmentDetail />}
+            />
+            <Route
+              path="assignment/:id/quiz"
+              element={<StudentAssignmentQuiz />}
+            />
+            <Route
+              path="assignment/:id/result/:submissionId"
+              element={<StudentAssignmentResult />}
+            />
+            <Route path="assessment" element={<StudentAssessment />} />
+            <Route
+              path="assessment/topics"
+              element={<StudentAssessmentTopics />}
+            />
+            <Route path="assessment/quiz" element={<StudentAssessmentQuiz />} />
+            <Route
+              path="assessment/result/:submissionId"
+              element={<StudentAssessmentResult />}
+            />
+            <Route
+              path="assessment/improvement"
+              element={<StudentAssessmentImprovement />}
+            />
+            <Route path="schedule" element={<StudentSchedule />} />
+            <Route path="competency-map" element={<StudentCompetencyMap />} />
+            <Route
+              path="competency-map/detail"
+              element={<SubjectCompetencyDetail />}
+            />
+            <Route
+              path="learning-roadmap"
+              element={<StudentLearningRoadmap />}
+            />
+            <Route path="statistics" element={<StudentStatistics />} />
+            <Route path="detail-study" element={<DetailStudy />} />
             <Route path="notifications" element={<StudentNotifications />} />
           </Route>
-        </Route> */}
+        </Route>
       </Routes>
     </BrowserRouter>
   );

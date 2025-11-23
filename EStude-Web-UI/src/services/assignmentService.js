@@ -98,6 +98,28 @@ const assignmentService = {
       return null;
     }
   },
+
+  // API cho học sinh
+  getStudentAssignments: async (studentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}/api/students/${studentId}/assignments`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        console.error("Lấy danh sách bài tập thất bại:", response.status);
+        return [];
+      }
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách bài tập học sinh:", error);
+      return [];
+    }
+  },
 };
 
 export default assignmentService;

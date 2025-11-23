@@ -142,6 +142,49 @@ const classSubjectService = {
       throw error;
     }
   },
+
+  // API cho học sinh
+  getClassSubjectsByStudent: async (studentId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}/api/students/${studentId}/subjects`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        console.error("Lấy danh sách môn học thất bại:", response.status);
+        return [];
+      }
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách môn học học sinh:", error);
+      return [];
+    }
+  },
+
+  getClassSubjectsByStudentWithDetails: async ({ studentId }) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}/api/students/${studentId}/subjects`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        console.error("Lấy danh sách môn học thất bại:", response.status);
+        return [];
+      }
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách môn học học sinh:", error);
+      return [];
+    }
+  },
 };
 
 export default classSubjectService;

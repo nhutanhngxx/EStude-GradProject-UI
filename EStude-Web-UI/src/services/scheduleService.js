@@ -164,6 +164,34 @@ const scheduleService = {
       return null;
     }
   },
+
+  // API cho học sinh
+  getSchedulesByStudent: async (studentId, startDate, endDate) => {
+    try {
+      let url = `${config.BASE_URL}/api/students/${studentId}/schedules`;
+      if (startDate && endDate) {
+        url += `?startDate=${startDate.toISOString().split("T")[0]}&endDate=${
+          endDate.toISOString().split("T")[0]
+        }`;
+      }
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) {
+        console.warn(
+          "Không thể lấy lịch học (có thể chưa có dữ liệu):",
+          response.status
+        );
+        return [];
+      }
+      const result = await response.json();
+      return Array.isArray(result) ? result : [];
+    } catch (error) {
+      console.error("Lỗi khi lấy lịch học của học sinh:", error);
+      return [];
+    }
+  },
 };
 
 export default scheduleService;

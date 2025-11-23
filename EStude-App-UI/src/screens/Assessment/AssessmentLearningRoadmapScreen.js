@@ -18,21 +18,20 @@ import aiService from "../../services/aiService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const themeColors = {
-  primary: "#4CAF50",       // Xanh lá chủ đạo
-  secondary: "#43A047",     // Xanh lá đậm hơn để phối
-  accent: "#B2FF59",        // Xanh neon accent nổi bật
+  primary: "#4CAF50", // Xanh lá chủ đạo
+  secondary: "#43A047", // Xanh lá đậm hơn để phối
+  accent: "#B2FF59", // Xanh neon accent nổi bật
 
-  success: "#4CAF50",       // Thành công = màu chủ đạo
-  warning: "#FFB300",       // Vàng cảnh báo
-  error: "#E53935",         // Đỏ cảnh báo
+  success: "#4CAF50", // Thành công = màu chủ đạo
+  warning: "#FFB300", // Vàng cảnh báo
+  error: "#E53935", // Đỏ cảnh báo
 
-  background: "#FFFFFF",    // Nền trắng
-  card: "#F4FFF5",          // Trắng pha xanh rất nhẹ, tạo chiều sâu
+  background: "#FFFFFF", // Nền trắng
+  card: "#F4FFF5", // Trắng pha xanh rất nhẹ, tạo chiều sâu
 
-  text: "#1B5E20",          // Xanh lá đậm (dễ đọc)
-  textLight: "#4C8C4A",     // Xanh lá nhạt hơn cho subtitle
+  text: "#1B5E20", // Xanh lá đậm (dễ đọc)
+  textLight: "#4C8C4A", // Xanh lá nhạt hơn cho subtitle
 };
-
 
 const { width } = Dimensions.get("window");
 
@@ -74,6 +73,21 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [questionModalVisible, setQuestionModalVisible] = useState(false);
 
+  // Modal state for task details
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [taskModalVisible, setTaskModalVisible] = useState(false);
+
+  // Modal state for practice quiz
+  const [quizModalVisible, setQuizModalVisible] = useState(false);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [quizStartTime, setQuizStartTime] = useState(null);
+  const [quizSubmitting, setQuizSubmitting] = useState(false);
+
+  // Modal state for quiz result
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [quizResult, setQuizResult] = useState(null);
+
   useEffect(() => {
     navigation.setOptions({
       title: "Lộ trình Học Tập",
@@ -112,33 +126,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       setLoading(true);
 
       // Gọi API getRoadmapLatest để lấy full data
-      // Response: { resultId, detailedAnalysis: { subject, phases, ... } }
+      // Response: { resultId, detailedAnalysis: { subject, phases, roadmap_id, ... } }
       const response = await aiService.getRoadmapLatest(token);
 
       if (response && response.detailedAnalysis) {
         console.log("✅ Fetched roadmap data:", response);
 
-        // Map response structure sang roadmap format
+        // Use detailedAnalysis directly as it already has correct structure
         const roadmapData = {
-          roadmap_id: `roadmap_${response.resultId}`,
-          result_id: response.resultId,
-          student_id: null, // Backend không trả về
-          subject: response.detailedAnalysis.subject,
-          created_at: new Date().toISOString(),
-          estimated_completion_days:
-            response.detailedAnalysis.estimated_completion_days || 7,
-          overall_goal:
-            response.detailedAnalysis.overall_goal ||
-            "Cải thiện kết quả học tập",
-          phases: response.detailedAnalysis.phases || [],
-          motivational_tips: response.detailedAnalysis.motivational_tips || [],
-          progress_tracking: response.detailedAnalysis.progress_tracking || {
-            completion_percentage: 0,
-            phases_completed: 0,
-            total_phases: response.detailedAnalysis.phases?.length || 0,
-            tasks_completed: 0,
-            total_tasks: 0,
-          },
+          ...response.detailedAnalysis,
+          resultId: response.resultId, // Add resultId for API calls
         };
 
         setRoadmap(roadmapData);
@@ -211,8 +208,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   };
 
   const markTaskCompleted = async (taskId, completionData = {}) => {
+    // Get resultId from params or roadmap object
+    const effectiveResultId =
+      resultId || roadmap?.resultId || roadmap?.result_id;
+
     // Nếu không có resultId, chỉ update local state
-    if (!resultId) {
+    if (!effectiveResultId) {
       if (completedTasks.includes(taskId)) {
         setCompletedTasks(completedTasks.filter((id) => id !== taskId));
         showToast("Đã bỏ đánh dấu hoàn thành", { type: "info" });
@@ -244,12 +245,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       // Gọi API update (nếu có)
       try {
         const response = await aiService.markTaskComplete(
-          resultId,
+          effectiveResultId,
           taskId,
           {
-            actual_time_spent_minutes: completionData.time_spent || 0,
-            score: completionData.score,
-            accuracy: completionData.accuracy,
+            actualTimeSpent: completionData.time_spent || 30,
+            score: completionData.score || 10,
+            accuracy: completionData.accuracy || 1.0,
           },
           token
         );
@@ -350,20 +351,82 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   };
 
   const handleStartPractice = (task) => {
-    Alert.alert(
-      "Bắt đầu luyện tập",
-      `${task.title}\n\nSố câu: ${task.num_questions}\nĐộ khó: ${task.difficulty}\n\nBạn có sẵn sàng không?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Bắt đầu",
-          onPress: () => {
-            // TODO: Navigate to practice screen
-            showToast("Tính năng đang phát triển", { type: "info" });
-          },
-        },
-      ]
-    );
+    // Check if has practice_set
+    if (task.practice_set && task.practice_set.length > 0) {
+      // Start practice quiz
+      setSelectedTask(task);
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setQuizStartTime(Date.now());
+      setQuizModalVisible(true);
+    } else {
+      // Show task detail modal if no practice set
+      setSelectedTask(task);
+      setTaskModalVisible(true);
+    }
+  };
+
+  const handleViewLearningContent = (task) => {
+    setSelectedTask(task);
+    setTaskModalVisible(true);
+  };
+
+  const handleSubmitQuiz = async () => {
+    if (!selectedTask || !selectedTask.practice_set) return;
+
+    setQuizSubmitting(true);
+
+    try {
+      // Calculate results
+      const totalQuestions = selectedTask.practice_set.length;
+      let correctCount = 0;
+
+      selectedTask.practice_set.forEach((question, index) => {
+        const userAnswer = userAnswers[index];
+        // Normalize answers: remove dot and trim ("A." -> "A", "C" -> "C")
+        const normalizedUserAnswer = userAnswer?.replace(".", "").trim();
+        const normalizedCorrectAnswer = question.correct_answer
+          ?.replace(".", "")
+          .trim();
+
+        console.log(`Question ${index + 1}:`, {
+          userAnswer,
+          normalizedUserAnswer,
+          correctAnswer: question.correct_answer,
+          normalizedCorrectAnswer,
+          isCorrect: normalizedUserAnswer === normalizedCorrectAnswer,
+        });
+
+        if (normalizedUserAnswer === normalizedCorrectAnswer) {
+          correctCount++;
+        }
+      });
+
+      const accuracy = correctCount / totalQuestions;
+      const score = Math.round(accuracy * 10); // Score out of 10
+      const timeSpentMinutes = Math.round((Date.now() - quizStartTime) / 60000);
+
+      // Close quiz modal and show result modal
+      setQuizModalVisible(false);
+
+      // Store result data
+      setQuizResult({
+        score,
+        accuracy,
+        timeSpentMinutes,
+        correctCount,
+        totalQuestions,
+        passed: score >= 5,
+      });
+
+      // Show result modal
+      setResultModalVisible(true);
+    } catch (error) {
+      console.error("Error submitting quiz:", error);
+      showToast("Lỗi khi nộp bài", { type: "error" });
+    } finally {
+      setQuizSubmitting(false);
+    }
   };
 
   const handleViewIncorrectQuestion = (question) => {
@@ -436,7 +499,20 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
     }
 
     const tasksCompleted = completedTasks.length;
-    const progress = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
+
+    // Use progress from progress_tracking if available, otherwise calculate
+    let progress = 0;
+    if (roadmap.progress_tracking) {
+      progress =
+        roadmap.progress_tracking.completion_percent ||
+        roadmap.progress_tracking.completion_percentage ||
+        0;
+    }
+
+    // Fallback to calculated progress if not provided
+    if (progress === 0 && totalTasks > 0) {
+      progress = (tasksCompleted / totalTasks) * 100;
+    }
 
     console.log("📊 Progress calculation:", {
       completedTasks: completedTasks,
@@ -560,7 +636,7 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                             color={themeColors.primary}
                           />
                           <Text style={styles.subtopicName}>
-                            {subtopic.subtopic}
+                            {subtopic.name || subtopic.subtopic}
                           </Text>
                         </View>
 
@@ -602,10 +678,15 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                 Tài liệu học tập:
                               </Text>
                               <View style={styles.aiNoteBox}>
-                                <Ionicons name="information-circle-outline" size={18} color="#1565c0" />
+                                <Ionicons
+                                  name="information-circle-outline"
+                                  size={18}
+                                  color="#1565c0"
+                                />
                                 <Text style={styles.aiNoteText}>
-                                  Lộ trình được thiết kế bởi AI, nên có thể một số đường dẫn tài liệu
-                                  bị sai. Học sinh có thể tự tìm tài liệu theo tên hiển thị.
+                                  Lộ trình được thiết kế bởi AI, nên có thể một
+                                  số đường dẫn tài liệu bị sai. Học sinh có thể
+                                  tự tìm tài liệu theo tên hiển thị.
                                 </Text>
                               </View>
                               {subtopic.learning_resources.map(
@@ -620,8 +701,8 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                         resource.type === "VIDEO"
                                           ? "play-circle"
                                           : resource.type === "ARTICLE"
-                                            ? "document-text"
-                                            : "game-controller"
+                                          ? "document-text"
+                                          : "game-controller"
                                       }
                                       size={20}
                                       color={themeColors.primary}
@@ -631,8 +712,11 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                         {resource.title}
                                       </Text>
                                       <Text style={styles.resourceMeta}>
-                                        {resource.type}
-                                        {/* •{" "}{resource.duration_minutes} phút */}
+                                        {resource.type} •{" "}
+                                        {resource.estimated_time_minutes ||
+                                          resource.duration_minutes ||
+                                          0}{" "}
+                                        phút
                                       </Text>
                                     </View>
                                     <Ionicons
@@ -739,6 +823,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                   duration_minutes: task.duration_minutes,
                                   url: task.resource_url,
                                 });
+                              } else if (task.type === "LEARN") {
+                                // Show learning content modal or navigate
+                                handleViewLearningContent(task);
                               } else {
                                 markTaskCompleted(task.task_id);
                               }
@@ -786,16 +873,18 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                     task.type === "WATCH_VIDEO"
                                       ? "play"
                                       : task.type === "PRACTICE"
-                                        ? "pencil"
-                                        : task.type === "ASSESSMENT"
-                                          ? "clipboard"
-                                          : "book"
+                                      ? "pencil"
+                                      : task.type === "ASSESSMENT"
+                                      ? "clipboard"
+                                      : task.type === "LEARN"
+                                      ? "bulb"
+                                      : "book"
                                   }
                                   size={12}
                                   color={themeColors.textLight}
                                 />
                                 <Text style={styles.taskMetaText}>
-                                  {task.duration_minutes} phút
+                                  {task.duration_minutes || 0} phút
                                 </Text>
                                 {task.score && (
                                   <Text style={styles.taskScore}>
@@ -940,11 +1029,13 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       item.overall_goal ||
       "Mục tiêu học tập";
 
-    // Tính progress
+    // Tính progress (support both old and new structure)
     let progress = 0;
     if (item.detailedAnalysis?.progress_tracking) {
       progress =
-        item.detailedAnalysis.progress_tracking.completion_percentage || 0;
+        item.detailedAnalysis.progress_tracking.completion_percent ||
+        item.detailedAnalysis.progress_tracking.completion_percentage ||
+        0;
     }
 
     return (
@@ -1053,6 +1144,728 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   };
 
   /**
+   * Render Practice Quiz Modal
+   */
+  const renderPracticeQuizModal = () => {
+    if (
+      !selectedTask ||
+      !selectedTask.practice_set ||
+      selectedTask.practice_set.length === 0
+    ) {
+      return null;
+    }
+
+    const currentQuestion = selectedTask.practice_set[currentQuestionIndex];
+    const totalQuestions = selectedTask.practice_set.length;
+    const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+    const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+    const canProceed = userAnswers[currentQuestionIndex] !== undefined;
+
+    return (
+      <Modal
+        visible={quizModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          Alert.alert(
+            "Thoát bài tập?",
+            "Bạn có chắc muốn thoát? Tiến trình sẽ không được lưu.",
+            [
+              { text: "Ở lại", style: "cancel" },
+              {
+                text: "Thoát",
+                style: "destructive",
+                onPress: () => {
+                  setQuizModalVisible(false);
+                  setUserAnswers({});
+                },
+              },
+            ]
+          );
+        }}
+      >
+        <View style={styles.quizContainer}>
+          {/* Header */}
+          <View style={styles.quizHeader}>
+            <View style={styles.quizHeaderTop}>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "Thoát bài tập?",
+                    "Bạn có chắc muốn thoát? Tiến trình sẽ không được lưu.",
+                    [
+                      { text: "Ở lại", style: "cancel" },
+                      {
+                        text: "Thoát",
+                        style: "destructive",
+                        onPress: () => {
+                          setQuizModalVisible(false);
+                          setUserAnswers({});
+                        },
+                      },
+                    ]
+                  );
+                }}
+                style={styles.quizCloseButton}
+              >
+                <Ionicons name="close" size={28} color={themeColors.text} />
+              </TouchableOpacity>
+              <Text style={styles.quizTitle}>{selectedTask.title}</Text>
+              <View style={{ width: 28 }} />
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.quizProgressContainer}>
+              <Text style={styles.quizProgressText}>
+                Câu {currentQuestionIndex + 1}/{totalQuestions}
+              </Text>
+              <View style={styles.quizProgressBar}>
+                <View
+                  style={[styles.quizProgressFill, { width: `${progress}%` }]}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Question Content */}
+          <ScrollView
+            style={styles.quizContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.questionCard}>
+              <View style={styles.questionHeader}>
+                <View style={styles.questionNumberBadge}>
+                  <Text style={styles.questionNumberText}>
+                    {currentQuestionIndex + 1}
+                  </Text>
+                </View>
+                <Text style={styles.questionHeaderText}>Câu hỏi</Text>
+              </View>
+              <Text style={styles.questionTextLarge}>
+                {currentQuestion.question_text}
+              </Text>
+            </View>
+
+            {/* Choices */}
+            <View style={styles.choicesContainer}>
+              <Text style={styles.choicesLabel}>Chọn đáp án:</Text>
+              {currentQuestion.choices &&
+                currentQuestion.choices.map((choice, index) => {
+                  const choiceLetter = choice.substring(0, 2); // "A.", "B.", etc.
+                  const choiceText = choice.substring(3); // Text after "A. "
+                  const letterOnly = choiceLetter.replace(".", "").trim(); // "A", "B", etc.
+                  const isSelected =
+                    userAnswers[currentQuestionIndex] === letterOnly;
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.choiceButton,
+                        isSelected && styles.choiceButtonSelected,
+                      ]}
+                      onPress={() => {
+                        // Store only the letter without dot ("A." -> "A")
+                        setUserAnswers({
+                          ...userAnswers,
+                          [currentQuestionIndex]: letterOnly,
+                        });
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.choiceRadio,
+                          isSelected && styles.choiceRadioSelected,
+                        ]}
+                      >
+                        {isSelected && <View style={styles.choiceRadioInner} />}
+                      </View>
+                      <View style={styles.choiceContent}>
+                        <Text
+                          style={[
+                            styles.choiceLetter,
+                            isSelected && styles.choiceLetterSelected,
+                          ]}
+                        >
+                          {choiceLetter}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.choiceText,
+                            isSelected && styles.choiceTextSelected,
+                          ]}
+                        >
+                          {choiceText}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+
+            <View style={styles.modalBottomSpacer} />
+          </ScrollView>
+
+          {/* Footer Navigation */}
+          <View style={styles.quizFooter}>
+            <TouchableOpacity
+              style={[
+                styles.quizNavButton,
+                currentQuestionIndex === 0 && styles.quizNavButtonDisabled,
+              ]}
+              disabled={currentQuestionIndex === 0}
+              onPress={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={
+                  currentQuestionIndex === 0 ? "#ccc" : themeColors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.quizNavButtonText,
+                  currentQuestionIndex === 0 &&
+                    styles.quizNavButtonTextDisabled,
+                ]}
+              >
+                Câu trước
+              </Text>
+            </TouchableOpacity>
+
+            {isLastQuestion ? (
+              <TouchableOpacity
+                style={[
+                  styles.quizSubmitButton,
+                  (!canProceed || quizSubmitting) &&
+                    styles.quizSubmitButtonDisabled,
+                ]}
+                disabled={!canProceed || quizSubmitting}
+                onPress={handleSubmitQuiz}
+              >
+                {quizSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                    <Text style={styles.quizSubmitButtonText}>Nộp bài</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.quizNavButton,
+                  !canProceed && styles.quizNavButtonDisabled,
+                ]}
+                disabled={!canProceed}
+                onPress={() =>
+                  setCurrentQuestionIndex(currentQuestionIndex + 1)
+                }
+              >
+                <Text
+                  style={[
+                    styles.quizNavButtonText,
+                    !canProceed && styles.quizNavButtonTextDisabled,
+                  ]}
+                >
+                  Câu tiếp
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={!canProceed ? "#ccc" : themeColors.primary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  /**
+   * Render Quiz Result Modal
+   */
+  const renderQuizResultModal = () => {
+    if (!quizResult) return null;
+
+    const isPassed = quizResult.passed;
+    const percentage = (quizResult.accuracy * 100).toFixed(0);
+
+    return (
+      <Modal
+        visible={resultModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setResultModalVisible(false)}
+      >
+        <View style={styles.resultModalOverlay}>
+          <View style={styles.resultModalContainer}>
+            {/* Icon and Status */}
+            {/* <View
+              style={[
+                styles.resultIconContainer,
+                isPassed ? styles.resultIconSuccess : styles.resultIconFail,
+              ]}
+            >
+              <Ionicons
+                name={isPassed ? "checkmark-circle" : "close-circle"}
+                size={80}
+                color="#fff"
+              />
+            </View> */}
+
+            <Text style={styles.resultTitle}>
+              {isPassed ? "🎉 Xuất sắc!" : " Chưa đạt yêu cầu"}
+            </Text>
+
+            <Text style={styles.resultSubtitle}>
+              {isPassed
+                ? "Chúc mừng! Bạn đã hoàn thành bài luyện tập"
+                : "Hãy ôn lại lý thuyết và thử lại nhé! 💪"}
+            </Text>
+
+            {/* Score Display */}
+            <View style={styles.resultScoreCard}>
+              <View style={styles.resultScoreMain}>
+                <Text style={styles.resultScoreLabel}>Điểm số</Text>
+                <Text
+                  style={[
+                    styles.resultScoreValue,
+                    isPassed
+                      ? styles.resultScoreSuccess
+                      : styles.resultScoreFail,
+                  ]}
+                >
+                  {quizResult.score}/10
+                </Text>
+              </View>
+
+              <View style={styles.resultDivider} />
+
+              <View style={styles.resultStatsGrid}>
+                <View style={styles.resultStatItem}>
+                  <Ionicons
+                    name="checkmark-done"
+                    size={20}
+                    color={themeColors.success}
+                  />
+                  <Text style={styles.resultStatLabel}>Câu đúng</Text>
+                  <Text style={styles.resultStatValue}>
+                    {quizResult.correctCount}/{quizResult.totalQuestions}
+                  </Text>
+                </View>
+
+                <View style={styles.resultStatItem}>
+                  <Ionicons
+                    name="stats-chart"
+                    size={20}
+                    color={themeColors.primary}
+                  />
+                  <Text style={styles.resultStatLabel}>Độ chính xác</Text>
+                  <Text style={styles.resultStatValue}>{percentage}%</Text>
+                </View>
+
+                <View style={styles.resultStatItem}>
+                  <Ionicons name="time" size={20} color={themeColors.warning} />
+                  <Text style={styles.resultStatLabel}>Thời gian</Text>
+                  <Text style={styles.resultStatValue}>
+                    {quizResult.timeSpentMinutes} phút
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            {!isPassed ? (
+              <View style={styles.resultButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.resultButtonSecondary}
+                  onPress={() => {
+                    setResultModalVisible(false);
+                    handleViewLearningContent(selectedTask);
+                  }}
+                >
+                  <Ionicons name="book" size={20} color={themeColors.primary} />
+                  <Text style={styles.resultButtonSecondaryText}>
+                    Ôn lại lý thuyết
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.resultButtonPrimary}
+                  onPress={() => {
+                    setResultModalVisible(false);
+                    // Reset and restart quiz
+                    setCurrentQuestionIndex(0);
+                    setUserAnswers({});
+                    setQuizStartTime(Date.now());
+                    setQuizModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="refresh" size={20} color="#fff" />
+                  <Text style={styles.resultButtonPrimaryText}>Làm lại</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.resultButtonSuccess}
+                onPress={async () => {
+                  setResultModalVisible(false);
+
+                  // Mark task as completed
+                  await markTaskCompleted(selectedTask.task_id, {
+                    time_spent: quizResult.timeSpentMinutes,
+                    score: quizResult.score,
+                    accuracy: quizResult.accuracy,
+                  });
+
+                  // Close task detail modal
+                  setTaskModalVisible(false);
+
+                  showToast(
+                    `Hoàn thành bài tập! Điểm: ${quizResult.score}/10`,
+                    "success"
+                  );
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Text style={styles.resultButtonSuccessText}>Hoàn thành</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  /**
+   * Render Task Detail Modal
+   */
+  const renderTaskDetailModal = () => {
+    if (!selectedTask) return null;
+
+    const isLearning = selectedTask.type === "LEARN";
+    const isPractice =
+      selectedTask.type === "PRACTICE" || selectedTask.type === "ASSESSMENT";
+
+    return (
+      <Modal
+        visible={taskModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setTaskModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setTaskModalVisible(false)}
+                style={styles.modalCloseButtonAbsolute}
+              >
+                <Ionicons name="close" size={24} color={themeColors.text} />
+              </TouchableOpacity>
+              <View style={styles.modalHeaderLeft}>
+                <Ionicons
+                  name={isLearning ? "bulb" : isPractice ? "pencil" : "book"}
+                  size={28}
+                  color={themeColors.primary}
+                />
+                <Text style={styles.modalTitle} numberOfLines={3}>
+                  {selectedTask.title}
+                </Text>
+              </View>
+            </View>
+
+            {/* Content */}
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Learning Summary */}
+              {selectedTask.learning_summary && (
+                <View style={styles.taskModalSection}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons
+                      name="information-circle"
+                      size={20}
+                      color={themeColors.primary}
+                    />
+                    <Text style={styles.sectionLabel}>Tổng quan</Text>
+                  </View>
+                  <Text style={styles.taskModalText}>
+                    {selectedTask.learning_summary}
+                  </Text>
+                </View>
+              )}
+
+              {/* Theory Explanation */}
+              {selectedTask.theory_explanation && (
+                <View style={styles.taskModalSection}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons
+                      name="book"
+                      size={20}
+                      color={themeColors.primary}
+                    />
+                    <Text style={styles.sectionLabel}>Lý thuyết</Text>
+                  </View>
+                  <View style={styles.theoryBox}>
+                    <Text style={styles.theoryText}>
+                      {selectedTask.theory_explanation}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Key Points */}
+              {selectedTask.key_points &&
+                selectedTask.key_points.length > 0 && (
+                  <View style={styles.taskModalSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons
+                        name="key"
+                        size={20}
+                        color={themeColors.success}
+                      />
+                      <Text style={styles.sectionLabel}>
+                        Điểm chính cần nhớ
+                      </Text>
+                    </View>
+                    {selectedTask.key_points.map((point, index) => (
+                      <View key={index} style={styles.keyPointItem}>
+                        <View style={styles.keyPointBullet}>
+                          <Text style={styles.keyPointNumber}>{index + 1}</Text>
+                        </View>
+                        <Text style={styles.keyPointText}>{point}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+              {/* Example */}
+              {selectedTask.example && (
+                <View style={styles.taskModalSection}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons
+                      name="bulb-outline"
+                      size={20}
+                      color={themeColors.warning}
+                    />
+                    <Text style={styles.sectionLabel}>Ví dụ minh họa</Text>
+                  </View>
+                  <View style={styles.exampleBox}>
+                    <Text style={styles.exampleLabel}>Câu hỏi:</Text>
+                    <Text style={styles.exampleQuestion}>
+                      {selectedTask.example.question}
+                    </Text>
+                    <Text style={[styles.exampleLabel, { marginTop: 12 }]}>
+                      Giải:
+                    </Text>
+                    <Text style={styles.exampleSolution}>
+                      {selectedTask.example.solution}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Tips */}
+              {selectedTask.tips && selectedTask.tips.length > 0 && (
+                <View style={styles.taskModalSection}>
+                  <View style={styles.sectionHeaderRow}>
+                    <Ionicons
+                      name="sparkles"
+                      size={20}
+                      color={themeColors.accent}
+                    />
+                    <Text style={styles.sectionLabel}>Mẹo học tập</Text>
+                  </View>
+                  {selectedTask.tips.map((tip, index) => (
+                    <View key={index} style={styles.tipItem}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color={themeColors.accent}
+                      />
+                      <Text style={styles.tipItemText}>{tip}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Practice Set Preview */}
+              {selectedTask.practice_set &&
+                selectedTask.practice_set.length > 0 && (
+                  <View style={styles.taskModalSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons
+                        name="clipboard"
+                        size={20}
+                        color={themeColors.primary}
+                      />
+                      <Text style={styles.sectionLabel}>Bài tập luyện tập</Text>
+                    </View>
+                    <View style={styles.practiceInfoBox}>
+                      <View style={styles.practiceInfoRow}>
+                        <Ionicons
+                          name="document-text"
+                          size={18}
+                          color={themeColors.primary}
+                        />
+                        <Text style={styles.practiceInfoText}>
+                          Số câu hỏi: {selectedTask.practice_set.length}
+                        </Text>
+                      </View>
+                      <View style={styles.practiceInfoRow}>
+                        <Ionicons
+                          name="time"
+                          size={18}
+                          color={themeColors.primary}
+                        />
+                        <Text style={styles.practiceInfoText}>
+                          Thời gian: {selectedTask.duration_minutes || 0} phút
+                        </Text>
+                      </View>
+                      {selectedTask.expected_accuracy && (
+                        <View style={styles.practiceInfoRow}>
+                          <Ionicons
+                            name="trophy"
+                            size={18}
+                            color={themeColors.warning}
+                          />
+                          <Text style={styles.practiceInfoText}>
+                            Độ chính xác mong đợi:{" "}
+                            {(selectedTask.expected_accuracy * 100).toFixed(0)}%
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+              {/* Recommended Resources */}
+              {selectedTask.recommended_resources &&
+                selectedTask.recommended_resources.length > 0 && (
+                  <View style={styles.taskModalSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Ionicons
+                        name="library"
+                        size={20}
+                        color={themeColors.primary}
+                      />
+                      <Text style={styles.sectionLabel}>
+                        Tài liệu tham khảo
+                      </Text>
+                    </View>
+                    {selectedTask.recommended_resources.map(
+                      (resource, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={styles.resourceItemModal}
+                          onPress={() => {
+                            setTaskModalVisible(false);
+                            handleOpenResource(resource);
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              resource.type === "VIDEO"
+                                ? "play-circle"
+                                : "document-text"
+                            }
+                            size={24}
+                            color={themeColors.primary}
+                          />
+                          <View style={styles.resourceInfoModal}>
+                            <Text style={styles.resourceTitleModal}>
+                              {resource.title}
+                            </Text>
+                            <Text style={styles.resourceMetaModal}>
+                              {resource.type} •{" "}
+                              {resource.estimated_time_minutes ||
+                                resource.duration_minutes ||
+                                0}{" "}
+                              phút
+                            </Text>
+                          </View>
+                          <Ionicons
+                            name="chevron-forward"
+                            size={20}
+                            color={themeColors.textLight}
+                          />
+                        </TouchableOpacity>
+                      )
+                    )}
+                  </View>
+                )}
+
+              <View style={styles.modalBottomSpacer} />
+            </ScrollView>
+
+            {/* Footer Actions */}
+            <View style={styles.modalFooter}>
+              {isLearning ? (
+                <TouchableOpacity
+                  style={styles.completeTaskButton}
+                  onPress={() => {
+                    markTaskCompleted(selectedTask.task_id);
+                    setTaskModalVisible(false);
+                  }}
+                >
+                  <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                  <Text style={styles.completeTaskButtonText}>
+                    Đã học xong ✓
+                  </Text>
+                </TouchableOpacity>
+              ) : isPractice ? (
+                <TouchableOpacity
+                  style={styles.startPracticeButton}
+                  onPress={() => {
+                    setTaskModalVisible(false);
+                    // Open quiz modal
+                    if (
+                      selectedTask.practice_set &&
+                      selectedTask.practice_set.length > 0
+                    ) {
+                      setCurrentQuestionIndex(0);
+                      setUserAnswers({});
+                      setQuizStartTime(Date.now());
+                      setQuizModalVisible(true);
+                    } else {
+                      showToast("Bài tập chưa có câu hỏi", { type: "info" });
+                    }
+                  }}
+                >
+                  <Ionicons name="play" size={24} color="#fff" />
+                  <Text style={styles.startPracticeButtonText}>
+                    Bắt đầu luyện tập
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.completeTaskButton}
+                  onPress={() => {
+                    markTaskCompleted(selectedTask.task_id);
+                    setTaskModalVisible(false);
+                  }}
+                >
+                  <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                  <Text style={styles.completeTaskButtonText}>
+                    Đánh dấu hoàn thành
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  /**
    * Render Incorrect Question Detail Modal
    */
   const renderQuestionDetailModal = () => {
@@ -1069,6 +1882,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
           <View style={styles.modalContainer}>
             {/* Header */}
             <View style={styles.modalHeader}>
+              <TouchableOpacity
+                onPress={() => setQuestionModalVisible(false)}
+                style={styles.modalCloseButtonAbsolute}
+              >
+                <Ionicons name="close" size={24} color={themeColors.text} />
+              </TouchableOpacity>
               <View style={styles.modalHeaderLeft}>
                 <Ionicons
                   name="alert-circle"
@@ -1077,12 +1896,6 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 />
                 <Text style={styles.modalTitle}>Chi tiết câu sai</Text>
               </View>
-              <TouchableOpacity
-                onPress={() => setQuestionModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
-                <Ionicons name="close" size={28} color={themeColors.text} />
-              </TouchableOpacity>
             </View>
 
             {/* Content */}
@@ -1256,13 +2069,20 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
         renderHistoryTab()
       )}
 
+      {/* Practice Quiz Modal */}
+      {renderPracticeQuizModal()}
+
+      {/* Quiz Result Modal */}
+      {renderQuizResultModal()}
+
+      {/* Task Detail Modal */}
+      {renderTaskDetailModal()}
+
       {/* Question Detail Modal */}
       {renderQuestionDetailModal()}
     </View>
   );
-}
-
-// ============================================
+} // ============================================
 // ============================================
 // MOCK DATA - Chỉ dùng khi API lỗi hoặc không có data
 // Thường thì roadmap sẽ được truyền từ route.params
@@ -2169,20 +2989,32 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
+    position: "relative",
   },
   modalHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    paddingRight: 40,
   },
   modalTitle: {
     marginLeft: 12,
     fontSize: 20,
     fontWeight: "700",
     color: themeColors.text,
+    flex: 1,
   },
   modalCloseButton: {
     padding: 4,
+  },
+  modalCloseButtonAbsolute: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 20,
   },
   modalContent: {
     flex: 1,
@@ -2317,7 +3149,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 8,
     padding: 10,
-    backgroundColor: "#e3f2fd",    // xanh nhẹ
+    backgroundColor: "#e3f2fd", // xanh nhẹ
     borderLeftWidth: 4,
     borderLeftColor: "#1565c0",
     borderRadius: 6,
@@ -2330,4 +3162,575 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
+  // Quiz Result Modal Styles
+  resultModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  resultModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    width: "100%",
+    maxWidth: 400,
+    padding: 32,
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  resultIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  resultIconSuccess: {
+    backgroundColor: themeColors.success,
+  },
+  resultIconFail: {
+    backgroundColor: themeColors.error,
+  },
+  resultTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: themeColors.text,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  resultSubtitle: {
+    fontSize: 16,
+    color: themeColors.textLight,
+    marginBottom: 28,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  resultScoreCard: {
+    width: "100%",
+    backgroundColor: themeColors.card,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 28,
+    borderWidth: 2,
+    borderColor: "#eee",
+  },
+  resultScoreMain: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  resultScoreLabel: {
+    fontSize: 14,
+    color: themeColors.textLight,
+    marginBottom: 8,
+    fontWeight: "600",
+  },
+  resultScoreValue: {
+    fontSize: 48,
+    fontWeight: "700",
+  },
+  resultScoreSuccess: {
+    color: themeColors.success,
+  },
+  resultScoreFail: {
+    color: themeColors.error,
+  },
+  resultDivider: {
+    height: 1,
+    backgroundColor: "#ddd",
+    marginBottom: 16,
+  },
+  resultStatsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  resultStatItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  resultStatLabel: {
+    fontSize: 11,
+    color: themeColors.textLight,
+    marginTop: 6,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  resultStatValue: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: themeColors.text,
+    textAlign: "center",
+  },
+  resultButtonsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  resultButtonPrimary: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: themeColors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  resultButtonPrimaryText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  resultButtonSecondary: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: themeColors.primary,
+  },
+  resultButtonSecondaryText: {
+    marginLeft: 8,
+    color: themeColors.primary,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  resultButtonSuccess: {
+    flexDirection: "row",
+    backgroundColor: themeColors.success,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  resultButtonSuccessText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  // Task Detail Modal Styles
+  taskModalSection: {
+    marginBottom: 24,
+  },
+  taskModalText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: themeColors.text,
+    backgroundColor: themeColors.card,
+    padding: 16,
+    borderRadius: 12,
+  },
+  theoryBox: {
+    backgroundColor: `${themeColors.primary}08`,
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: themeColors.primary,
+  },
+  theoryText: {
+    fontSize: 15,
+    lineHeight: 24,
+    color: themeColors.text,
+  },
+  keyPointItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#fff",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: themeColors.success,
+  },
+  keyPointBullet: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: themeColors.success,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  keyPointNumber: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  keyPointText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 22,
+    color: themeColors.text,
+  },
+  exampleBox: {
+    backgroundColor: `${themeColors.warning}10`,
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: themeColors.warning,
+  },
+  exampleLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: themeColors.text,
+    marginBottom: 6,
+  },
+  exampleQuestion: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: themeColors.text,
+    fontStyle: "italic",
+  },
+  exampleSolution: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: themeColors.text,
+    fontWeight: "600",
+  },
+  tipItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: `${themeColors.accent}15`,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  tipItemText: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+    lineHeight: 22,
+    color: themeColors.text,
+  },
+  practiceInfoBox: {
+    backgroundColor: themeColors.card,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: themeColors.primary,
+  },
+  practiceInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  practiceInfoText: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: "600",
+    color: themeColors.text,
+  },
+  resourceItemModal: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  resourceInfoModal: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  resourceTitleModal: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: themeColors.text,
+    marginBottom: 4,
+  },
+  resourceMetaModal: {
+    fontSize: 12,
+    color: themeColors.textLight,
+  },
+  completeTaskButton: {
+    flexDirection: "row",
+    backgroundColor: themeColors.success,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  completeTaskButtonText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  startPracticeButton: {
+    flexDirection: "row",
+    backgroundColor: themeColors.primary,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  startPracticeButtonText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  // Practice Quiz Modal Styles
+  quizContainer: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+  },
+  quizHeader: {
+    backgroundColor: "#fff",
+    paddingTop: 50,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  quizHeaderTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  quizCloseButton: {
+    padding: 4,
+  },
+  quizTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "700",
+    color: themeColors.text,
+    textAlign: "center",
+    marginHorizontal: 8,
+  },
+  quizProgressContainer: {
+    marginTop: 8,
+  },
+  quizProgressText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: themeColors.primary,
+    marginBottom: 8,
+  },
+  quizProgressBar: {
+    height: 8,
+    backgroundColor: "#eee",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  quizProgressFill: {
+    height: "100%",
+    backgroundColor: themeColors.primary,
+    borderRadius: 4,
+  },
+  quizContent: {
+    flex: 1,
+    padding: 20,
+  },
+  questionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  questionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  questionNumberBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: themeColors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  questionNumberText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  questionHeaderText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: themeColors.text,
+  },
+  questionTextLarge: {
+    fontSize: 16,
+    lineHeight: 26,
+    color: themeColors.text,
+  },
+  choicesContainer: {
+    marginBottom: 20,
+  },
+  choicesLabel: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: themeColors.text,
+    marginBottom: 12,
+  },
+  choiceButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: "#eee",
+  },
+  choiceButtonSelected: {
+    borderColor: themeColors.primary,
+    backgroundColor: `${themeColors.primary}08`,
+  },
+  choiceRadio: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#ccc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  choiceRadioSelected: {
+    borderColor: themeColors.primary,
+  },
+  choiceRadioInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: themeColors.primary,
+  },
+  choiceContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  choiceLetter: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: themeColors.textLight,
+    marginRight: 8,
+    minWidth: 24,
+  },
+  choiceLetterSelected: {
+    color: themeColors.primary,
+  },
+  choiceText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: themeColors.text,
+  },
+  choiceTextSelected: {
+    fontWeight: "600",
+    color: themeColors.text,
+  },
+  quizFooter: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+    justifyContent: "space-between",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  quizNavButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: themeColors.primary,
+  },
+  quizNavButtonDisabled: {
+    borderColor: "#ccc",
+  },
+  quizNavButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: themeColors.primary,
+    marginHorizontal: 8,
+  },
+  quizNavButtonTextDisabled: {
+    color: "#ccc",
+  },
+  quizSubmitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: themeColors.success,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  quizSubmitButtonDisabled: {
+    backgroundColor: "#ccc",
+    elevation: 0,
+  },
+  quizSubmitButtonText: {
+    marginLeft: 8,
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

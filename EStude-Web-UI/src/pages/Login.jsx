@@ -21,6 +21,7 @@ export default function Login() {
   const { darkMode } = useContext(ThemeContext);
 
   const roleLabel = {
+    STUDENT: "HỌC SINH",
     TEACHER: "GIÁO VIÊN",
     ADMIN: "QUẢN TRỊ VIÊN",
   };
@@ -190,7 +191,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => {
-                const roles = ["ADMIN", "TEACHER"];
+                const roles = ["STUDENT", "TEACHER", "ADMIN"];
                 const currentIndex = roles.indexOf(role.toUpperCase());
                 const nextRole = roles[(currentIndex + 1) % roles.length];
                 navigate(`/login?role=${nextRole}`);

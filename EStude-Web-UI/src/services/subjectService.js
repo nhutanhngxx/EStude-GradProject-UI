@@ -143,6 +143,26 @@ const subjectService = {
       return null;
     }
   },
+
+  getSubjectById: async (subjectId) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}/api/subjects/${subjectId}`,
+        {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Lấy thông tin môn học thất bại");
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin môn học:", error);
+      return null;
+    }
+  },
 };
 
 export default subjectService;

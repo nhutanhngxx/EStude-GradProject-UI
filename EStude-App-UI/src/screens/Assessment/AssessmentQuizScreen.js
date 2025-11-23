@@ -201,22 +201,42 @@ export default function AssessmentQuizScreen({ route, navigation }) {
     try {
       setAiFeedbackLoading(true);
 
-      // Map questions to AI format
-      const aiQuestions = questions.map((q) => {
-        const userAnswer = answers[q.questionId];
-        const correctOption = q.options?.find((opt) => opt.isCorrect);
+      // Use submission answers from backend instead of local questions
+      // Backend returns full question details with correct/chosen options
+      const aiQuestions =
+        submissionResult.answers?.map((ans) => {
+          // Build options array from backend data
+          const optionsSet = new Set();
+          const optionsList = [];
 
-        return {
-          question_id: q.questionId,
-          topic: q.topicName || "Không rõ",
-          question: q.questionText,
-          options: q.options?.map((opt) => opt.optionText) || [],
-          correct_answer: q.options?.findIndex((opt) => opt.isCorrect) || 0,
-          student_answer: userAnswer
-            ? q.options?.findIndex((opt) => opt.optionId === userAnswer)
-            : -1,
-        };
-      });
+          // Add correct option
+          if (ans.correctOptionText) {
+            optionsSet.add(ans.correctOptionText);
+            optionsList.push(ans.correctOptionText);
+          }
+
+          // Add chosen option if different
+          if (
+            ans.chosenOptionText &&
+            ans.chosenOptionText !== ans.correctOptionText
+          ) {
+            optionsSet.add(ans.chosenOptionText);
+            optionsList.push(ans.chosenOptionText);
+          }
+
+          // Find indices
+          const correctIndex = optionsList.indexOf(ans.correctOptionText);
+          const chosenIndex = optionsList.indexOf(ans.chosenOptionText);
+
+          return {
+            question_id: ans.questionId,
+            topic: ans.topicName || "Không rõ",
+            question: ans.questionText,
+            options: optionsList,
+            correct_answer: correctIndex >= 0 ? correctIndex : 0,
+            student_answer: chosenIndex >= 0 ? chosenIndex : -1,
+          };
+        }) || [];
 
       const aiPayload = {
         submission_id: submissionResult.submissionId.toString(),
