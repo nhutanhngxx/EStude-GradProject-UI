@@ -16,6 +16,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useToast } from "../../contexts/ToastContext";
 import aiService from "../../services/aiService";
 import { useAuth } from "../../contexts/AuthContext";
+import subjectService from "../../services/subjectService";
+import classSubjectService from "../../services/classSubjectService";
+import topicService from "../../services/topicService";
 
 const themeColors = {
   primary: "#4CAF50", // Xanh lá chủ đạo
@@ -49,7 +52,7 @@ const { width } = Dimensions.get("window");
 export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const { roadmap: initialRoadmap, evaluation, resultId } = route.params;
   const { showToast } = useToast();
-  const { token } = useAuth();
+  const { token, user, studentId } = useAuth();
 
   console.log("🔍 AssessmentLearningRoadmapScreen params:", {
     hasInitialRoadmap: !!initialRoadmap,
@@ -87,6 +90,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   // Modal state for quiz result
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
+
+  // State for final assessment
+  const [finalAssessmentModalVisible, setFinalAssessmentModalVisible] =
+    useState(false);
+  const [finalAssessmentQuestions, setFinalAssessmentQuestions] = useState([]);
+  const [loadingFinalAssessment, setLoadingFinalAssessment] = useState(false);
+  const [finalAssessmentTask, setFinalAssessmentTask] = useState(null);
+  const [finalAssessmentId, setFinalAssessmentId] = useState(null);
+  const [finalAssessmentSubjectId, setFinalAssessmentSubjectId] =
+    useState(null);
 
   useEffect(() => {
     navigation.setOptions({
@@ -348,6 +361,584 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
         },
       ]
     );
+  };
+
+  /**
+   * Helper: Extract target accuracy percentage from criteria string
+   * Examples:
+   * - "Đạt độ chính xác 90% trở lên" => 90
+   * - "Đạt 80% trong bài luyện tập" => 80
+   * - "Đạt ≥ 90% trong bài đánh giá lại" => 90
+   */
+  const extractTargetAccuracy = (criteriaString) => {
+    if (!criteriaString) return 70; // Default fallback
+
+    // Match patterns like "90%", "80%", etc.
+    const match = criteriaString.match(/(\d+)%/);
+    if (match && match[1]) {
+      return parseInt(match[1], 10);
+    }
+
+    return 70; // Default fallback
+  };
+
+  /**
+   * Helper: Identify if a task is the final assessment
+   * Based on: last phase, last day, task type ASSESSMENT or FINAL_EXAM
+   */
+  const isFinalAssessmentTask = (task, phase, roadmapData) => {
+    if (!roadmapData || !roadmapData.phases) return false;
+
+    // Check if this is the last phase
+    const lastPhase = roadmapData.phases[roadmapData.phases.length - 1];
+    if (phase.phase_number !== lastPhase.phase_number) return false;
+
+    // Check if this phase has final assessment milestone
+    if (
+      phase.milestone &&
+      (phase.milestone.assessment_type === "FINAL_EXAM" ||
+        phase.milestone.assessment_type === "ASSESSMENT")
+    ) {
+      // Check if task is ASSESSMENT type
+      if (task.type === "ASSESSMENT" || task.type === "FINAL_EXAM") {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  /**
+   * Helper: Get unique topics from roadmap phases
+   * Returns array of unique topic names
+   */
+  const getUniqueTopicsFromRoadmap = (roadmapData) => {
+    if (!roadmapData || !roadmapData.phases) return [];
+
+    const topicsSet = new Set();
+
+    roadmapData.phases.forEach((phase) => {
+      if (phase.topics && Array.isArray(phase.topics)) {
+        phase.topics.forEach((topicObj) => {
+          if (topicObj.topic) {
+            topicsSet.add(topicObj.topic);
+          }
+        });
+      }
+
+      // Also check milestone topics
+      if (phase.milestone && phase.milestone.topics) {
+        phase.milestone.topics.forEach((topic) => {
+          topicsSet.add(topic);
+        });
+      }
+    });
+
+    return Array.from(topicsSet);
+  };
+
+  /**
+   * Helper: String similarity comparison (Levenshtein-like)
+   * Returns similarity score 0-1
+   */
+  const stringSimilarity = (str1, str2) => {
+    const s1 = str1.toLowerCase().trim();
+    const s2 = str2.toLowerCase().trim();
+
+    // Exact match
+    if (s1 === s2) return 1.0;
+
+    // Check if one contains the other
+    if (s1.includes(s2) || s2.includes(s1)) return 0.8;
+
+    // Simple character overlap calculation
+    const set1 = new Set(s1.split(""));
+    const set2 = new Set(s2.split(""));
+    const intersection = new Set([...set1].filter((x) => set2.has(x)));
+
+    const similarity = (2 * intersection.size) / (set1.size + set2.size);
+
+    return similarity;
+  };
+
+  /**
+   * Match roadmap topics with subject topics from backend
+   * Returns matched topic IDs
+   */
+  const matchTopicsWithSubject = async (subjectName, roadmapTopics) => {
+    try {
+      // 1. Get all class-subjects for student
+      const classSubjects = await classSubjectService.getClassSubjectsByStudent(
+        {
+          studentId: studentId || user.userId,
+        }
+      );
+
+      if (!classSubjects || classSubjects.length === 0) {
+        console.log("⚠️ No class-subjects found");
+        return [];
+      }
+
+      console.log("📚 Found class-subjects:", classSubjects.length);
+      if (classSubjects.length > 0) {
+        console.log("📝 First class-subject structure:", classSubjects[0]);
+      }
+
+      // 2. Get all detailed class subjects to access subject info
+      const allClassSubjects = await classSubjectService.getAllClassSubjects();
+      if (!allClassSubjects || allClassSubjects.length === 0) {
+        console.log("⚠️ No detailed class-subjects found");
+        return [];
+      }
+
+      // 3. Find matching subject by name
+      let matchedSubject = null;
+      let bestMatch = 0;
+
+      classSubjects.forEach((cs) => {
+        // Get detailed info from allClassSubjects
+        const detail = allClassSubjects.find(
+          (acs) => acs.classSubjectId === cs.classSubjectId
+        );
+
+        if (!detail || !detail.subject) return;
+
+        const subjectNameFromApi = detail.subject.name || "";
+        const similarity = stringSimilarity(subjectNameFromApi, subjectName);
+
+        if (similarity > bestMatch) {
+          bestMatch = similarity;
+          matchedSubject = detail.subject;
+        }
+      });
+
+      if (!matchedSubject || bestMatch < 0.5) {
+        console.log("⚠️ No matching subject found for:", subjectName);
+        console.log("   Best match score:", bestMatch);
+        return [];
+      }
+
+      console.log("✅ Matched subject:", matchedSubject);
+
+      // 4. Get topics for this subject
+      const subjectId = matchedSubject.subjectId;
+
+      if (!subjectId) {
+        console.error(
+          "⚠️ Cannot find subjectId in matched subject:",
+          matchedSubject
+        );
+        console.error("Available keys:", Object.keys(matchedSubject));
+        return [];
+      }
+
+      console.log("📝 Using subjectId:", subjectId);
+
+      const subjectTopics = await topicService.getTopicsBySubject(subjectId);
+
+      if (!subjectTopics || subjectTopics.length === 0) {
+        console.log("⚠️ No topics found for subject:", matchedSubject);
+        return [];
+      }
+
+      // 4. Match roadmap topics with subject topics
+      const matchedTopicIds = [];
+
+      roadmapTopics.forEach((roadmapTopic) => {
+        let bestTopicMatch = null;
+        let bestTopicSimilarity = 0;
+
+        subjectTopics.forEach((subjectTopic) => {
+          const similarity = stringSimilarity(
+            subjectTopic.topicName || subjectTopic.name || "",
+            roadmapTopic
+          );
+
+          if (similarity > bestTopicSimilarity) {
+            bestTopicSimilarity = similarity;
+            bestTopicMatch = subjectTopic;
+          }
+        });
+
+        // Accept match if similarity > 0.4 (flexible matching)
+        if (bestTopicMatch && bestTopicSimilarity > 0.4) {
+          matchedTopicIds.push(bestTopicMatch.topicId || bestTopicMatch.id);
+          console.log(
+            `✅ Matched topic: "${roadmapTopic}" -> "${
+              bestTopicMatch.topicName || bestTopicMatch.name
+            }" (${(bestTopicSimilarity * 100).toFixed(0)}%)`
+          );
+        }
+      });
+
+      return matchedTopicIds;
+    } catch (error) {
+      console.error("Error matching topics:", error);
+      return [];
+    }
+  };
+
+  /**
+   * Handle starting final assessment with dynamic questions
+   */
+  const handleStartFinalAssessment = async (task, phase) => {
+    try {
+      setLoadingFinalAssessment(true);
+      setFinalAssessmentTask(task);
+
+      // Get subject name and unique topics
+      const subjectName = roadmap?.subject || "Toán";
+      const roadmapTopics = getUniqueTopicsFromRoadmap(roadmap);
+
+      console.log("🔍 Starting final assessment for:", {
+        subject: subjectName,
+        topics: roadmapTopics,
+      });
+
+      // Match topics with subject
+      const matchedTopicIds = await matchTopicsWithSubject(
+        subjectName,
+        roadmapTopics
+      );
+
+      if (matchedTopicIds.length === 0) {
+        Alert.alert(
+          "Không tìm thấy câu hỏi",
+          "Không thể tìm được chủ đề phù hợp. Vui lòng thử lại sau hoặc liên hệ giáo viên.",
+          [{ text: "Đóng" }]
+        );
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      // Get matched subject info (need subjectId for API)
+      const classSubjects = await classSubjectService.getClassSubjectsByStudent(
+        {
+          studentId: studentId || user.userId,
+        }
+      );
+
+      console.log(
+        "📚 Retrieved class-subjects for matching:",
+        classSubjects?.length
+      );
+      if (classSubjects && classSubjects.length > 0) {
+        console.log("📝 Sample class-subject structure:", classSubjects[0]);
+      }
+
+      if (!classSubjects || classSubjects.length === 0) {
+        Alert.alert(
+          "Không tìm thấy môn học",
+          "Không thể tải danh sách môn học. Vui lòng thử lại sau.",
+          [{ text: "Đóng" }]
+        );
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      // Get detailed class subjects
+      const allClassSubjects = await classSubjectService.getAllClassSubjects();
+      if (!allClassSubjects || allClassSubjects.length === 0) {
+        Alert.alert(
+          "Không tìm thấy thông tin",
+          "Không thể tải thông tin chi tiết môn học.",
+          [{ text: "Đóng" }]
+        );
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      let matchedSubject = null;
+      let bestMatch = 0;
+
+      classSubjects.forEach((cs) => {
+        const detail = allClassSubjects.find(
+          (acs) => acs.classSubjectId === cs.classSubjectId
+        );
+
+        if (!detail || !detail.subject) return;
+
+        const subjectNameFromApi = detail.subject.name || "";
+        const similarity = stringSimilarity(subjectNameFromApi, subjectName);
+
+        if (similarity > bestMatch) {
+          bestMatch = similarity;
+          matchedSubject = detail.subject;
+        }
+      });
+
+      if (!matchedSubject || bestMatch < 0.5) {
+        Alert.alert(
+          "Không tìm thấy môn học",
+          `Không thể tìm thấy môn "${subjectName}" trong danh sách của bạn.`,
+          [{ text: "Đóng" }]
+        );
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      const subjectIdForApi = matchedSubject.subjectId;
+
+      if (!subjectIdForApi) {
+        console.error(
+          "⚠️ Cannot find subjectId in matched subject:",
+          matchedSubject
+        );
+        console.error("Available keys:", Object.keys(matchedSubject));
+        Alert.alert("Lỗi", "Không thể xác định ID môn học. Vui lòng thử lại.", [
+          { text: "Đóng" },
+        ]);
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      console.log("✅ Matched subject:", {
+        subjectId: subjectIdForApi,
+        subjectName: matchedSubject.name,
+        similarity: `${(bestMatch * 100).toFixed(0)}%`,
+      });
+
+      // Generate 10 questions using topicService API
+      const assessmentData = await generateFinalAssessmentQuestions(
+        matchedTopicIds,
+        subjectIdForApi,
+        10
+      );
+
+      if (
+        !assessmentData ||
+        !assessmentData.questions ||
+        assessmentData.questions.length === 0
+      ) {
+        Alert.alert(
+          "Không có câu hỏi",
+          "Không thể tạo bộ câu hỏi cho bài đánh giá. Vui lòng thử lại sau.",
+          [{ text: "Đóng" }]
+        );
+        setLoadingFinalAssessment(false);
+        return;
+      }
+
+      // Save assessment data
+      setFinalAssessmentId(assessmentData.assessmentId);
+      setFinalAssessmentSubjectId(assessmentData.subjectId);
+      setFinalAssessmentQuestions(assessmentData.questions);
+
+      // Reset quiz state
+      setCurrentQuestionIndex(0);
+      setUserAnswers({});
+      setQuizStartTime(Date.now());
+
+      // Open assessment modal
+      setFinalAssessmentModalVisible(true);
+
+      showToast(`Đã tạo ${assessmentData.questions.length} câu hỏi`, {
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error starting final assessment:", error);
+
+      let errorMessage = "Lỗi khi tải bài đánh giá";
+      if (error.message) {
+        if (error.message.includes("cần ít nhất")) {
+          errorMessage =
+            "Không đủ câu hỏi. Vui lòng chọn thêm chủ đề hoặc giảm số câu hỏi.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      Alert.alert("Lỗi", errorMessage, [{ text: "Đóng" }]);
+    } finally {
+      setLoadingFinalAssessment(false);
+    }
+  };
+
+  /**
+   * Generate final assessment questions using topicService API
+   * Matches the flow from AssessmentTopicSelectionScreen
+   */
+  const generateFinalAssessmentQuestions = async (
+    topicIds,
+    subjectIdParam,
+    numQuestions
+  ) => {
+    try {
+      console.log("📝 Generating questions for topics:", topicIds);
+
+      // Get student info from auth context
+      const effectiveStudentId = studentId || user?.userId || user?.id;
+
+      if (!effectiveStudentId) {
+        console.error("No student ID found");
+        return null;
+      }
+
+      // Prepare payload matching AssessmentQuizScreen format
+      const payload = {
+        studentId: effectiveStudentId,
+        subjectId: subjectIdParam,
+        topicIds: topicIds,
+        numQuestions: numQuestions || 10,
+        difficulty: "mixed", // Mixed difficulty for final assessment
+        gradeLevel: "GRADE_10", // Default grade level
+      };
+
+      console.log(
+        "📤 Calling generateAssessmentQuestions with payload:",
+        payload
+      );
+
+      // Call topicService API
+      const response = await topicService.generateAssessmentQuestions(
+        payload,
+        token
+      );
+
+      console.log("📥 API Response:", response);
+
+      if (response && response.success && response.data) {
+        const { assessmentId, questions, subjectName } = response.data;
+
+        console.log("✅ Generated assessment:", {
+          assessmentId,
+          questionCount: questions?.length,
+          subjectName,
+        });
+
+        // Return full response data
+        return {
+          assessmentId,
+          questions,
+          subjectName,
+          subjectId: subjectIdParam,
+        };
+      }
+
+      console.log("⚠️ Invalid response format:", response);
+      return null;
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * Handle submitting final assessment
+   * Matches the flow from AssessmentQuizScreen
+   */
+  const handleSubmitFinalAssessment = async () => {
+    if (!finalAssessmentTask || !finalAssessmentQuestions || !finalAssessmentId)
+      return;
+
+    setQuizSubmitting(true);
+
+    try {
+      const timeElapsedSeconds = Math.round(
+        (Date.now() - quizStartTime) / 1000
+      );
+      const effectiveStudentId = studentId || user?.userId || user?.id;
+
+      // Prepare submission data matching AssessmentQuizScreen format
+      const submissionData = {
+        assessmentId: finalAssessmentId,
+        studentId: effectiveStudentId,
+        subjectId: finalAssessmentSubjectId,
+        gradeLevel: finalAssessmentQuestions[0]?.gradeLevel || "GRADE_10",
+        difficulty: "MIXED",
+        answers: Object.keys(userAnswers).map((questionIndex) => {
+          const question = finalAssessmentQuestions[parseInt(questionIndex)];
+          return {
+            questionId: question.questionId,
+            chosenOptionId: userAnswers[questionIndex],
+          };
+        }),
+        timeTaken: timeElapsedSeconds,
+      };
+
+      console.log("📤 Submitting final assessment:", submissionData);
+
+      // Call submit API
+      const result = await topicService.submitAssessment(submissionData, token);
+
+      console.log("📥 Submit result:", result);
+
+      // Extract data from response (backend wraps in {success, message, data})
+      const submissionResult = result.data || result;
+
+      if (
+        submissionResult &&
+        (submissionResult.submissionId ||
+          submissionResult.id ||
+          submissionResult.score !== undefined)
+      ) {
+        // Normalize result
+        const normalizedResult = {
+          ...submissionResult,
+          submissionId:
+            submissionResult.submissionId ||
+            submissionResult.id ||
+            `temp_${Date.now()}`,
+        };
+
+        console.log("✅ Submission successful:", normalizedResult);
+
+        // Calculate accuracy and check pass
+        const accuracy =
+          normalizedResult.correctAnswers / normalizedResult.totalQuestions;
+        const score = normalizedResult.score / 10; // Convert to 0-10 scale
+        const timeSpentMinutes = Math.round(timeElapsedSeconds / 60);
+
+        // Get target accuracy from criteria
+        const phase = roadmap.phases[roadmap.phases.length - 1];
+        const targetAccuracy = extractTargetAccuracy(phase.milestone?.criteria);
+
+        // Check if passed
+        const passed = accuracy * 100 >= targetAccuracy;
+
+        // Close assessment modal
+        setFinalAssessmentModalVisible(false);
+
+        // Wait for modal to close
+        setTimeout(() => {
+          // Store result data
+          setQuizResult({
+            score,
+            accuracy,
+            timeSpentMinutes,
+            correctCount: normalizedResult.correctAnswers,
+            totalQuestions: normalizedResult.totalQuestions,
+            passed,
+            isFinalAssessment: true,
+            targetAccuracy,
+            submissionData: normalizedResult,
+          });
+
+          // Show result modal
+          setResultModalVisible(true);
+
+          // If passed, mark task as completed
+          if (passed) {
+            setTimeout(async () => {
+              await markTaskCompleted(finalAssessmentTask.task_id, {
+                score,
+                accuracy,
+                time_spent: timeSpentMinutes,
+              });
+            }, 500);
+          }
+        }, 300);
+      } else {
+        throw new Error("Không nhận được kết quả từ server");
+      }
+    } catch (error) {
+      console.error("Error submitting final assessment:", error);
+      showToast(error.message || "Lỗi khi nộp bài. Vui lòng thử lại.", {
+        type: "error",
+      });
+    } finally {
+      setQuizSubmitting(false);
+    }
   };
 
   const handleStartPractice = (task) => {
@@ -798,6 +1389,11 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                           task.task_id
                         );
                         const isUpdating = updatingTask === task.task_id;
+                        const isFinalTask = isFinalAssessmentTask(
+                          task,
+                          phase,
+                          roadmap
+                        );
 
                         return (
                           <TouchableOpacity
@@ -805,10 +1401,14 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                             style={[
                               styles.taskItem,
                               isCompleted && styles.taskItemCompleted,
+                              isFinalTask && styles.taskItemFinal,
                             ]}
-                            disabled={isUpdating}
+                            disabled={isUpdating || loadingFinalAssessment}
                             onPress={() => {
-                              if (
+                              // Check if this is the final assessment task
+                              if (isFinalTask) {
+                                handleStartFinalAssessment(task, phase);
+                              } else if (
                                 task.type === "PRACTICE" ||
                                 task.type === "ASSESSMENT"
                               ) {
@@ -1242,7 +1842,7 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 <Text style={styles.questionHeaderText}>Câu hỏi</Text>
               </View>
               <Text style={styles.questionTextLarge}>
-                {currentQuestion.question_text}
+                {currentQuestion.question_text || currentQuestion.questionText}
               </Text>
             </View>
 
@@ -1386,6 +1986,242 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   };
 
   /**
+   * Render Final Assessment Modal
+   */
+  const renderFinalAssessmentModal = () => {
+    if (!finalAssessmentQuestions || finalAssessmentQuestions.length === 0) {
+      return null;
+    }
+
+    const currentQuestion = finalAssessmentQuestions[currentQuestionIndex];
+    const totalQuestions = finalAssessmentQuestions.length;
+    const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+    const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
+    const canProceed = userAnswers[currentQuestionIndex] !== undefined;
+
+    return (
+      <Modal
+        visible={finalAssessmentModalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          Alert.alert(
+            "Thoát bài đánh giá?",
+            "Bạn có chắc muốn thoát? Tiến trình sẽ không được lưu.",
+            [
+              { text: "Ở lại", style: "cancel" },
+              {
+                text: "Thoát",
+                style: "destructive",
+                onPress: () => {
+                  setFinalAssessmentModalVisible(false);
+                  setUserAnswers({});
+                },
+              },
+            ]
+          );
+        }}
+      >
+        <View style={styles.quizContainer}>
+          {/* Header */}
+          <View style={styles.quizHeader}>
+            <View style={styles.quizHeaderTop}>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert(
+                    "Thoát bài đánh giá?",
+                    "Bạn có chắc muốn thoát? Tiến trình sẽ không được lưu.",
+                    [
+                      { text: "Ở lại", style: "cancel" },
+                      {
+                        text: "Thoát",
+                        style: "destructive",
+                        onPress: () => {
+                          setFinalAssessmentModalVisible(false);
+                          setUserAnswers({});
+                        },
+                      },
+                    ]
+                  );
+                }}
+                style={styles.quizCloseButton}
+              >
+                <Ionicons name="close" size={28} color={themeColors.text} />
+              </TouchableOpacity>
+              <Text style={styles.quizTitle}>Kiểm tra cuối khóa</Text>
+              <View style={{ width: 28 }} />
+            </View>
+
+            {/* Progress Bar */}
+            <View style={styles.quizProgressContainer}>
+              <Text style={styles.quizProgressText}>
+                Câu {currentQuestionIndex + 1}/{totalQuestions}
+              </Text>
+              <View style={styles.quizProgressBar}>
+                <View
+                  style={[styles.quizProgressFill, { width: `${progress}%` }]}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Question Content */}
+          <ScrollView
+            style={styles.quizContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.questionCard}>
+              <View style={styles.questionHeader}>
+                <View style={styles.questionNumberBadge}>
+                  <Text style={styles.questionNumberText}>
+                    {currentQuestionIndex + 1}
+                  </Text>
+                </View>
+                <Text style={styles.questionHeaderText}>Câu hỏi</Text>
+              </View>
+              <Text style={styles.questionTextLarge}>
+                {currentQuestion.questionText}
+              </Text>
+            </View>
+
+            {/* Choices */}
+            <View style={styles.choicesContainer}>
+              <Text style={styles.choicesLabel}>Chọn đáp án:</Text>
+              {currentQuestion.options &&
+                currentQuestion.options.map((option, index) => {
+                  const isSelected =
+                    userAnswers[currentQuestionIndex] === option.optionId;
+
+                  return (
+                    <TouchableOpacity
+                      key={option.optionId}
+                      style={[
+                        styles.choiceButton,
+                        isSelected && styles.choiceButtonSelected,
+                      ]}
+                      onPress={() => {
+                        setUserAnswers({
+                          ...userAnswers,
+                          [currentQuestionIndex]: option.optionId,
+                        });
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.choiceRadio,
+                          isSelected && styles.choiceRadioSelected,
+                        ]}
+                      >
+                        {isSelected && <View style={styles.choiceRadioInner} />}
+                      </View>
+                      <View style={styles.choiceContent}>
+                        <Text
+                          style={[
+                            styles.choiceLetter,
+                            isSelected && styles.choiceLetterSelected,
+                          ]}
+                        >
+                          {String.fromCharCode(65 + index)}.
+                        </Text>
+                        <Text
+                          style={[
+                            styles.choiceText,
+                            isSelected && styles.choiceTextSelected,
+                          ]}
+                        >
+                          {option.optionText}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+            </View>
+
+            <View style={styles.modalBottomSpacer} />
+          </ScrollView>
+
+          {/* Footer Navigation */}
+          <View style={styles.quizFooter}>
+            <TouchableOpacity
+              style={[
+                styles.quizNavButton,
+                currentQuestionIndex === 0 && styles.quizNavButtonDisabled,
+              ]}
+              disabled={currentQuestionIndex === 0}
+              onPress={() => setCurrentQuestionIndex(currentQuestionIndex - 1)}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={24}
+                color={
+                  currentQuestionIndex === 0 ? "#ccc" : themeColors.primary
+                }
+              />
+              <Text
+                style={[
+                  styles.quizNavButtonText,
+                  currentQuestionIndex === 0 &&
+                    styles.quizNavButtonTextDisabled,
+                ]}
+              >
+                Câu trước
+              </Text>
+            </TouchableOpacity>
+
+            {isLastQuestion ? (
+              <TouchableOpacity
+                style={[
+                  styles.quizSubmitButton,
+                  (!canProceed || quizSubmitting) &&
+                    styles.quizSubmitButtonDisabled,
+                ]}
+                disabled={!canProceed || quizSubmitting}
+                onPress={handleSubmitFinalAssessment}
+              >
+                {quizSubmitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                    <Text style={styles.quizSubmitButtonText}>
+                      Nộp bài đánh giá
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.quizNavButton,
+                  !canProceed && styles.quizNavButtonDisabled,
+                ]}
+                disabled={!canProceed}
+                onPress={() =>
+                  setCurrentQuestionIndex(currentQuestionIndex + 1)
+                }
+              >
+                <Text
+                  style={[
+                    styles.quizNavButtonText,
+                    !canProceed && styles.quizNavButtonTextDisabled,
+                  ]}
+                >
+                  Câu tiếp
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={24}
+                  color={!canProceed ? "#ccc" : themeColors.primary}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  /**
    * Render Quiz Result Modal
    */
   const renderQuizResultModal = () => {
@@ -1393,6 +2229,8 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
     const isPassed = quizResult.passed;
     const percentage = (quizResult.accuracy * 100).toFixed(0);
+    const isFinalAssessment = quizResult.isFinalAssessment || false;
+    const targetAccuracy = quizResult.targetAccuracy || 70;
 
     return (
       <Modal
@@ -1403,6 +2241,14 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       >
         <View style={styles.resultModalOverlay}>
           <View style={styles.resultModalContainer}>
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={() => setResultModalVisible(false)}
+              style={styles.resultCloseButton}
+            >
+              <Ionicons name="close" size={28} color={themeColors.text} />
+            </TouchableOpacity>
+
             {/* Icon and Status */}
             {/* <View
               style={[
@@ -1423,9 +2269,32 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
             <Text style={styles.resultSubtitle}>
               {isPassed
-                ? "Chúc mừng! Bạn đã hoàn thành bài luyện tập"
-                : "Hãy ôn lại lý thuyết và thử lại nhé! 💪"}
+                ? isFinalAssessment
+                  ? "Chúc mừng! Bạn đã hoàn thành đánh giá cuối khóa"
+                  : "Chúc mừng! Bạn đã hoàn thành bài luyện tập"
+                : "Hãy ôn lại lý thuyết và thử lại nhé!"}
             </Text>
+
+            {/* Show target vs achieved for final assessment */}
+            {isFinalAssessment && (
+              <View style={styles.targetComparisonCard}>
+                <View style={styles.targetRow}>
+                  <Text style={styles.targetLabel}>Yêu cầu:</Text>
+                  <Text style={styles.targetValue}>{targetAccuracy}%</Text>
+                </View>
+                <View style={styles.targetRow}>
+                  <Text style={styles.targetLabel}>Đạt được:</Text>
+                  <Text
+                    style={[
+                      styles.targetValue,
+                      isPassed ? styles.targetSuccess : styles.targetFail,
+                    ]}
+                  >
+                    {percentage}%
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Score Display */}
             <View style={styles.resultScoreCard}>
@@ -1439,7 +2308,7 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                       : styles.resultScoreFail,
                   ]}
                 >
-                  {quizResult.score}/10
+                  {quizResult.score.toFixed(2)}/10
                 </Text>
               </View>
 
@@ -1481,18 +2350,24 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
             {/* Action Buttons */}
             {!isPassed ? (
               <View style={styles.resultButtonsContainer}>
-                <TouchableOpacity
-                  style={styles.resultButtonSecondary}
-                  onPress={() => {
-                    setResultModalVisible(false);
-                    handleViewLearningContent(selectedTask);
-                  }}
-                >
-                  <Ionicons name="book" size={20} color={themeColors.primary} />
-                  <Text style={styles.resultButtonSecondaryText}>
-                    Ôn lại lý thuyết
-                  </Text>
-                </TouchableOpacity>
+                {!isFinalAssessment && (
+                  <TouchableOpacity
+                    style={styles.resultButtonSecondary}
+                    onPress={() => {
+                      setResultModalVisible(false);
+                      handleViewLearningContent(selectedTask);
+                    }}
+                  >
+                    <Ionicons
+                      name="book"
+                      size={20}
+                      color={themeColors.primary}
+                    />
+                    <Text style={styles.resultButtonSecondaryText}>
+                      Ôn lại lý thuyết
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={styles.resultButtonPrimary}
@@ -1502,11 +2377,18 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                     setCurrentQuestionIndex(0);
                     setUserAnswers({});
                     setQuizStartTime(Date.now());
-                    setQuizModalVisible(true);
+
+                    if (isFinalAssessment) {
+                      setFinalAssessmentModalVisible(true);
+                    } else {
+                      setQuizModalVisible(true);
+                    }
                   }}
                 >
                   <Ionicons name="refresh" size={20} color="#fff" />
-                  <Text style={styles.resultButtonPrimaryText}>Làm lại</Text>
+                  <Text style={styles.resultButtonPrimaryText}>
+                    {isFinalAssessment ? "Làm lại bài đánh giá" : "Làm lại"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -1516,7 +2398,11 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   setResultModalVisible(false);
 
                   // Mark task as completed
-                  await markTaskCompleted(selectedTask.task_id, {
+                  const taskToComplete = isFinalAssessment
+                    ? finalAssessmentTask
+                    : selectedTask;
+
+                  await markTaskCompleted(taskToComplete.task_id, {
                     time_spent: quizResult.timeSpentMinutes,
                     score: quizResult.score,
                     accuracy: quizResult.accuracy,
@@ -1526,13 +2412,17 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   setTaskModalVisible(false);
 
                   showToast(
-                    `Hoàn thành bài tập! Điểm: ${quizResult.score}/10`,
+                    isFinalAssessment
+                      ? `🎉 Hoàn thành khóa học! Điểm: ${quizResult.score}/10`
+                      : `Hoàn thành bài tập! Điểm: ${quizResult.score}/10`,
                     "success"
                   );
                 }}
               >
                 <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                <Text style={styles.resultButtonSuccessText}>Hoàn thành</Text>
+                <Text style={styles.resultButtonSuccessText}>
+                  {isFinalAssessment ? "Hoàn thành khóa học" : "Hoàn thành"}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -2071,6 +2961,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
       {/* Practice Quiz Modal */}
       {renderPracticeQuizModal()}
+
+      {/* Final Assessment Modal */}
+      {renderFinalAssessmentModal()}
 
       {/* Quiz Result Modal */}
       {renderQuizResultModal()}
@@ -2898,6 +3791,11 @@ const styles = StyleSheet.create({
   taskItemCompleted: {
     opacity: 0.6,
   },
+  taskItemFinal: {
+    backgroundColor: "#FFF9E5",
+    borderWidth: 2,
+    borderColor: themeColors.warning,
+  },
   taskCheckbox: {
     marginRight: 10,
   },
@@ -3182,6 +4080,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
+    position: "relative",
+  },
+  resultCloseButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 20,
   },
   resultIconContainer: {
     width: 120,
@@ -3210,6 +4118,37 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     textAlign: "center",
     lineHeight: 24,
+  },
+  targetComparisonCard: {
+    width: "100%",
+    backgroundColor: "#FFF9E5",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: themeColors.warning,
+  },
+  targetRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  targetLabel: {
+    fontSize: 14,
+    color: themeColors.text,
+    fontWeight: "600",
+  },
+  targetValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: themeColors.text,
+  },
+  targetSuccess: {
+    color: themeColors.success,
+  },
+  targetFail: {
+    color: themeColors.error,
   },
   resultScoreCard: {
     width: "100%",
