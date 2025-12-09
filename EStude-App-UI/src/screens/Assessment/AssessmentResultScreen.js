@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import LatexText from "../../components/common/LatexText";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import topicService from "../../services/topicService";
@@ -385,9 +386,9 @@ export default function AssessmentResultScreen({ route, navigation }) {
             {/* Overall Advice */}
             {submissionResult.aiRecommendation.overall_advice && (
               <View style={styles.overallAdviceSection}>
-                <Text style={styles.overallAdviceText}>
-                  {submissionResult.aiRecommendation.overall_advice}
-                </Text>
+                <LatexText textStyle={styles.overallAdviceText}>
+                  {submissionResult.aiRecommendation.overall_advice || ""}
+                </LatexText>
               </View>
             )}
 
@@ -423,9 +424,13 @@ export default function AssessmentResultScreen({ route, navigation }) {
                                 <Text style={styles.recommendationLabel}>
                                   Tập trung học:
                                 </Text>
-                                <Text style={styles.recommendationValue}>
-                                  {topic.recommendation.study_focus}
-                                </Text>
+                                <View style={{ flex: 1 }}>
+                                  <LatexText
+                                    textStyle={styles.recommendationValue}
+                                  >
+                                    {topic.recommendation.study_focus || ""}
+                                  </LatexText>
+                                </View>
                               </View>
                             )}
 
@@ -439,9 +444,14 @@ export default function AssessmentResultScreen({ route, navigation }) {
                                 <Text style={styles.recommendationLabel}>
                                   Luyện tập:
                                 </Text>
-                                <Text style={styles.recommendationValue}>
-                                  {topic.recommendation.practice_suggestion}
-                                </Text>
+                                <View style={{ flex: 1 }}>
+                                  <LatexText
+                                    textStyle={styles.recommendationValue}
+                                  >
+                                    {topic.recommendation.practice_suggestion ||
+                                      ""}
+                                  </LatexText>
+                                </View>
                               </View>
                             )}
 
@@ -451,9 +461,13 @@ export default function AssessmentResultScreen({ route, navigation }) {
                                 <Text style={styles.recommendationLabel}>
                                   Tài liệu:
                                 </Text>
-                                <Text style={styles.recommendationValue}>
-                                  {topic.recommendation.resource_hint}
-                                </Text>
+                                <View style={{ flex: 1 }}>
+                                  <LatexText
+                                    textStyle={styles.recommendationValue}
+                                  >
+                                    {topic.recommendation.resource_hint || ""}
+                                  </LatexText>
+                                </View>
                               </View>
                             )}
                           </View>
@@ -847,12 +861,14 @@ const styles = StyleSheet.create({
   recommendationRow: {
     flexDirection: "row",
     gap: 8,
+    alignItems: "flex-start",
   },
   recommendationLabel: {
     fontSize: 13,
     fontWeight: "600",
     color: "#666",
-    minWidth: 90,
+    width: 90,
+    flexShrink: 0,
   },
   recommendationValue: {
     flex: 1,
