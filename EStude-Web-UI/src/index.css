@@ -152,3 +152,28 @@ body,
 .table-custom tbody tr td input:disabled {
   @apply bg-gray-100 dark:bg-gray-600 cursor-not-allowed;
 }
+
+/* LaTeX rendering styles */
+.latex-content {
+  text-align: left;
+  line-height: 1.6;
+}
+
+.latex-content .katex {
+  font-size: 1em;
+  text-align: left;
+}
+
+.latex-content .katex-display {
+  margin: 0.5rem 0;
+  text-align: left !important;
+}
+
+.latex-content .katex-display > .katex {
+  text-align: left !important;
+  display: inline-block;
+}
+
+.latex-content .katex-html {
+  text-align: left !important;
+}

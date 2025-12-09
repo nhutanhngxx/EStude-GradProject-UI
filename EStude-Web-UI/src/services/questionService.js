@@ -2,9 +2,13 @@ import config from "../config/config.js";
 
 const endpoints = {
   addQuestionToAssignment: "/api/questions/assignments/{assignmentId}",
-  // Question Bank endpoints
+  // Question Bank endpoints (v2.0 - Optimized with Pagination)
   createQuestionBank: "/api/questions/bank",
-  getAllQuestionBank: "/api/questions/bank",
+  getAllQuestionBank: "/api/questions/bank", // With pagination
+  getQuestionBankBySubject: "/api/questions/bank/subject/{subjectId}",
+  getQuestionBankByGrade: "/api/questions/bank/grade/{gradeLevel}",
+  getQuestionBankBySubjectAndGrade:
+    "/api/questions/bank/subject/{subjectId}/grade/{gradeLevel}",
   getQuestionBankByTopic: "/api/questions/bank/topic/{topicId}",
   getQuestionBankById: "/api/questions/bank/{questionId}",
   updateQuestionBank: "/api/questions/bank/{questionId}",
@@ -74,13 +78,16 @@ const questionService = {
   },
 
   /**
-   * Get all questions from question bank
-   * @returns {Promise<Object>} Response with questions array
+   * Get all questions from question bank with pagination
+   * @param {number} page - Page number (starts from 0)
+   * @param {number} size - Page size (default 20, max 100)
+   * @param {boolean} full - Full DTO or summary (default false)
+   * @returns {Promise<Object>} Paginated response
    */
-  getAllQuestionBank: async () => {
+  getAllQuestionBank: async (page = 0, size = 20, full = false) => {
     try {
       const response = await fetch(
-        `${config.BASE_URL}${endpoints.getAllQuestionBank}`,
+        `${config.BASE_URL}${endpoints.getAllQuestionBank}?page=${page}&size=${size}&full=${full}`,
         {
           method: "GET",
           headers: {
@@ -96,6 +103,143 @@ const questionService = {
       return await response.json();
     } catch (error) {
       console.error("Lỗi khi lấy danh sách câu hỏi:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get questions by subject with pagination
+   * @param {number} subjectId - Subject ID
+   * @param {number} page - Page number (starts from 0)
+   * @param {number} size - Page size
+   * @param {boolean} full - Full DTO or summary
+   * @param {number} topicId - Optional topic ID filter
+   * @param {string} difficulty - Optional difficulty filter (EASY, MEDIUM, HARD)
+   * @returns {Promise<Object>} Paginated response
+   */
+  getQuestionBankBySubject: async (
+    subjectId,
+    page = 0,
+    size = 20,
+    full = false,
+    topicId = null,
+    difficulty = null
+  ) => {
+    try {
+      let url = `${config.BASE_URL}${endpoints.getQuestionBankBySubject.replace(
+        "{subjectId}",
+        subjectId
+      )}?page=${page}&size=${size}&full=${full}`;
+
+      // Add optional filters
+      if (topicId) {
+        url += `&topicId=${topicId}`;
+      }
+      if (difficulty) {
+        url += `&difficulty=${difficulty}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Lấy danh sách câu hỏi theo môn học thất bại");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách câu hỏi theo môn học:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get questions by grade level with pagination
+   * @param {string} gradeLevel - Grade level enum (GRADE_6 to GRADE_12)
+   * @param {number} page - Page number
+   * @param {number} size - Page size
+   * @param {boolean} full - Full DTO or summary
+   * @returns {Promise<Object>} Paginated response
+   */
+  getQuestionBankByGrade: async (
+    gradeLevel,
+    page = 0,
+    size = 20,
+    full = false
+  ) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getQuestionBankByGrade.replace(
+          "{gradeLevel}",
+          gradeLevel
+        )}?page=${page}&size=${size}&full=${full}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Lấy danh sách câu hỏi theo khối lớp thất bại");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Lỗi khi lấy danh sách câu hỏi theo khối lớp:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get questions by subject and grade level with pagination
+   * @param {number} subjectId - Subject ID
+   * @param {string} gradeLevel - Grade level enum (GRADE_6 to GRADE_12)
+   * @param {number} page - Page number
+   * @param {number} size - Page size
+   * @param {boolean} full - Full DTO or summary
+   * @returns {Promise<Object>} Paginated response
+   */
+  getQuestionBankBySubjectAndGrade: async (
+    subjectId,
+    gradeLevel,
+    page = 0,
+    size = 20,
+    full = false
+  ) => {
+    try {
+      const response = await fetch(
+        `${config.BASE_URL}${endpoints.getQuestionBankBySubjectAndGrade
+          .replace("{subjectId}", subjectId)
+          .replace(
+            "{gradeLevel}",
+            gradeLevel
+          )}?page=${page}&size=${size}&full=${full}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Lấy danh sách câu hỏi theo môn học và khối lớp thất bại"
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(
+        "Lỗi khi lấy danh sách câu hỏi theo môn học và khối lớp:",
+        error
+      );
       throw error;
     }
   },

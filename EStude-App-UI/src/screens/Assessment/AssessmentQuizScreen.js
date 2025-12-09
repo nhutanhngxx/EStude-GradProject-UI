@@ -14,6 +14,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { AuthContext } from "../../contexts/AuthContext";
 import topicService from "../../services/topicService";
 import aiService from "../../services/aiService";
+import LatexText from "../../components/common/LatexText";
 
 const themeColors = {
   primary: "#9C27B0",
@@ -564,9 +565,9 @@ export default function AssessmentQuizScreen({ route, navigation }) {
           </View>
 
           {/* Question text */}
-          <Text style={styles.questionText}>
+          <LatexText textStyle={styles.questionText}>
             {currentQuestion.questionText}
-          </Text>
+          </LatexText>
 
           {/* Options */}
           <View style={styles.optionsContainer}>
@@ -598,12 +599,26 @@ export default function AssessmentQuizScreen({ route, navigation }) {
                   </View>
                   <Text
                     style={[
+                      {
+                        fontSize: 15,
+                        color: isSelected ? themeColors.primary : "#333",
+                        fontWeight: isSelected ? "600" : "400",
+                        lineHeight: 22,
+                        marginRight: 6,
+                      },
+                    ]}
+                  >
+                    {String.fromCharCode(65 + idx)}.
+                  </Text>
+                  <LatexText
+                    style={{ flex: 1 }}
+                    textStyle={[
                       styles.optionText,
                       isSelected && styles.optionTextSelected,
                     ]}
                   >
-                    {String.fromCharCode(65 + idx)}. {option.optionText}
-                  </Text>
+                    {option.optionText}
+                  </LatexText>
                 </TouchableOpacity>
               );
             })}
