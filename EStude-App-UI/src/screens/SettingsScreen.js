@@ -45,7 +45,7 @@ export default function SettingsScreen({ navigation }) {
   return (
     <View style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.sectionTitle}>Cài đặt chung</Text>
+        {/* <Text style={styles.sectionTitle}>Cài đặt chung</Text>
 
         <TouchableOpacity style={styles.item}>
           <View style={styles.itemLeft}>
@@ -83,7 +83,7 @@ export default function SettingsScreen({ navigation }) {
             <Text style={styles.itemText}>Chính sách bảo mật</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <TouchableOpacity
           style={[styles.item, styles.logout]}
