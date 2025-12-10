@@ -15,11 +15,11 @@ import topicService from "../../services/topicService";
 import aiService from "../../services/aiService";
 
 const themeColors = {
-  primary: "#00cc66",      // xanh lá chủ đạo
-  secondary: "#33cc77",    // xanh lá nhạt hơn
-  background: "#e6f5ea",   // nền xanh rất nhạt / trắng pha xanh
-  card: "#FFFFFF",          // màu card vẫn trắng
-  text: "#006633",          // text màu xanh đậm
+  primary: "#00cc66", // xanh lá chủ đạo
+  secondary: "#33cc77", // xanh lá nhạt hơn
+  background: "#e6f5ea", // nền xanh rất nhạt / trắng pha xanh
+  card: "#FFFFFF", // màu card vẫn trắng
+  text: "#006633", // text màu xanh đậm
 };
 
 export default function AssessmentHistoryScreen({ navigation }) {
@@ -360,6 +360,8 @@ export default function AssessmentHistoryScreen({ navigation }) {
 
   const getPerformanceColor = (level) => {
     switch (level) {
+      case "NEEDS_IMPROVEMENT":
+        return "#FF5722";
       case "EXCELLENT":
         return "#4CAF50";
       case "GOOD":
@@ -377,6 +379,8 @@ export default function AssessmentHistoryScreen({ navigation }) {
 
   const getPerformanceLabel = (level) => {
     switch (level) {
+      case "NEEDS_IMPROVEMENT":
+        return "Cần cải thiện";
       case "EXCELLENT":
         return "Xuất sắc";
       case "GOOD":

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import LatexText from "../../components/common/LatexText";
 
 const themeColors = {
   primary: "#9C27B0",
@@ -116,15 +117,20 @@ export default function AssessmentReviewScreen({ route, navigation }) {
           </View>
 
           {/* Question text */}
-          <Text style={styles.questionText}>
-            {currentQuestion.questionText}
-          </Text>
+          <LatexText textStyle={styles.questionText}>
+            {currentQuestion.questionText || ""}
+          </LatexText>
 
           {/* Options */}
           <View style={styles.optionsContainer}>
             {currentQuestion.options?.map((option, idx) => {
               const isUserAnswer = userAnswer === option.optionId;
               const isCorrectAnswer = option.isCorrect;
+              // Show A, B, C, D prefix only if we have full options (from quiz)
+              const hasFullOptions = currentQuestion.options.length >= 3;
+              const optionPrefix = hasFullOptions
+                ? `${String.fromCharCode(65 + idx)}. `
+                : "";
 
               return (
                 <View
@@ -163,17 +169,20 @@ export default function AssessmentReviewScreen({ route, navigation }) {
                     </View>
 
                     {/* Option Text */}
-                    <Text
-                      style={[
-                        styles.optionText,
-                        isCorrectAnswer && styles.optionTextCorrect,
-                        isUserAnswer &&
-                          !isCorrectAnswer &&
-                          styles.optionTextWrong,
-                      ]}
-                    >
-                      {String.fromCharCode(65 + idx)}. {option.optionText}
-                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <LatexText
+                        textStyle={[
+                          styles.optionText,
+                          isCorrectAnswer && styles.optionTextCorrect,
+                          isUserAnswer &&
+                            !isCorrectAnswer &&
+                            styles.optionTextWrong,
+                        ]}
+                      >
+                        {optionPrefix}
+                        {option.optionText || ""}
+                      </LatexText>
+                    </View>
                   </View>
 
                   {/* Labels */}
@@ -236,31 +245,53 @@ export default function AssessmentReviewScreen({ route, navigation }) {
               )}
 
               {/* Explanation text */}
-              <Text style={styles.explanationText}>
-                {aiFeedback.explanation}
-              </Text>
+              <LatexText textStyle={styles.explanationText}>
+                {aiFeedback.explanation || ""}
+              </LatexText>
 
-              {/* Show student and correct answers */}
-              {!aiFeedback.is_correct && (
+              {/* Show student and correct answers - always show if data exists */}
+              {(aiFeedback.student_answer || aiFeedback.correct_answer) && (
                 <View style={styles.aiAnswersComparison}>
-                  <View style={styles.aiAnswerRow}>
-                    <Ionicons name="close-circle" size={16} color="#F44336" />
-                    <Text style={styles.aiAnswerLabel}>Bạn đã chọn:</Text>
-                    <Text style={styles.aiAnswerWrong}>
-                      {aiFeedback.student_answer}
-                    </Text>
-                  </View>
-                  <View style={styles.aiAnswerRow}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color="#4CAF50"
-                    />
-                    <Text style={styles.aiAnswerLabel}>Đáp án đúng:</Text>
-                    <Text style={styles.aiAnswerCorrect}>
-                      {aiFeedback.correct_answer}
-                    </Text>
-                  </View>
+                  {aiFeedback.student_answer && (
+                    <View style={styles.aiAnswerRow}>
+                      <Ionicons
+                        name={
+                          aiFeedback.is_correct
+                            ? "checkmark-circle"
+                            : "close-circle"
+                        }
+                        size={16}
+                        color={aiFeedback.is_correct ? "#4CAF50" : "#F44336"}
+                      />
+                      <Text style={styles.aiAnswerLabel}>Bạn đã chọn:</Text>
+                      <View style={{ flex: 1 }}>
+                        <LatexText
+                          textStyle={
+                            aiFeedback.is_correct
+                              ? styles.aiAnswerCorrect
+                              : styles.aiAnswerWrong
+                          }
+                        >
+                          {aiFeedback.student_answer}
+                        </LatexText>
+                      </View>
+                    </View>
+                  )}
+                  {aiFeedback.correct_answer && (
+                    <View style={styles.aiAnswerRow}>
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color="#4CAF50"
+                      />
+                      <Text style={styles.aiAnswerLabel}>Đáp án đúng:</Text>
+                      <View style={{ flex: 1 }}>
+                        <LatexText textStyle={styles.aiAnswerCorrect}>
+                          {aiFeedback.correct_answer}
+                        </LatexText>
+                      </View>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
@@ -273,9 +304,9 @@ export default function AssessmentReviewScreen({ route, navigation }) {
                 <Ionicons name="bulb" size={20} color={themeColors.primary} />
                 <Text style={styles.explanationTitle}>Giải thích</Text>
               </View>
-              <Text style={styles.explanationText}>
-                {currentQuestion.explanation}
-              </Text>
+              <LatexText textStyle={styles.explanationText}>
+                {currentQuestion.explanation || ""}
+              </LatexText>
             </View>
           )}
 
@@ -573,13 +604,14 @@ const styles = StyleSheet.create({
   },
   aiAnswerRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 6,
   },
   aiAnswerLabel: {
     fontSize: 13,
     color: "#666",
     fontWeight: "500",
+    flexShrink: 0,
   },
   aiAnswerWrong: {
     fontSize: 13,

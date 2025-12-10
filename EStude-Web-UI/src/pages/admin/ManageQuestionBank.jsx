@@ -17,6 +17,7 @@ import topicService from "../../services/topicService";
 import subjectService from "../../services/subjectService";
 import { useToast } from "../../contexts/ToastContext";
 import Pagination from "../../components/common/Pagination";
+import LatexText from "../../components/common/LatexText";
 
 const Modal = ({ title, children, onClose, size = "2xl" }) => {
   // Convert size to width percentage
@@ -42,9 +43,9 @@ const Modal = ({ title, children, onClose, size = "2xl" }) => {
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
-        className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm ${getWidthClass()} p-6 max-h-[90vh] overflow-y-auto`}
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm ${getWidthClass()} max-h-[90vh] flex flex-col`}
       >
-        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 sticky top-0 bg-white dark:bg-gray-800 z-10">
+        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 p-6 pb-4 flex-shrink-0">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}
           </h2>
@@ -55,7 +56,7 @@ const Modal = ({ title, children, onClose, size = "2xl" }) => {
             <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto flex-1 p-6 pt-4">{children}</div>
       </div>
     </div>
   );
@@ -106,10 +107,12 @@ const ManageQuestionBank = () => {
   const [modalType, setModalType] = useState(null);
   const [selectedQuestion, setSelectedQuestion] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(0); // API v2.0: page starts from 0
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
   const [importedQuestions, setImportedQuestions] = useState([]);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20; // API v2.0: default page size
 
   // Filters
   const [filters, setFilters] = useState({
@@ -157,7 +160,7 @@ const ManageQuestionBank = () => {
       setQuestions([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.topicId, filters.difficulty]);
+  }, [filters.topicId, filters.difficulty, currentPage]); // ✅ Added currentPage dependency
 
   const fetchSubjects = async () => {
     try {
@@ -197,16 +200,38 @@ const ManageQuestionBank = () => {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await questionService.getQuestionBankByTopic(
-        filters.topicId,
-        filters.difficulty || null
+
+      // ✅ API v2.0: Use getQuestionBankBySubject with topicId filter and pagination
+      // URL: /api/questions/bank/subject/{subjectId}?page=0&size=20&topicId={topicId}&difficulty={difficulty}
+      const response = await questionService.getQuestionBankBySubject(
+        filters.subjectId, // Required for the new API
+        currentPage, // 0-based page number
+        itemsPerPage, // 20 items per page
+        false, // full = false (summary DTO)
+        filters.topicId, // Optional topicId filter
+        filters.difficulty || null // Optional difficulty filter
       );
-      if (response && response.data) {
-        setQuestions(response.data);
+
+      // Handle paginated response
+      if (response && response.success && response.data) {
+        // API returns: { success: true, message: "...", data: { content: [...], totalPages: ..., ... } }
+        const data = response.data;
+        setQuestions(Array.isArray(data.content) ? data.content : []);
+        setTotalPages(data.totalPages || 0);
+        setTotalElements(data.totalElements || 0);
+      } else {
+        // Fallback: empty response
+        setQuestions([]);
+        setTotalPages(0);
+        setTotalElements(0);
       }
     } catch (error) {
       console.error("Error loading questions:", error);
       showToast("Lỗi khi tải danh sách câu hỏi", "error");
+      // ⚠️ CRITICAL: Reset về array rỗng khi lỗi
+      setQuestions([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setLoading(false);
     }
@@ -244,8 +269,8 @@ const ManageQuestionBank = () => {
         difficultyLevel: question.difficultyLevel,
         attachmentUrl: question.attachmentUrl || "",
         options:
-          question.options && question.options.length > 0
-            ? question.options.map((opt) => ({
+          question.questionOptions && question.questionOptions.length > 0
+            ? question.questionOptions.map((opt) => ({
                 optionText: opt.optionText,
                 isCorrect: opt.isCorrect,
                 optionOrder: opt.optionOrder,
@@ -653,16 +678,20 @@ const ManageQuestionBank = () => {
     }
   };
 
-  const filteredQuestions = questions.filter((question) =>
-    question.questionText.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ Server-side filtering: API handles pagination and filtering
+  // Client-side search only for display (filter already-loaded page)
+  const filteredQuestions = searchTerm
+    ? questions.filter((question) =>
+        question.questionText.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : questions;
 
-  const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentQuestions = filteredQuestions.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
+  // For display: use currentPage (0-based for API, 1-based for UI)
+  const displayPage = currentPage + 1;
+  const startIndex = currentPage * itemsPerPage;
+
+  // Show current page results (already filtered by API)
+  const currentQuestions = filteredQuestions;
 
   const getDifficultyBadge = (level) => {
     const difficulty = DIFFICULTY_LEVELS.find((d) => d.value === level);
@@ -681,8 +710,7 @@ const ManageQuestionBank = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
-      {/* <div className="max-w-7xl mx-auto"> */}
+    <div className="h-full flex flex-col p-4 sm:p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>
@@ -746,7 +774,7 @@ const ManageQuestionBank = () => {
                   subjectId: e.target.value,
                   topicId: "",
                 });
-                setCurrentPage(1);
+                setCurrentPage(0); // API v2.0: page starts from 0
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -771,7 +799,7 @@ const ManageQuestionBank = () => {
                   gradeLevel: e.target.value,
                   topicId: "",
                 });
-                setCurrentPage(1);
+                setCurrentPage(0); // API v2.0: page starts from 0
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={!filters.subjectId}
@@ -797,7 +825,7 @@ const ManageQuestionBank = () => {
                   volume: e.target.value,
                   topicId: "",
                 });
-                setCurrentPage(1);
+                setCurrentPage(0); // API v2.0: page starts from 0
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={!filters.subjectId}
@@ -819,7 +847,7 @@ const ManageQuestionBank = () => {
               value={filters.topicId}
               onChange={(e) => {
                 setFilters({ ...filters, topicId: e.target.value });
-                setCurrentPage(1);
+                setCurrentPage(0); // API v2.0: page starts from 0
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={!filters.subjectId}
@@ -841,7 +869,7 @@ const ManageQuestionBank = () => {
               value={filters.difficulty}
               onChange={(e) => {
                 setFilters({ ...filters, difficulty: e.target.value });
-                setCurrentPage(1);
+                setCurrentPage(0); // API v2.0: page starts from 0
               }}
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={!filters.topicId}
@@ -865,7 +893,7 @@ const ManageQuestionBank = () => {
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1);
+            setCurrentPage(0); // API v2.0: page starts from 0
           }}
           className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           disabled={!filters.topicId}
@@ -875,13 +903,26 @@ const ManageQuestionBank = () => {
       {/* Question Count */}
       {filters.topicId && (
         <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Tổng số câu hỏi:{" "}
-          <span className="font-semibold">{filteredQuestions.length}</span>
+          {searchTerm ? (
+            <>
+              Tìm thấy{" "}
+              <span className="font-semibold">{filteredQuestions.length}</span>{" "}
+              trong tổng số{" "}
+              <span className="font-semibold">{totalElements}</span> câu hỏi
+            </>
+          ) : (
+            <>
+              Tổng số câu hỏi:{" "}
+              <span className="font-semibold">
+                {totalElements || filteredQuestions.length}
+              </span>
+            </>
+          )}
         </div>
       )}
 
-      {/* Questions List */}
-      <div className="space-y-4 mb-16">
+      {/* Questions List - Flex grow để chiếm hết không gian còn lại */}
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
         {loading ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center text-gray-500 dark:text-gray-400">
             Đang tải...
@@ -904,7 +945,7 @@ const ManageQuestionBank = () => {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                      #{startIndex + index + 1}
+                      #{currentPage * itemsPerPage + index + 1}
                     </span>
                     {getDifficultyBadge(question.difficultyLevel)}
                     <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -914,9 +955,9 @@ const ManageQuestionBank = () => {
                       {question.points} điểm
                     </span>
                   </div>
-                  <p className="text-gray-900 dark:text-gray-100 font-medium">
-                    {question.questionText}
-                  </p>
+                  <div className="text-gray-900 dark:text-gray-100 font-medium">
+                    <LatexText>{question.questionText}</LatexText>
+                  </div>
                 </div>
                 <div className="flex gap-2 ml-4">
                   <button
@@ -943,55 +984,62 @@ const ManageQuestionBank = () => {
                 </div>
               </div>
 
-              {question.options && question.options.length > 0 && (
-                <div className="mt-3 space-y-2">
-                  {question.options.map((option) => (
-                    <div
-                      key={option.optionId}
-                      className={`flex items-start gap-2 p-2 rounded ${
-                        option.isCorrect
-                          ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
-                          : "bg-gray-50 dark:bg-gray-700/50"
-                      }`}
-                    >
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {String.fromCharCode(65 + option.optionOrder - 1)}.
-                      </span>
-                      <span
-                        className={`text-sm flex-1 ${
+              {question.questionOptions &&
+                question.questionOptions.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {question.questionOptions.map((option) => (
+                      <div
+                        key={option.optionId}
+                        className={`flex items-start gap-2 p-2 rounded ${
                           option.isCorrect
-                            ? "text-green-900 dark:text-green-300 font-medium"
-                            : "text-gray-700 dark:text-gray-300"
+                            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                            : "bg-gray-50 dark:bg-gray-700/50"
                         }`}
                       >
-                        {option.optionText}
-                      </span>
-                      {option.isCorrect && (
-                        <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
-                          ✓ Đáp án đúng
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          {String.fromCharCode(65 + option.optionOrder - 1)}.
                         </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                        <div
+                          className={`text-sm flex-1 ${
+                            option.isCorrect
+                              ? "text-green-900 dark:text-green-300 font-medium"
+                              : "text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          <LatexText>{option.optionText}</LatexText>
+                        </div>
+                        {option.isCorrect && (
+                          <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+                            ✓ Đáp án đúng
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
           ))
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Pagination - Luôn ở cuối, không sticky */}
       {totalPages > 1 && (
-        <div className="mt-6">
-          <Pagination
-            totalItems={filteredQuestions.length}
-            itemsPerPage={itemsPerPage}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-          />
+        <div className="flex-shrink-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Hiển thị {startIndex + 1}-
+              {Math.min(startIndex + itemsPerPage, totalElements)} trong tổng số{" "}
+              {totalElements} câu hỏi
+            </div>
+            <Pagination
+              totalItems={totalElements}
+              itemsPerPage={itemsPerPage}
+              currentPage={displayPage}
+              onPageChange={(page) => setCurrentPage(page - 1)} // Convert 1-based to 0-based
+            />
+          </div>
         </div>
       )}
-      {/* </div> */}
 
       {/* View Modal */}
       {modalType === "view" && selectedQuestion && (
@@ -1001,9 +1049,9 @@ const ManageQuestionBank = () => {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Câu hỏi
               </label>
-              <p className="text-gray-900 dark:text-gray-100">
-                {selectedQuestion.questionText}
-              </p>
+              <div className="text-gray-900 dark:text-gray-100">
+                <LatexText>{selectedQuestion.questionText}</LatexText>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1037,19 +1085,21 @@ const ManageQuestionBank = () => {
                   Chủ đề
                 </label>
                 <p className="text-gray-900 dark:text-gray-100">
-                  {selectedQuestion.topic?.name || "-"}
+                  {selectedQuestion.topicName ||
+                    selectedQuestion.topic?.name ||
+                    "-"}
                 </p>
               </div>
             </div>
 
-            {selectedQuestion.options &&
-              selectedQuestion.options.length > 0 && (
+            {selectedQuestion.questionOptions &&
+              selectedQuestion.questionOptions.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Đáp án
                   </label>
                   <div className="space-y-2">
-                    {selectedQuestion.options.map((option) => (
+                    {selectedQuestion.questionOptions.map((option) => (
                       <div
                         key={option.optionId}
                         className={`flex items-start gap-2 p-3 rounded ${
@@ -1061,15 +1111,15 @@ const ManageQuestionBank = () => {
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                           {String.fromCharCode(65 + option.optionOrder - 1)}.
                         </span>
-                        <span
+                        <div
                           className={`text-sm flex-1 ${
                             option.isCorrect
                               ? "text-green-900 dark:text-green-300 font-medium"
                               : "text-gray-700 dark:text-gray-300"
                           }`}
                         >
-                          {option.optionText}
-                        </span>
+                          <LatexText>{option.optionText}</LatexText>
+                        </div>
                         {option.isCorrect && (
                           <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
                             ✓ Đúng
@@ -1389,9 +1439,9 @@ const ManageQuestionBank = () => {
                           {question.points} điểm
                         </span>
                       </div>
-                      <p className="text-gray-900 dark:text-gray-100 mb-2">
-                        {question.questionText}
-                      </p>
+                      <div className="text-gray-900 dark:text-gray-100 mb-2">
+                        <LatexText>{question.questionText}</LatexText>
+                      </div>
                       {question.options && question.options.length > 0 && (
                         <div className="space-y-1">
                           {question.options.map((option, optIdx) => (
@@ -1406,15 +1456,15 @@ const ManageQuestionBank = () => {
                               <span className="font-medium text-gray-600 dark:text-gray-400">
                                 {String.fromCharCode(65 + optIdx)}.
                               </span>
-                              <span
+                              <div
                                 className={`flex-1 ${
                                   option.isCorrect
                                     ? "text-green-900 dark:text-green-300 font-medium"
                                     : "text-gray-700 dark:text-gray-300"
                                 }`}
                               >
-                                {option.optionText}
-                              </span>
+                                <LatexText>{option.optionText}</LatexText>
+                              </div>
                               {option.isCorrect && (
                                 <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
                                   ✓

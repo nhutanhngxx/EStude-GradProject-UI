@@ -19,6 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import subjectService from "../../services/subjectService";
 import classSubjectService from "../../services/classSubjectService";
 import topicService from "../../services/topicService";
+import LatexText from "../../components/common/LatexText";
 
 const themeColors = {
   primary: "#4CAF50", // Xanh lá chủ đạo
@@ -101,6 +102,13 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const [finalAssessmentSubjectId, setFinalAssessmentSubjectId] =
     useState(null);
 
+  // Modal state for creating new roadmap
+  const [createRoadmapModalVisible, setCreateRoadmapModalVisible] =
+    useState(false);
+
+  // Store requestId for creating new roadmap
+  const [currentRequestId, setCurrentRequestId] = useState(null);
+
   useEffect(() => {
     navigation.setOptions({
       title: "Lộ trình Học Tập",
@@ -153,6 +161,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
         setRoadmap(roadmapData);
         extractCompletedTasks(roadmapData);
+
+        // Store requestId for creating new roadmap
+        if (response.requestId) {
+          setCurrentRequestId(response.requestId);
+          console.log("💾 Stored requestId:", response.requestId);
+        }
       } else {
         showToast("Không thể tải lộ trình học tập", { type: "error" });
         // Fallback to mock
@@ -397,7 +411,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
     if (
       phase.milestone &&
       (phase.milestone.assessment_type === "FINAL_EXAM" ||
-        phase.milestone.assessment_type === "ASSESSMENT")
+        phase.milestone.assessment_type === "ASSESSMENT" ||
+        phase.milestone.assessment_type === "FULL_ASSESSMENT" ||
+        phase.milestone.assessment_type === "QUIZ")
     ) {
       // Check if task is ASSESSMENT type
       if (task.type === "ASSESSMENT" || task.type === "FINAL_EXAM") {
@@ -962,6 +978,150 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
     setTaskModalVisible(true);
   };
 
+  const handleCreateNewRoadmap = () => {
+    setCreateRoadmapModalVisible(true);
+  };
+
+  const handleConfirmCreateRoadmap = async () => {
+    setCreateRoadmapModalVisible(false);
+
+    try {
+      setLoading(true);
+      showToast("Đang tạo lộ trình học tập...", { type: "info" });
+
+      // ============================================
+      // PHƯƠNG ÁN MỚI: Sử dụng requestId để lấy dataPayload
+      // ============================================
+
+      // Validation: Kiểm tra xem có requestId không
+      if (!currentRequestId) {
+        console.warn("⚠️ [Layer 5] No requestId found, using old flow...");
+        showToast(
+          "Không tìm thấy dữ liệu lộ trình trước đó. Vui lòng làm bài đánh giá trước!",
+          { type: "warning" }
+        );
+        return;
+      }
+
+      // ============================================
+      // BƯỚC 1: Lấy dataPayload từ requestId (KHÔNG CẦN TOKEN)
+      // ============================================
+      console.log(
+        "📥 [Layer 5 - NEW] Bước 1: Fetching dataPayload from requestId:",
+        currentRequestId
+      );
+      const requestResponse = await aiService.getRequestById(currentRequestId);
+      console.log("📊 [Layer 5 - NEW] Request response:", requestResponse);
+
+      if (
+        !requestResponse ||
+        !requestResponse.success ||
+        !requestResponse.data
+      ) {
+        showToast("Không thể lấy dữ liệu lộ trình!", { type: "error" });
+        return;
+      }
+
+      const dataPayload = requestResponse.data.dataPayload;
+
+      if (!dataPayload) {
+        showToast("Dữ liệu payload không hợp lệ!", { type: "error" });
+        return;
+      }
+
+      console.log("✅ [Layer 5 - NEW] Got dataPayload:", dataPayload);
+
+      // Validation: Kiểm tra nếu không có câu sai
+      if (
+        !dataPayload.incorrect_questions ||
+        dataPayload.incorrect_questions.length === 0
+      ) {
+        showToast(
+          "Không tìm thấy câu hỏi sai để tạo lộ trình. Hãy làm thêm bài đánh giá!",
+          { type: "warning" }
+        );
+        return;
+      }
+
+      console.log(
+        "❌ [Layer 5 - NEW] Incorrect questions count:",
+        dataPayload.incorrect_questions.length
+      );
+
+      // ============================================
+      // BƯỚC 2: Gửi request tạo roadmap với dataPayload
+      // ============================================
+      console.log("🚀 [Layer 5 - NEW] Bước 2: Generating roadmap...");
+      console.log(
+        "📤 [Layer 5 - NEW] Payload:",
+        JSON.stringify(dataPayload, null, 2)
+      );
+
+      const generateResponse = await aiService.generateLearningRoadmap(
+        dataPayload,
+        token
+      );
+
+      if (!generateResponse || !generateResponse.success) {
+        console.error(
+          "❌ [Layer 5 - NEW] Generate Roadmap failed:",
+          generateResponse
+        );
+        showToast("Không thể tạo lộ trình học tập!", { type: "error" });
+        return;
+      }
+
+      console.log("✅ [Layer 5 - NEW] Generate success:", generateResponse);
+      showToast("Lộ trình học tập đã được tạo!", { type: "success" });
+
+      // ============================================
+      // BƯỚC 3: Lấy roadmap mới nhất và lưu requestId mới
+      // ============================================
+      console.log("📥 [Layer 5 - NEW] Bước 3: Fetching latest roadmap...");
+      const roadmapResponse = await aiService.getRoadmapLatest(token);
+
+      if (!roadmapResponse || !roadmapResponse.detailedAnalysis) {
+        showToast("Không thể tải lộ trình!", { type: "error" });
+        return;
+      }
+
+      console.log(
+        "✅ [Layer 5 - NEW] Got roadmap:",
+        roadmapResponse.detailedAnalysis
+      );
+
+      // Lưu requestId mới cho lần tạo tiếp theo
+      if (roadmapResponse.requestId) {
+        setCurrentRequestId(roadmapResponse.requestId);
+        console.log(
+          "💾 [Layer 5 - NEW] Stored new requestId:",
+          roadmapResponse.requestId
+        );
+      }
+
+      // ============================================
+      // BƯỚC 4: Cập nhật state và reload dữ liệu
+      // ============================================
+      const roadmapData = {
+        ...roadmapResponse.detailedAnalysis,
+        resultId: roadmapResponse.resultId, // Add resultId for progress tracking
+      };
+
+      setRoadmap(roadmapData);
+      extractCompletedTasks(roadmapData);
+
+      // Switch to current tab to show new roadmap
+      setActiveTab("current");
+
+      showToast("Lộ trình mới đã được tải!", { type: "success" });
+    } catch (error) {
+      console.error("❌ [Layer 5] Error creating roadmap:", error);
+      showToast("Lỗi khi tạo lộ trình học tập!", { type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitQuiz = async () => {
     if (!selectedTask || !selectedTask.practice_set) return;
 
@@ -1023,6 +1183,23 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const handleViewIncorrectQuestion = (question) => {
     setSelectedQuestion(question);
     setQuestionModalVisible(true);
+  };
+
+  const renderCreateRoadmapButton = () => {
+    return (
+      <View style={styles.createRoadmapContainer}>
+        <TouchableOpacity
+          style={styles.createRoadmapButton}
+          onPress={handleCreateNewRoadmap}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add-circle" size={24} color="#fff" />
+          <Text style={styles.createRoadmapButtonText}>
+            Tạo Lộ trình học tập mới
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderOverallGoal = () => {
@@ -1345,12 +1522,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                       />
                                     </View>
                                     <View style={styles.reviewInfo}>
-                                      <Text
+                                      <LatexText
                                         style={styles.reviewQuestion}
-                                        numberOfLines={2}
+                                        textStyle={styles.reviewQuestion}
                                       >
                                         {q.question_text}
-                                      </Text>
+                                      </LatexText>
                                       <Text style={styles.reviewTip}>
                                         💡 {q.tip}
                                       </Text>
@@ -1841,9 +2018,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 </View>
                 <Text style={styles.questionHeaderText}>Câu hỏi</Text>
               </View>
-              <Text style={styles.questionTextLarge}>
+              <LatexText textStyle={styles.questionTextLarge}>
                 {currentQuestion.question_text || currentQuestion.questionText}
-              </Text>
+              </LatexText>
             </View>
 
             {/* Choices */}
@@ -1889,14 +2066,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                         >
                           {choiceLetter}
                         </Text>
-                        <Text
-                          style={[
-                            styles.choiceText,
-                            isSelected && styles.choiceTextSelected,
-                          ]}
-                        >
-                          {choiceText}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <LatexText
+                            textStyle={[
+                              styles.choiceText,
+                              isSelected && styles.choiceTextSelected,
+                            ]}
+                          >
+                            {choiceText}
+                          </LatexText>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );
@@ -2079,9 +2258,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 </View>
                 <Text style={styles.questionHeaderText}>Câu hỏi</Text>
               </View>
-              <Text style={styles.questionTextLarge}>
+              <LatexText textStyle={styles.questionTextLarge}>
                 {currentQuestion.questionText}
-              </Text>
+              </LatexText>
             </View>
 
             {/* Choices */}
@@ -2123,14 +2302,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                         >
                           {String.fromCharCode(65 + index)}.
                         </Text>
-                        <Text
-                          style={[
-                            styles.choiceText,
-                            isSelected && styles.choiceTextSelected,
-                          ]}
-                        >
-                          {option.optionText}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <LatexText
+                            textStyle={[
+                              styles.choiceText,
+                              isSelected && styles.choiceTextSelected,
+                            ]}
+                          >
+                            {option.optionText}
+                          </LatexText>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );
@@ -2756,6 +2937,61 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   };
 
   /**
+   * Render Create Roadmap Confirmation Modal
+   */
+  const renderCreateRoadmapModal = () => {
+    return (
+      <Modal
+        visible={createRoadmapModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCreateRoadmapModalVisible(false)}
+      >
+        <View style={styles.confirmModalOverlay}>
+          <View style={styles.confirmModalContainer}>
+            <View style={styles.confirmModalIconContainer}>
+              <Ionicons
+                name="rocket-outline"
+                size={48}
+                color={themeColors.primary}
+              />
+            </View>
+
+            <Text style={styles.confirmModalTitle}>
+              Tạo Lộ trình học tập mới?
+            </Text>
+
+            <Text style={styles.confirmModalMessage}>
+              Bạn có muốn tạo Lộ trình học tập mới không?
+            </Text>
+
+            <View style={styles.confirmModalButtons}>
+              <TouchableOpacity
+                style={styles.confirmModalButtonCancel}
+                onPress={() => setCreateRoadmapModalVisible(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.confirmModalButtonCancelText}>Hủy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.confirmModalButtonConfirm}
+                onPress={handleConfirmCreateRoadmap}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                <Text style={styles.confirmModalButtonConfirmText}>
+                  Xác nhận
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  /**
    * Render Incorrect Question Detail Modal
    */
   const renderQuestionDetailModal = () => {
@@ -2803,9 +3039,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   />
                   <Text style={styles.sectionLabel}>Câu hỏi</Text>
                 </View>
-                <Text style={styles.questionText}>
+                <LatexText textStyle={styles.questionText}>
                   {selectedQuestion.question_text}
-                </Text>
+                </LatexText>
               </View>
 
               {/* Your Answer (Wrong) */}
@@ -2821,9 +3057,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={styles.answerBox}>
-                  <Text style={styles.yourAnswer}>
+                  <LatexText textStyle={styles.yourAnswer}>
                     {selectedQuestion.your_answer}
-                  </Text>
+                  </LatexText>
                 </View>
               </View>
 
@@ -2840,9 +3076,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={[styles.answerBox, styles.correctAnswerBox]}>
-                  <Text style={styles.correctAnswer}>
+                  <LatexText textStyle={styles.correctAnswer}>
                     {selectedQuestion.correct_answer}
-                  </Text>
+                  </LatexText>
                 </View>
               </View>
 
@@ -2852,9 +3088,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   <Ionicons name="book" size={20} color={themeColors.primary} />
                   <Text style={styles.sectionLabel}>Giải thích</Text>
                 </View>
-                <Text style={styles.explanationText}>
+                <LatexText textStyle={styles.explanationText}>
                   {selectedQuestion.explanation}
-                </Text>
+                </LatexText>
               </View>
 
               {/* Common Mistake */}
@@ -2868,9 +3104,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                     />
                     <Text style={styles.sectionLabel}>Lỗi phổ biến</Text>
                   </View>
-                  <Text style={styles.mistakeText}>
+                  <LatexText textStyle={styles.mistakeText}>
                     {selectedQuestion.common_mistake}
-                  </Text>
+                  </LatexText>
                 </View>
               )}
 
@@ -2885,22 +3121,23 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                     />
                     <Text style={styles.sectionLabel}>💡 Mẹo ghi nhớ</Text>
                   </View>
-                  <Text style={styles.tipDetailText}>
+                  <LatexText textStyle={styles.tipDetailText}>
                     {selectedQuestion.tip}
-                  </Text>
+                  </LatexText>
                 </View>
               )}
 
               <View style={styles.modalBottomSpacer} />
             </ScrollView>
 
-            {/* Footer Button */}
+            {/* Footer */}
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 style={styles.understoodButton}
                 onPress={() => setQuestionModalVisible(false)}
+                activeOpacity={0.8}
               >
-                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Ionicons name="checkmark-circle" size={20} color="#fff" />
                 <Text style={styles.understoodButtonText}>Đã hiểu</Text>
               </TouchableOpacity>
             </View>
@@ -2945,6 +3182,7 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
         >
+          {renderCreateRoadmapButton()}
           {renderOverallGoal()}
           {renderProgressBar()}
           {renderMotivationTips()}
@@ -2973,6 +3211,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
       {/* Question Detail Modal */}
       {renderQuestionDetailModal()}
+
+      {/* Create Roadmap Confirmation Modal */}
+      {renderCreateRoadmapModal()}
     </View>
   );
 } // ============================================
@@ -3418,6 +3659,118 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  // Create Roadmap Button Styles
+  createRoadmapContainer: {
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  createRoadmapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: themeColors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  createRoadmapButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  // Confirmation Modal Styles
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  confirmModalContainer: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    maxWidth: 360,
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  confirmModalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: `${themeColors.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  confirmModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: themeColors.text,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  confirmModalMessage: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: themeColors.textLight,
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  confirmModalButtons: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  confirmModalButtonCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderWidth: 2,
+    borderColor: "#ddd",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmModalButtonCancelText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: themeColors.textLight,
+  },
+  confirmModalButtonConfirm: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    backgroundColor: themeColors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  confirmModalButtonConfirmText: {
+    marginLeft: 6,
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
   },
   goalCard: {
     margin: 16,

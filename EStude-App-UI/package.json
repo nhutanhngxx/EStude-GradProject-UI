@@ -29,14 +29,17 @@
     "expo-image-picker": "^17.0.8",
     "expo-network": "~7.1.5",
     "expo-status-bar": "~2.2.3",
+    "ramda": "^0.32.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
+    "react-native-render-html": "^6.3.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-web": "^0.20.0",
+    "react-native-webview": "^13.16.0",
     "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
