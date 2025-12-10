@@ -19,6 +19,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import subjectService from "../../services/subjectService";
 import classSubjectService from "../../services/classSubjectService";
 import topicService from "../../services/topicService";
+import LatexText from "../../components/common/LatexText";
 
 const themeColors = {
   primary: "#4CAF50", // Xanh lá chủ đạo
@@ -401,7 +402,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
     if (
       phase.milestone &&
       (phase.milestone.assessment_type === "FINAL_EXAM" ||
-        phase.milestone.assessment_type === "ASSESSMENT")
+        phase.milestone.assessment_type === "ASSESSMENT" ||
+        phase.milestone.assessment_type === "FULL_ASSESSMENT" ||
+        phase.milestone.assessment_type === "QUIZ")
     ) {
       // Check if task is ASSESSMENT type
       if (task.type === "ASSESSMENT" || task.type === "FINAL_EXAM") {
@@ -1541,12 +1544,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                                       />
                                     </View>
                                     <View style={styles.reviewInfo}>
-                                      <Text
+                                      <LatexText
                                         style={styles.reviewQuestion}
-                                        numberOfLines={2}
+                                        textStyle={styles.reviewQuestion}
                                       >
                                         {q.question_text}
-                                      </Text>
+                                      </LatexText>
                                       <Text style={styles.reviewTip}>
                                         💡 {q.tip}
                                       </Text>
@@ -2037,9 +2040,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 </View>
                 <Text style={styles.questionHeaderText}>Câu hỏi</Text>
               </View>
-              <Text style={styles.questionTextLarge}>
+              <LatexText textStyle={styles.questionTextLarge}>
                 {currentQuestion.question_text || currentQuestion.questionText}
-              </Text>
+              </LatexText>
             </View>
 
             {/* Choices */}
@@ -2085,14 +2088,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                         >
                           {choiceLetter}
                         </Text>
-                        <Text
-                          style={[
-                            styles.choiceText,
-                            isSelected && styles.choiceTextSelected,
-                          ]}
-                        >
-                          {choiceText}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <LatexText
+                            textStyle={[
+                              styles.choiceText,
+                              isSelected && styles.choiceTextSelected,
+                            ]}
+                          >
+                            {choiceText}
+                          </LatexText>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );
@@ -2275,9 +2280,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                 </View>
                 <Text style={styles.questionHeaderText}>Câu hỏi</Text>
               </View>
-              <Text style={styles.questionTextLarge}>
+              <LatexText textStyle={styles.questionTextLarge}>
                 {currentQuestion.questionText}
-              </Text>
+              </LatexText>
             </View>
 
             {/* Choices */}
@@ -2319,14 +2324,16 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                         >
                           {String.fromCharCode(65 + index)}.
                         </Text>
-                        <Text
-                          style={[
-                            styles.choiceText,
-                            isSelected && styles.choiceTextSelected,
-                          ]}
-                        >
-                          {option.optionText}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <LatexText
+                            textStyle={[
+                              styles.choiceText,
+                              isSelected && styles.choiceTextSelected,
+                            ]}
+                          >
+                            {option.optionText}
+                          </LatexText>
+                        </View>
                       </View>
                     </TouchableOpacity>
                   );
@@ -3054,9 +3061,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   />
                   <Text style={styles.sectionLabel}>Câu hỏi</Text>
                 </View>
-                <Text style={styles.questionText}>
+                <LatexText textStyle={styles.questionText}>
                   {selectedQuestion.question_text}
-                </Text>
+                </LatexText>
               </View>
 
               {/* Your Answer (Wrong) */}
@@ -3072,9 +3079,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={styles.answerBox}>
-                  <Text style={styles.yourAnswer}>
+                  <LatexText textStyle={styles.yourAnswer}>
                     {selectedQuestion.your_answer}
-                  </Text>
+                  </LatexText>
                 </View>
               </View>
 
@@ -3091,9 +3098,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   </Text>
                 </View>
                 <View style={[styles.answerBox, styles.correctAnswerBox]}>
-                  <Text style={styles.correctAnswer}>
+                  <LatexText textStyle={styles.correctAnswer}>
                     {selectedQuestion.correct_answer}
-                  </Text>
+                  </LatexText>
                 </View>
               </View>
 
@@ -3103,9 +3110,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                   <Ionicons name="book" size={20} color={themeColors.primary} />
                   <Text style={styles.sectionLabel}>Giải thích</Text>
                 </View>
-                <Text style={styles.explanationText}>
+                <LatexText textStyle={styles.explanationText}>
                   {selectedQuestion.explanation}
-                </Text>
+                </LatexText>
               </View>
 
               {/* Common Mistake */}
@@ -3119,9 +3126,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                     />
                     <Text style={styles.sectionLabel}>Lỗi phổ biến</Text>
                   </View>
-                  <Text style={styles.mistakeText}>
+                  <LatexText textStyle={styles.mistakeText}>
                     {selectedQuestion.common_mistake}
-                  </Text>
+                  </LatexText>
                 </View>
               )}
 
@@ -3136,9 +3143,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
                     />
                     <Text style={styles.sectionLabel}>💡 Mẹo ghi nhớ</Text>
                   </View>
-                  <Text style={styles.tipDetailText}>
+                  <LatexText textStyle={styles.tipDetailText}>
                     {selectedQuestion.tip}
-                  </Text>
+                  </LatexText>
                 </View>
               )}
 
