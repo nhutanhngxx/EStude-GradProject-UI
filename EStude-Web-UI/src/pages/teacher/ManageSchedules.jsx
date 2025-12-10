@@ -4,6 +4,7 @@ import { useToast } from "../../contexts/ToastContext";
 import classService from "../../services/classService";
 import scheduleService from "../../services/scheduleService";
 import classSubjectService from "../../services/classSubjectService";
+import termService from "../../services/termService";
 import {
   Upload,
   Plus,
@@ -135,6 +136,10 @@ const ManageSchedules = () => {
     return totalWeeks + 1;
   };
 
+  // Lấy schoolId từ user
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const schoolId = user.school?.schoolId;
+
   useEffect(() => {
     const fetchInit = async () => {
       try {
@@ -143,6 +148,14 @@ const ManageSchedules = () => {
         setClasses(classesRes || []);
         const csRes = await classSubjectService.getAllClassSubjects();
         setClassSubjects(csRes || []);
+
+        // Fetch all terms from the school to populate the semester selector
+        if (schoolId) {
+          const termsRes = await termService.getTermsBySchool(schoolId);
+          if (termsRes && termsRes.length > 0) {
+            setTerms(termsRes);
+          }
+        }
       } catch (err) {
         console.error("Lỗi khi load dữ liệu:", err);
         showToast("Không thể tải dữ liệu!", "error");
@@ -151,11 +164,11 @@ const ManageSchedules = () => {
       }
     };
     fetchInit();
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => {
     if (!selectedClass) {
-      setTerms([]);
+      // Don't clear terms anymore - keep school terms available
       setSelectedTerm("");
       setFilteredSubjects([]);
       setSchedules([]);
@@ -172,7 +185,10 @@ const ManageSchedules = () => {
     const fetchClassDetails = async () => {
       try {
         const classDetail = await classService.getClassById(selectedClass);
-        setTerms(classDetail.terms || []);
+        // Update terms with class-specific terms if available
+        if (classDetail.terms && classDetail.terms.length > 0) {
+          setTerms(classDetail.terms);
+        }
       } catch (err) {
         console.error("Lỗi khi load chi tiết lớp:", err);
         showToast("Không thể tải học kỳ của lớp!", "error");

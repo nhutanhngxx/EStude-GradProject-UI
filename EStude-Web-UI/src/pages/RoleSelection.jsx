@@ -10,19 +10,19 @@ export default function RoleSelection() {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
   const roles = [
-    {
-      name: "Học sinh",
-      value: "student",
-      color: "blue",
-      lightBg: "bg-white",
-      lightText: "text-blue-700",
-      lightBorder: "border-blue-200",
-      lightHover: "hover:bg-blue-50",
-      darkBg: "dark:bg-gray-800",
-      darkText: "dark:text-blue-400",
-      darkBorder: "dark:border-blue-700",
-      darkHover: "dark:hover:bg-blue-900",
-    },
+    // {
+    //   name: "Học sinh",
+    //   value: "student",
+    //   color: "blue",
+    //   lightBg: "bg-white",
+    //   lightText: "text-blue-700",
+    //   lightBorder: "border-blue-200",
+    //   lightHover: "hover:bg-blue-50",
+    //   darkBg: "dark:bg-gray-800",
+    //   darkText: "dark:text-blue-400",
+    //   darkBorder: "dark:border-blue-700",
+    //   darkHover: "dark:hover:bg-blue-900",
+    // },
     {
       name: "Giáo viên",
       value: "teacher",
@@ -78,7 +78,7 @@ export default function RoleSelection() {
         Chọn vai trò để đăng nhập vào hệ thống
       </p>
 
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 w-full max-w-xs sm:max-w-4xl">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 w-full max-w-xs sm:max-w-4xl">
         {roles.map((role) => (
           <button
             key={role.value}
