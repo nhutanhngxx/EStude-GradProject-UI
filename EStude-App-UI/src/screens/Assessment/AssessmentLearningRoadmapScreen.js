@@ -106,6 +106,9 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
   const [createRoadmapModalVisible, setCreateRoadmapModalVisible] =
     useState(false);
 
+  // Store requestId for creating new roadmap
+  const [currentRequestId, setCurrentRequestId] = useState(null);
+
   useEffect(() => {
     navigation.setOptions({
       title: "Lộ trình Học Tập",
@@ -158,6 +161,12 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
 
         setRoadmap(roadmapData);
         extractCompletedTasks(roadmapData);
+
+        // Store requestId for creating new roadmap
+        if (response.requestId) {
+          setCurrentRequestId(response.requestId);
+          console.log("💾 Stored requestId:", response.requestId);
+        }
       } else {
         showToast("Không thể tải lộ trình học tập", { type: "error" });
         // Fallback to mock
@@ -981,76 +990,52 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       showToast("Đang tạo lộ trình học tập...", { type: "info" });
 
       // ============================================
-      // BƯỚC 1: Lấy Feedback mới nhất (Layer 1)
+      // PHƯƠNG ÁN MỚI: Sử dụng requestId để lấy dataPayload
       // ============================================
-      console.log("📥 [Layer 5] Bước 1: Fetching latest feedback...");
-      const feedbackResponse = await aiService.getFeedbackLatest(token);
-      console.log("📊 [Layer 5] Feedback response:", feedbackResponse);
 
-      if (!feedbackResponse || !feedbackResponse.detailedAnalysis) {
-        showToast("Không thể lấy thông tin câu hỏi sai!", { type: "error" });
+      // Validation: Kiểm tra xem có requestId không
+      if (!currentRequestId) {
+        console.warn("⚠️ [Layer 5] No requestId found, using old flow...");
+        showToast(
+          "Không tìm thấy dữ liệu lộ trình trước đó. Vui lòng làm bài đánh giá trước!",
+          { type: "warning" }
+        );
         return;
       }
 
-      const feedbackData = feedbackResponse.detailedAnalysis;
-
       // ============================================
-      // BƯỚC 2: Lấy Improvement từ params hoặc API (Layer 4)
+      // BƯỚC 1: Lấy dataPayload từ requestId (KHÔNG CẦN TOKEN)
       // ============================================
-      console.log("📈 [Layer 5] Bước 2: Getting improvement data...");
-      let improvementData = evaluation; // Ưu tiên từ params
+      console.log(
+        "📥 [Layer 5 - NEW] Bước 1: Fetching dataPayload from requestId:",
+        currentRequestId
+      );
+      const requestResponse = await aiService.getRequestById(currentRequestId);
+      console.log("📊 [Layer 5 - NEW] Request response:", requestResponse);
 
-      // Nếu không có từ params, gọi API
-      if (!improvementData) {
-        console.log("⚠️ [Layer 5] No evaluation in params, calling API...");
-        const improvementResponse = await aiService.getImprovementLatest(token);
-
-        if (!improvementResponse || !improvementResponse.detailedAnalysis) {
-          showToast("Không thể lấy dữ liệu đánh giá tiến bộ!", {
-            type: "error",
-          });
-          return;
-        }
-
-        improvementData = improvementResponse.detailedAnalysis;
-        console.log("✅ [Layer 5] Got improvement from API:", improvementData);
-      } else {
-        console.log("✅ [Layer 5] Using improvement from params");
+      if (
+        !requestResponse ||
+        !requestResponse.success ||
+        !requestResponse.data
+      ) {
+        showToast("Không thể lấy dữ liệu lộ trình!", { type: "error" });
+        return;
       }
 
-      // ============================================
-      // BƯỚC 3: Transform dữ liệu thành payload
-      // ============================================
-      console.log("🔄 [Layer 5] Bước 3: Transforming data...");
+      const dataPayload = requestResponse.data.dataPayload;
 
-      // Transform incorrect questions
-      const incorrectQuestions = feedbackData.feedback
-        ? feedbackData.feedback
-            .filter((item) => !item.is_correct)
-            .map((item) => ({
-              question_id: item.question_id,
-              topic: item.topic || "Không xác định",
-              subtopic: item.subtopic || "Chung",
-              difficulty:
-                item.difficulty_level === "Dễ"
-                  ? "EASY"
-                  : item.difficulty_level === "Trung bình"
-                  ? "MEDIUM"
-                  : "HARD",
-              question_text: item.question || "",
-              student_answer: item.student_answer || "",
-              correct_answer: item.correct_answer || "",
-              error_type: "CONCEPT_MISUNDERSTANDING",
-            }))
-        : [];
+      if (!dataPayload) {
+        showToast("Dữ liệu payload không hợp lệ!", { type: "error" });
+        return;
+      }
 
-      console.log(
-        "❌ [Layer 5] Incorrect questions count:",
-        incorrectQuestions.length
-      );
+      console.log("✅ [Layer 5 - NEW] Got dataPayload:", dataPayload);
 
       // Validation: Kiểm tra nếu không có câu sai
-      if (incorrectQuestions.length === 0) {
+      if (
+        !dataPayload.incorrect_questions ||
+        dataPayload.incorrect_questions.length === 0
+      ) {
         showToast(
           "Không tìm thấy câu hỏi sai để tạo lộ trình. Hãy làm thêm bài đánh giá!",
           { type: "warning" }
@@ -1058,62 +1043,41 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
         return;
       }
 
-      // Build payload
-      const payload = {
-        submission_id:
-          feedbackData.submission_id || improvementData.submission_id,
-        student_id: user.userId || studentId,
-        subject: feedbackData.subject || improvementData.subject,
-
-        evaluation_data: {
-          topics: (improvementData.topics || []).map((topic) => ({
-            topic: topic.topic,
-            improvement: topic.improvement || 0,
-            status: topic.status || "Ổn định",
-            previous_accuracy: topic.previous_accuracy || 0.1, // Min 0.1
-            new_accuracy: topic.new_accuracy || 0.1, // Min 0.1
-          })),
-          overall_improvement: {
-            improvement: improvementData.overall_improvement?.improvement || 0,
-            previous_average:
-              improvementData.overall_improvement?.previous_average || 0.1,
-            new_average:
-              improvementData.overall_improvement?.new_average || 0.1,
-          },
-        },
-
-        incorrect_questions: incorrectQuestions,
-        learning_style: "VISUAL",
-        available_time_per_day: 30,
-      };
-
-      console.log("📤 [Layer 5] Payload:", JSON.stringify(payload, null, 2));
+      console.log(
+        "❌ [Layer 5 - NEW] Incorrect questions count:",
+        dataPayload.incorrect_questions.length
+      );
 
       // ============================================
-      // BƯỚC 4: Gửi request tạo roadmap
+      // BƯỚC 2: Gửi request tạo roadmap với dataPayload
       // ============================================
-      console.log("🚀 [Layer 5] Bước 4: Generating roadmap...");
+      console.log("🚀 [Layer 5 - NEW] Bước 2: Generating roadmap...");
+      console.log(
+        "📤 [Layer 5 - NEW] Payload:",
+        JSON.stringify(dataPayload, null, 2)
+      );
+
       const generateResponse = await aiService.generateLearningRoadmap(
-        payload,
+        dataPayload,
         token
       );
 
       if (!generateResponse || !generateResponse.success) {
         console.error(
-          "❌ [Layer 5] Generate Roadmap failed:",
+          "❌ [Layer 5 - NEW] Generate Roadmap failed:",
           generateResponse
         );
         showToast("Không thể tạo lộ trình học tập!", { type: "error" });
         return;
       }
 
-      console.log("✅ [Layer 5] Generate success:", generateResponse);
+      console.log("✅ [Layer 5 - NEW] Generate success:", generateResponse);
       showToast("Lộ trình học tập đã được tạo!", { type: "success" });
 
       // ============================================
-      // BƯỚC 5: Lấy roadmap mới nhất
+      // BƯỚC 3: Lấy roadmap mới nhất và lưu requestId mới
       // ============================================
-      console.log("📥 [Layer 5] Bước 5: Fetching latest roadmap...");
+      console.log("📥 [Layer 5 - NEW] Bước 3: Fetching latest roadmap...");
       const roadmapResponse = await aiService.getRoadmapLatest(token);
 
       if (!roadmapResponse || !roadmapResponse.detailedAnalysis) {
@@ -1122,15 +1086,29 @@ export default function AssessmentLearningRoadmapScreen({ route, navigation }) {
       }
 
       console.log(
-        "✅ [Layer 5] Got roadmap:",
+        "✅ [Layer 5 - NEW] Got roadmap:",
         roadmapResponse.detailedAnalysis
       );
 
+      // Lưu requestId mới cho lần tạo tiếp theo
+      if (roadmapResponse.requestId) {
+        setCurrentRequestId(roadmapResponse.requestId);
+        console.log(
+          "💾 [Layer 5 - NEW] Stored new requestId:",
+          roadmapResponse.requestId
+        );
+      }
+
       // ============================================
-      // BƯỚC 6: Cập nhật state và reload dữ liệu
+      // BƯỚC 4: Cập nhật state và reload dữ liệu
       // ============================================
-      setRoadmap(roadmapResponse.detailedAnalysis);
-      extractCompletedTasks(roadmapResponse.detailedAnalysis);
+      const roadmapData = {
+        ...roadmapResponse.detailedAnalysis,
+        resultId: roadmapResponse.resultId, // Add resultId for progress tracking
+      };
+
+      setRoadmap(roadmapData);
+      extractCompletedTasks(roadmapData);
 
       // Switch to current tab to show new roadmap
       setActiveTab("current");

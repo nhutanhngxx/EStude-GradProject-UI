@@ -63,6 +63,7 @@ const endpoints = {
   generateLearningRoadmap: "/api/ai/generate-learning-roadmap",
   getRoadmapLatest: "/api/ai/me/roadmap/latest",
   getAllRoadmaps: "/api/ai/me/roadmap", // Get all roadmaps (array)
+  getRequestById: "/api/ai/request/{requestId}", // Get request by ID (no token needed)
 
   // Layer 5: Progress Tracking APIs (NEW - Nov 2025)
   getRoadmapLatestSummary: "/api/ai/me/roadmap/latest/summary",
@@ -710,6 +711,35 @@ const aiService = {
       return result;
     } catch (error) {
       console.error("Lỗi khi lấy roadmap mới nhất:", error);
+      return null;
+    }
+  },
+
+  /**
+   * Layer 5: Lấy request data theo requestId (không cần token)
+   * @param {number} requestId - Request ID
+   * @returns {Object} Request data với dataPayload đầy đủ
+   */
+  getRequestById: async (requestId) => {
+    try {
+      const url = `${config.BASE_URL}${endpoints.getRequestById}`.replace(
+        "{requestId}",
+        requestId
+      );
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        console.error("Get Request by ID failed:", response.status);
+        return null;
+      }
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Lỗi khi lấy request data:", error);
       return null;
     }
   },
