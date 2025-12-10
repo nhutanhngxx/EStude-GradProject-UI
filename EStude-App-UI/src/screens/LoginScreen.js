@@ -174,10 +174,11 @@ const styles = StyleSheet.create({
     marginTop: 100,
   },
   title: {
-    fontSize: 28,
+    fontSize: 25,
     fontWeight: "bold",
     color: "#007f3f",
     marginBottom: 30,
+    textAlign: "center",
   },
   input: {
     width: "100%",
