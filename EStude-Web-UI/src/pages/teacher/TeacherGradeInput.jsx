@@ -17,6 +17,7 @@ import aiService from "../../services/aiService";
 import { useToast } from "../../contexts/ToastContext";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import classSubjectService from "../../services/classSubjectService";
 
 export default function TeacherGradeInput() {
   const { showToast } = useToast();
@@ -30,6 +31,8 @@ export default function TeacherGradeInput() {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedTerm, setExpandedTerm] = useState(null);
   const [expandedSubject, setExpandedSubject] = useState(null);
+
+  // console.log("user: ", user);
 
   const [filters, setFilters] = useState({
     termName: "all",
@@ -45,15 +48,61 @@ export default function TeacherGradeInput() {
     value: "",
   });
 
+  // useEffect(() => {
+  //   const fetchMyClasses = async () => {
+  //     const result = await teacherService.getClassSubjectByTeacherId(
+  //       user.userId
+  //     );
+  //     if (result) setClasses(result);
+  //   };
+  //   fetchMyClasses();
+  // }, [user.userId]);
+
   useEffect(() => {
     const fetchMyClasses = async () => {
-      const result = await teacherService.getClassSubjectByTeacherId(
-        user.userId
-      );
-      if (result) setClasses(result);
+      try {
+        let rawData;
+
+        if (isAdmin) {
+          // Giáo vụ: lấy TẤT CẢ lớp-môn của trường
+          rawData = await classSubjectService.getAllClassSubjects();
+        } else {
+          // Giáo viên thường: chỉ lấy lớp mình dạy
+          rawData = await teacherService.getClassSubjectByTeacherId(
+            user.userId
+          );
+        }
+
+        if (!rawData || !Array.isArray(rawData)) {
+          console.warn("Dữ liệu lớp không hợp lệ hoặc rỗng");
+          setClasses([]);
+          return;
+        }
+
+        // Chuẩn hóa dữ liệu về format thống nhất mà component đang dùng
+        const normalizedClasses = rawData.map((item) => ({
+          classId: item.classId,
+          className: item.className,
+          subjectName:
+            item.subject?.name || item.subjectName || "Không xác định",
+          termName: item.term?.name || item.termName || "Không xác định",
+          classSubjectId: item.classSubjectId,
+          // Các field phụ nếu cần sau này
+          teacher: item.teacher || null,
+        }));
+
+        setClasses(normalizedClasses);
+      } catch (err) {
+        console.error("Lỗi khi tải danh sách lớp:", err);
+        showToast("Không thể tải danh sách lớp học", "error");
+        setClasses([]);
+      }
     };
-    fetchMyClasses();
-  }, [user.userId]);
+
+    if (user?.userId) {
+      fetchMyClasses();
+    }
+  }, [user.userId, isAdmin, showToast]);
 
   useEffect(() => {
     setIsAdmin(user?.admin === true);
