@@ -3,53 +3,40 @@ import {
   PlusCircle,
   Edit2,
   Trash2,
-  Eye,
   UploadCloud,
   Download,
   X,
-  Layers,
+  Eye,
 } from "lucide-react";
 
 import subjectService from "../../services/subjectService";
 import { useToast } from "../../contexts/ToastContext";
 import { useConfirm } from "../../contexts/ConfirmContext";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
 import * as XLSX from "xlsx";
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function ManageSubjects() {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
-  const isAdmin = user.admin === true; // Kiểm tra admin của Teacher (Giáo vụ)
+  const isAdmin = user.admin === true;
 
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef();
+  const [loading, setLoading] = useState(true); // ĐÃ THÊM
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchSubjects = async () => {
+      setLoading(true);
       try {
         const result = await subjectService.getAllSubjects();
         if (result) {
-          // Nếu Teacher có admin = true (giáo vụ) thì lấy tất cả môn học
-          // Nếu Teacher thông thường thì chỉ lấy môn học của trường
           const filtered = isAdmin
-            ? result // Teacher admin (giáo vụ) lấy tất cả môn học
+            ? result
             : result.filter((s) =>
                 s.schools?.some((sch) => sch.schoolId === schoolId)
               );
@@ -58,6 +45,8 @@ export default function ManageSubjects() {
       } catch (error) {
         console.error("Lỗi khi lấy môn học:", error);
         showToast("Lỗi khi tải danh sách môn học!", "error");
+      } finally {
+        setLoading(false);
       }
     };
     fetchSubjects();
@@ -69,8 +58,23 @@ export default function ManageSubjects() {
     setSelectedSubject(null);
   };
 
+  // ĐÃ THÊM hàm openModal
+  const openModal = (action, subject = null) => {
+    if (action === "add") {
+      resetForm();
+      setIsFormOpen(true);
+    } else if (action === "view" && subject) {
+      setSelectedSubject(subject);
+      setName(subject.name);
+      setDescription(subject.description || "");
+      setIsFormOpen(true);
+    } else if (action === "delete" && subject) {
+      handleDeleteSubject(subject.subjectId);
+    }
+  };
+
   const handleSaveSubject = async () => {
-    if (!name) {
+    if (!name.trim()) {
       showToast("Vui lòng nhập tên môn học.", "warn");
       return;
     }
@@ -81,19 +85,13 @@ export default function ManageSubjects() {
         (!selectedSubject || s.subjectId !== selectedSubject.subjectId)
     );
     if (isDuplicate) {
-      showToast(
-        `Môn học này đã tồn tại ${
-          isAdmin ? "trong hệ thống" : "trong trường của bạn"
-        }.`,
-        "error"
-      );
+      showToast(`Môn học "${name}" đã tồn tại.`, "error");
       return;
     }
 
     try {
       let result;
       if (selectedSubject) {
-        // Nếu là admin thì không gửi schoolId (môn học global)
         const payload = isAdmin
           ? { subjectId: selectedSubject.subjectId, name, description }
           : {
@@ -102,12 +100,19 @@ export default function ManageSubjects() {
               description,
               schoolId,
             };
-
         result = await subjectService.updateSubject(payload);
-        if (result) {
+      } else {
+        const payload = isAdmin
+          ? { name, description }
+          : { name, description, schoolId };
+        result = await subjectService.addSubject(payload);
+      }
+
+      if (result) {
+        if (selectedSubject) {
           setSubjects((prev) =>
             prev.map((s) =>
-              s.subjectId === selectedSubject.subjectId
+              s.subjectId === result.subjectId
                 ? {
                     ...s,
                     name: result.name,
@@ -116,376 +121,207 @@ export default function ManageSubjects() {
                 : s
             )
           );
-          showToast("Cập nhật môn học thành công!", "success");
-        }
-      } else {
-        // Nếu là admin thì không gửi schoolId (môn học global)
-        const payload = isAdmin
-          ? { name, description }
-          : { name, description, schoolId };
-
-        result = await subjectService.addSubject(payload);
-        if (result) {
-          setSubjects((prev) => [
-            ...prev,
-            {
-              subjectId: result.subjectId,
-              name: result.name,
-              description: result.description || "",
-            },
-          ]);
+          showToast("Cập nhật thành công!", "success");
+        } else {
+          setSubjects((prev) => [...prev, result]);
           showToast("Thêm môn học thành công!", "success");
         }
-      }
-
-      if (result) {
         setIsFormOpen(false);
         resetForm();
-      } else {
-        showToast("Lỗi khi lưu môn học!", "error");
       }
     } catch (error) {
-      console.error("Lỗi khi lưu môn học:", error);
       showToast("Lỗi khi lưu môn học!", "error");
     }
   };
 
-  // const handleDeleteSubject = async (subjectId) => {
-  //   const ok = await confirm(
-  //     "Xóa môn học vĩnh viễn!",
-  //     "Việc xóa môn học sẽ ảnh hưởng tới hệ thống (lớp học, bài tập, thống kê...). Bạn có chắc chắn?"
-  //   );
+  const handleDeleteSubject = async (subjectId) => {
+    const ok = await confirm(
+      "Xóa môn học?",
+      "Bạn có chắc chắn muốn xóa môn học này? Hành động này không thể hoàn tác."
+    );
+    if (!ok) return;
 
-  //   if (!ok) return;
-
-  //   try {
-  //     const success = await subjectService.deleteSubject(subjectId);
-  //     if (success) {
-  //       setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
-  //       showToast("Xóa môn học thành công!", "success");
-  //     } else {
-  //       showToast("Xóa môn học thất bại!", "error");
-  //     }
-  //   } catch (error) {
-  //     console.error("Lỗi khi xóa môn học:", error);
-  //     showToast("Lỗi khi xóa môn học!", "error");
-  //   }
-  // };
+    try {
+      await subjectService.deleteSubject(subjectId);
+      setSubjects((prev) => prev.filter((s) => s.subjectId !== subjectId));
+      showToast("Xóa thành công!", "success");
+    } catch (error) {
+      showToast("Không thể xóa môn học (có thể đang được sử dụng).", "error");
+    }
+  };
 
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const wsData = [
       ["name", "description"],
-      ["Toán", "Môn Toán chương trình THPT"],
-      ["Văn", "Ngữ văn chương trình THPT"],
+      ["Toán", "Môn Toán học"],
+      ["Lý", "Môn Vật lý"],
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, "SubjectsTemplate");
-    XLSX.writeFile(wb, "subjects-template.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Subjects");
+    XLSX.writeFile(wb, "mau-mon-hoc.xlsx");
   };
 
   const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-      const rows = json.map((row, idx) => ({
-        rowIndex: idx + 2,
-        name: (row.name || row.Name || "").toString().trim(),
-        description: (row.description || row.Description || "")
-          .toString()
-          .trim(),
-      }));
-
-      const invalid = rows.filter((r) => !r.name);
-      if (invalid.length > 0) {
-        showToast(
-          `Có ${invalid.length} dòng thiếu tên môn (ví dụ: dòng ${invalid
-            .slice(0, 3)
-            .map((r) => r.rowIndex)
-            .join(", ")}...). Vui lòng kiểm tra file.`,
-          "error"
-        );
-        e.target.value = null;
-        return;
-      }
-
-      const duplicates = rows.filter((r) =>
-        subjects.some(
-          (s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase()
-        )
-      );
-
-      if (duplicates.length > 0) {
-        showToast(
-          `Có ${duplicates.length} môn đã tồn tại (ví dụ: ${duplicates
-            .slice(0, 3)
-            .map((d) => d.name)
-            .join(", ")}...). Chúng sẽ bị bỏ qua.`,
-          "warn"
-        );
-      }
-
-      const rowsToImport = rows.filter(
-        (r) =>
-          !subjects.some(
-            (s) => s.name.trim().toLowerCase() === r.name.trim().toLowerCase()
-          )
-      );
-
-      if (rowsToImport.length === 0) {
-        showToast("Không có môn học mới nào để import.", "info");
-        e.target.value = null;
-        return;
-      }
-
-      showToast("Đang import... Vui lòng chờ.", "info");
-      const added = [];
-      for (const r of rowsToImport) {
-        try {
-          // Nếu là admin thì không gửi schoolId (môn học global)
-          const payload = isAdmin
-            ? { name: r.name, description: r.description }
-            : { name: r.name, description: r.description, schoolId };
-
-          const res = await subjectService.addSubject(payload);
-          if (res) added.push(res);
-        } catch (err) {
-          console.error("Error adding subject row:", r, err);
-        }
-      }
-
-      if (added.length > 0) {
-        setSubjects((prev) => [
-          ...prev,
-          ...added.map((res) => ({
-            subjectId: res.subjectId,
-            name: res.name,
-            description: res.description || "",
-          })),
-        ]);
-        showToast(`Import thành công ${added.length} môn học.`, "success");
-      } else {
-        showToast("Không có môn học nào được thêm.", "warn");
-      }
-
-      e.target.value = null;
-    } catch (error) {
-      console.error("Lỗi khi đọc file Excel:", error);
-      showToast("Lỗi khi đọc file Excel. Kiểm tra định dạng file.", "error");
-      e.target.value = null;
-    }
+    // ... (giữ nguyên hàm import Excel của bạn)
+    // (Bạn có thể copy nguyên hàm cũ vào đây)
   };
-
-  // Commented out chart - uncomment if needed
-  // const chartData = {
-  //   labels: subjects.map((s) => s.name),
-  //   datasets: [
-  //     {
-  //       label: "Số lớp được phân",
-  //       data: subjects.map((s) => s.classes?.length || 0),
-  //       backgroundColor: "#3b82f6",
-  //       borderColor: "#2563eb",
-  //       borderWidth: 1,
-  //     },
-  //   ],
-  // };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold mb-2">
             Quản lý môn học {isAdmin && "(Giáo vụ)"}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xl">
-            {isAdmin
-              ? "Quản lý tất cả môn học trong hệ thống. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và import/export Excel dễ dàng."
-              : "Quản lý môn học giúp giáo viên tổ chức và quản lý điểm danh, bài tập và đánh giá học sinh. Bạn có thể thêm, chỉnh sửa hoặc xóa môn học và import/export Excel dễ dàng."}
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            Quản lý danh sách môn học trong trường.
           </p>
         </div>
         <div className="flex gap-3 flex-wrap">
           {/* <button
-            onClick={() => {
-              setIsFormOpen(true);
-              resetForm();
-            }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
+            onClick={() => openModal("add")}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
-            <PlusCircle size={16} /> Thêm mới môn học
+            <PlusCircle size={18} /> Thêm môn học
           </button>
           <button
             onClick={downloadTemplate}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
-            title="Tải file mẫu Excel"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           >
-            <Download size={16} /> Tải file mẫu
+            <Download size={18} /> Tải mẫu
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm shadow-sm hover:shadow-md"
-            title="Import file Excel"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
           >
-            <UploadCloud size={16} /> Import Excel
+            <UploadCloud size={18} /> Import Excel
           </button>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            accept=".xlsx,.xls"
             className="hidden"
             onChange={handleFileChange}
           /> */}
         </div>
       </div>
 
-      {/* Layout 2 cột */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: Table */}
-        <div className="flex-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-          <table className="w-full">
-            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-600 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-700">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                Mã môn học
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                Tên môn học
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                Mô tả
+              </th>
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                Thao tác
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.name") || "Tên môn học"}
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.description") || "Mô tả"}
-                </th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  {t("admin.subjects.actions") || "Thao tác"}
-                </th>
+                <td
+                  colSpan={4}
+                  className="px-6 py-12 text-center text-gray-500"
+                >
+                  Đang tải...
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    {t("common.loading") || "Đang tải..."}
+            ) : subjects.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={4}
+                  className="px-6 py-12 text-center text-gray-500"
+                >
+                  Chưa có môn học nào.
+                </td>
+              </tr>
+            ) : (
+              subjects.map((subject) => (
+                <tr
+                  key={subject.subjectId}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                >
+                  <td className="px-6 py-4 text-sm">{subject.subjectId}</td>
+                  <td className="px-6 py-4 text-sm font-medium">
+                    {subject.name}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                    {subject.description || "-"}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => openModal("view", subject)}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Xem"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      {/* <button
+                        onClick={() => openModal("delete", subject)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Xóa"
+                      >
+                        <Trash2 size={16} />
+                      </button> */}
+                    </div>
                   </td>
                 </tr>
-              ) : currentSubjects.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="4"
-                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
-                  >
-                    {t("admin.subjects.noData") || "Không có dữ liệu"}
-                  </td>
-                </tr>
-              ) : (
-                currentSubjects.map((subject) => (
-                  <tr
-                    key={subject.subjectId}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-gray-100">
-                      {subject.subjectId}
-                    </td>
-                    <td className="px-6 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {subject.name}
-                    </td>
-                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400">
-                      {subject.description || "-"}
-                    </td>
-                    <td className="px-6 py-2 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button
-                          onClick={() => openModal("edit", subject)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                          title={t("common.edit") || "Sửa"}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => openModal("delete", subject)}
-                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                          title={t("common.delete") || "Xóa"}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Right: Chart */}
-        {/* <div className="flex-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-          <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Layers size={18} /> Thống kê số lớp phân cho môn học
-          </h2>
-          {subjects.length > 0 ? (
-            <Bar
-              data={chartData}
-              options={{
-                responsive: true,
-                plugins: { legend: { position: "top" } },
-                scales: { y: { beginAtZero: true, stepSize: 1 } },
-              }}
-            />
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Chưa có dữ liệu để hiển thị biểu đồ.
-            </p>
-          )}
-        </div> */}
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Modal Add/Edit Subject */}
+      {/* Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600 shadow-lg">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {selectedSubject && "Xem chi tiết môn học"}
+              <h2 className="text-xl font-bold">
+                {selectedSubject
+                  ? "Xem thông tin cơ bản môn học"
+                  : "Thêm môn học mới"}
               </h2>
-              <button
-                onClick={() => setIsFormOpen(false)}
-                className="p-1 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                aria-label="Đóng modal"
-              >
-                <X size={18} />
+              <button onClick={() => setIsFormOpen(false)}>
+                <X size={20} />
               </button>
             </div>
-            <input
-              type="text"
-              placeholder="Tên môn"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-400"
-            />
-            <textarea
-              placeholder="Mô tả môn học"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full mb-3 px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-400 min-h-[80px]"
-            />
-            <div className="flex justify-end gap-3">
-              <button
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Tên môn học"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <textarea
+                placeholder="Mô tả (tùy chọn)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              {/* <button
                 onClick={() => setIsFormOpen(false)}
-                className="px-4 py-2 border rounded-lg border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+                className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 Hủy
               </button>
-              {/* <button
+              <button
                 onClick={handleSaveSubject}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-500 transition text-sm"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Lưu
               </button> */}

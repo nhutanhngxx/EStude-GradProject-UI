@@ -157,7 +157,7 @@ export default function AttendanceModal({
       const termBeginDate = new Date(classSubject.term.beginDate);
       const termEndDate = new Date(classSubject.term.endDate);
 
-      if (currentDate < termBeginDate || currentDate > termEndDate) {
+      if (currentDate > termEndDate) {
         showToast("Không thể tạo vì lớp học đã hoàn thành!", "error");
         return;
       }
@@ -385,8 +385,8 @@ export default function AttendanceModal({
             message="Bạn có chắc chắn muốn tạo buổi điểm danh này không?"
             onCancel={() => setConfirmOpen(false)}
             onConfirm={() => {
-              handleCreateSession();
               setConfirmOpen(false);
+              handleCreateSession();
             }}
           />
 

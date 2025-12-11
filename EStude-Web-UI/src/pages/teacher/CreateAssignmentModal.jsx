@@ -557,8 +557,8 @@ export default function CreateAssignmentModal({
                     disabled={isLoading}
                   >
                     <option value="QUIZ">Trắc nghiệm</option>
-                    <option value="ESSAY">Tự luận</option>
-                    <option value="MIXED">Kết hợp</option>
+                    {/* <option value="ESSAY">Tự luận</option> */}
+                    {/* <option value="MIXED">Kết hợp</option> */}
                   </select>
                 </div>
               </div>
@@ -750,13 +750,13 @@ export default function CreateAssignmentModal({
                         >
                           <Plus size={16} /> Trắc nghiệm
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => addQuestion("ESSAY")}
                           className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600 transition text-sm"
                           disabled={isLoading}
                         >
                           <Plus size={16} /> Tự luận
-                        </button>
+                        </button> */}
                       </div>
                     </div>
 
@@ -796,7 +796,7 @@ export default function CreateAssignmentModal({
                                 <option value="MULTIPLE_CHOICE">
                                   Trắc nghiệm
                                 </option>
-                                <option value="ESSAY">Tự luận</option>
+                                {/* <option value="ESSAY">Tự luận</option> */}
                               </select>
                               <input
                                 className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
