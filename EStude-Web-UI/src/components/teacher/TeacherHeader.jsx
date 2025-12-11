@@ -28,9 +28,9 @@ const TeacherHeader = () => {
   // Lấy thông tin người dùng từ localStorage (nếu cần)
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   console.log(user);
-  
+
   // Lấy tên trường
-  const schoolName = user.school.schoolName || "";
+  const schoolName = user?.school?.schoolName || "";
 
   return (
     <header className="flex justify-between items-center bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-200 dark:border-gray-700 shadow-sm">

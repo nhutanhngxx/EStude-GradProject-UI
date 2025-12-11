@@ -481,7 +481,7 @@ const ManageAccounts = () => {
           <option value="ALL">Tất cả trường</option>
           {schools.map((s) => (
             <option key={s.schoolId} value={s.schoolId}>
-              {s.schoolName}
+              {s?.schoolName}
             </option>
           ))}
         </select>
@@ -663,7 +663,7 @@ const ManageAccounts = () => {
                   <option value="">{t("manageAccounts.selectSchool")}</option>
                   {schools.map((s) => (
                     <option key={s.schoolId} value={s.schoolId}>
-                      {s.schoolName}
+                      {s?.schoolName}
                     </option>
                   ))}
                 </select>
@@ -685,7 +685,7 @@ const ManageAccounts = () => {
                   <option value="">{t("manageAccounts.selectSchool")}</option>
                   {schools.map((s) => (
                     <option key={s.schoolId} value={s.schoolId}>
-                      {s.schoolName}
+                      {s?.schoolName}
                     </option>
                   ))}
                 </select>

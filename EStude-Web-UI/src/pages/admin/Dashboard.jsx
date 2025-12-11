@@ -817,7 +817,7 @@ const Dashboard = () => {
                         {modalType === "schools" && (
                           <>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
-                              {item.schoolName || t("common.na")}
+                              {item?.schoolName || t("common.na")}
                             </td>
                             <td className="px-4 py-2.5 truncate text-gray-700 dark:text-gray-200">
                               {item.address || t("common.na")}

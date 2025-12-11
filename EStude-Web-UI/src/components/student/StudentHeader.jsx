@@ -5,7 +5,7 @@ import studentService from "../../services/studentService";
 const StudentHeader = () => {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [schoolName, setSchoolName] = useState(
-    user.school.schoolName || "Trường học"
+    user?.school?.schoolName || "Trường học"
   );
 
   useEffect(() => {
