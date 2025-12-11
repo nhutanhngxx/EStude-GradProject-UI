@@ -19,7 +19,7 @@ export default function ManageSubjects() {
   const { confirm } = useConfirm();
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
-  const isAdmin = user.admin === true;
+  const isAdmin = user.isAdmin === true;
 
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState(null);

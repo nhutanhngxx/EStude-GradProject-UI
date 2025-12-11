@@ -112,7 +112,7 @@ const ManageClassesAdmin = () => {
           ...new Map(
             allClassSubjects
               .filter((cs) =>
-                cls.terms.some((t) => t.termId === cs.term?.termId)
+                cls.terms?.some((t) => t.termId === cs.term?.termId)
               )
               .map((cs) => [
                 cs.subject.subjectId,
@@ -171,7 +171,7 @@ const ManageClassesAdmin = () => {
           teacherId: s.teacherId ?? null,
         })) || []
       );
-      setSelectedTeacher(cls.homeroomTeacher?.userId ?? "");
+      setSelectedTeacher(cls.homeroomTeacherId ?? "");
       setEditableSemesters(
         cls.terms?.map((t, idx) => ({
           termId: t.termId,
@@ -240,7 +240,7 @@ const ManageClassesAdmin = () => {
       cls.name.toLowerCase().includes(kw) ||
       cls.subjects?.some((s) => s.name.toLowerCase().includes(kw));
     const matchesSchool =
-      !selectedSchool || cls.school?.schoolId === Number(selectedSchool);
+      !selectedSchool || cls.schoolId === Number(selectedSchool);
 
     let matchesStatus = true;
     if (filterStatus !== "all") {
@@ -358,7 +358,7 @@ const ManageClassesAdmin = () => {
                   className="border-t border-gray-200 dark:border-gray-700"
                 >
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                    {c.school?.schoolName || "-"}
+                    {c.schoolName || "-"}
                   </td>
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {gradeMapping[c.gradeLevel] || c.gradeLevel}
@@ -367,7 +367,7 @@ const ManageClassesAdmin = () => {
                     {c.name}
                   </td>
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
-                    {c.homeroomTeacher?.fullName || "-"}
+                    {c.homeroomTeacherName || "-"}
                   </td>
                   <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
                     {/* {c.classSize} */}

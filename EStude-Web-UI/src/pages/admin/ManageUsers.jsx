@@ -415,8 +415,8 @@ const ManageAccounts = () => {
     (u) =>
       (filterRole === "ALL" || u.role === filterRole) &&
       (filterSchool === "ALL" || u.school?.schoolId === Number(filterSchool)) &&
-      (u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-        u.email.toLowerCase().includes(search.toLowerCase()))
+      (u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+        u.email?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const indexOfLastItem = currentPage * itemsPerPage;
