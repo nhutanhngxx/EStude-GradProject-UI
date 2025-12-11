@@ -515,7 +515,7 @@ export default function AssessmentImprovementScreen({ navigation, route }) {
           ) : (
             <>
               <Ionicons name="map" size={22} color="#fff" />
-              <Text style={styles.roadmapButtonText}>Xem lộ trình học tập</Text>
+              <Text style={styles.roadmapButtonText}>Tạo lộ trình học tập</Text>
               <Ionicons name="arrow-forward" size={18} color="#fff" />
             </>
           )}
