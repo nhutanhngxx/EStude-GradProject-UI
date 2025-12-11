@@ -29,18 +29,28 @@ export default function MyClasses() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
-  const [selectedTermId, setSelectedTermId] = useState(null); // Lọc theo termId
+
+  // Bộ lọc theo tên học kỳ (giống ManageClasses)
+  const [selectedTermName, setSelectedTermName] = useState(null);
+  const [schoolTerms, setSchoolTerms] = useState([]);
+
+  // Tìm kiếm
   const [classKeyword, setClassKeyword] = useState("");
   const [subjectKeyword, setSubjectKeyword] = useState("");
+
+  // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [isAssignmentListOpen, setIsAssignmentListOpen] = useState(false);
+
+  // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
+
+  // Loading & error
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [schoolTerms, setSchoolTerms] = useState([]); // Học kỳ của trường
-  const itemsPerPage = 6;
 
   // Debounce tìm kiếm
   const debouncedSetClassKeyword = useMemo(
@@ -62,8 +72,6 @@ export default function MyClasses() {
         const result = await classSubjectService.getTeacherClassSubjects(
           user.userId
         );
-        console.log("getTeacherClassSubjects: ", result);
-
         if (result) setClasses(result);
       } catch (err) {
         console.error(err);
@@ -72,7 +80,6 @@ export default function MyClasses() {
         setIsLoading(false);
       }
     };
-
     fetchMyClasses();
   }, [user.userId]);
 
@@ -81,15 +88,11 @@ export default function MyClasses() {
     const fetchSchoolTerms = async () => {
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const schoolId = userData.schoolId || userData.school?.schoolId;
-      if (!schoolId) {
-        console.warn("Không tìm thấy schoolId");
-        return;
-      }
+      if (!schoolId) return;
 
       try {
         setIsLoading(true);
         const schoolClasses = await classService.getClassesBySchoolId(schoolId);
-
         if (!schoolClasses || !Array.isArray(schoolClasses)) return;
 
         const termMap = new Map();
@@ -111,7 +114,6 @@ export default function MyClasses() {
         const uniqueTermsList = Array.from(termMap.values()).sort(
           (a, b) => new Date(b.beginDate) - new Date(a.beginDate)
         );
-
         setSchoolTerms(uniqueTermsList);
       } catch (err) {
         console.error("Lỗi tải học kỳ trường:", err);
@@ -123,21 +125,33 @@ export default function MyClasses() {
     fetchSchoolTerms();
   }, []);
 
-  // Tạo options cho dropdown học kỳ
-  const termOptions = useMemo(() => {
-    return schoolTerms.map((term) => ({
-      termId: term.termId,
-      label: `${term.termName} (${formatDateVN(
-        term.beginDate
-      )} - ${formatDateVN(term.endDate)})`,
-    }));
+  // Danh sách học kỳ unique theo tên (cho dropdown)
+  const termNameOptions = useMemo(() => {
+    const uniqueNames = new Set();
+    const options = [];
+
+    const sortedTerms = [...schoolTerms].sort(
+      (a, b) => new Date(b.beginDate) - new Date(a.beginDate)
+    );
+
+    sortedTerms.forEach((term) => {
+      if (!uniqueNames.has(term.termName)) {
+        uniqueNames.add(term.termName);
+        options.push({
+          label: term.termName,
+          termName: term.termName,
+        });
+      }
+    });
+
+    return options;
   }, [schoolTerms]);
 
-  // Tự động chọn học kỳ hiện tại (ngày 10/12/2025 → HK1)
+  // Tự động chọn học kỳ hiện tại (ngày 11/12/2025)
   useEffect(() => {
-    if (selectedTermId !== null || termOptions.length === 0) return;
+    if (selectedTermName || termNameOptions.length === 0) return;
 
-    const today = new Date();
+    const today = new Date("2025-12-11");
     const currentTerm = schoolTerms.find((term) => {
       const begin = new Date(term.beginDate);
       const end = new Date(term.endDate);
@@ -145,13 +159,13 @@ export default function MyClasses() {
     });
 
     if (currentTerm) {
-      setSelectedTermId(currentTerm.termId);
-    } else if (termOptions.length > 0) {
-      setSelectedTermId(termOptions[0].termId); // Chọn mới nhất nếu không có hiện tại
+      setSelectedTermName(currentTerm.termName);
+    } else if (termNameOptions.length > 0) {
+      setSelectedTermName(termNameOptions[0].termName);
     }
-  }, [termOptions, schoolTerms, selectedTermId]);
+  }, [termNameOptions, schoolTerms, selectedTermName]);
 
-  // Flatten classes
+  // Flatten classes để dễ lọc
   const flattenedClasses = useMemo(() => {
     return classes.map((cls) => ({
       key: `${cls.classId}-${cls.subjectName}-${cls.termId}`,
@@ -169,7 +183,7 @@ export default function MyClasses() {
   // Reset trang khi filter thay đổi
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedTermId, classKeyword, subjectKeyword]);
+  }, [selectedTermName, classKeyword, subjectKeyword]);
 
   // Tìm kiếm không dấu
   const fuzzyMatch = (str, pattern) => {
@@ -185,15 +199,16 @@ export default function MyClasses() {
     return normalizedStr.includes(normalizedPattern);
   };
 
-  // Lọc lớp theo termId + từ khóa
+  // Lọc lớp theo tên học kỳ + từ khóa
   const filteredClasses = useMemo(() => {
     return flattenedClasses.filter((cls) => {
-      const termPass = selectedTermId === null || cls.termId === selectedTermId;
+      const termPass =
+        selectedTermName === null || cls.termName === selectedTermName;
       const classPass = fuzzyMatch(cls.className, classKeyword);
       const subjectPass = fuzzyMatch(cls.subjectName, subjectKeyword);
       return termPass && classPass && subjectPass;
     });
-  }, [flattenedClasses, selectedTermId, classKeyword, subjectKeyword]);
+  }, [flattenedClasses, selectedTermName, classKeyword, subjectKeyword]);
 
   // Phân trang
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -202,9 +217,8 @@ export default function MyClasses() {
     startIndex + itemsPerPage
   );
 
-  // Lấy label học kỳ hiện tại để hiển thị (tùy chọn)
-  const currentTermLabel =
-    termOptions.find((opt) => opt.termId === selectedTermId)?.label || "";
+  // Label học kỳ hiện tại
+  const currentTermLabel = selectedTermName || "";
 
   return (
     <div className="flex flex-col flex-1 min-h-0 p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
@@ -213,7 +227,7 @@ export default function MyClasses() {
           <h1 className="text-2xl font-bold mb-2">Lớp giảng dạy</h1>
           <p className="text-gray-600 dark:text-gray-400">
             Danh sách lớp đang giảng dạy của bạn theo
-            {selectedTermId && currentTermLabel && (
+            {selectedTermName && (
               <span className="ml-2 font-medium">{currentTermLabel}</span>
             )}
           </p>
@@ -225,16 +239,13 @@ export default function MyClasses() {
         {/* Học kỳ */}
         <div className="flex items-center gap-2">
           <select
-            value={selectedTermId ?? ""}
-            onChange={(e) => {
-              const value = e.target.value;
-              setSelectedTermId(value ? Number(value) : null);
-            }}
+            value={selectedTermName ?? ""}
+            onChange={(e) => setSelectedTermName(e.target.value || null)}
             className="px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
           >
             <option value="">Chọn học kỳ</option>
-            {termOptions.map((option) => (
-              <option key={option.termId} value={option.termId}>
+            {termNameOptions.map((option) => (
+              <option key={option.termName} value={option.termName}>
                 {option.label}
               </option>
             ))}
@@ -271,7 +282,7 @@ export default function MyClasses() {
       </div>
 
       {/* Danh sách lớp */}
-      {selectedTermId === null ? (
+      {selectedTermName === null ? (
         <p className="text-gray-500 dark:text-gray-400 mt-4">
           Vui lòng chọn học kỳ để xem danh sách lớp học.
         </p>
@@ -348,7 +359,7 @@ export default function MyClasses() {
                       });
                       setIsAttendanceOpen(true);
                     }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transição"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
                   >
                     <CheckSquare size={16} /> <span>Điểm danh</span>
                   </button>

@@ -181,7 +181,7 @@ const ManageSubjects = () => {
   );
 
   return (
-    <div className="bg-transparent dark:bg-gray-900 p-6">
+    <div className="bg-transparent p-6">
       {/* <div className="max-w-7xl mx-auto"> */}
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
