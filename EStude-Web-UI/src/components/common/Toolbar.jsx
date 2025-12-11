@@ -46,7 +46,7 @@ const Toolbar = ({
             <option value="">{t("manageClasses.filters.allSchools")}</option>
             {schools.map((s) => (
               <option key={s.schoolId} value={s.schoolId}>
-                {s.schoolName}
+                {s?.schoolName}
               </option>
             ))}
           </select>

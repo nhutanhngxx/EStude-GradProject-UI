@@ -64,7 +64,7 @@ const ManageSchools = () => {
           const mappedSchools = data.map((s) => ({
             id: s.id,
             code: s.schoolCode,
-            name: s.schoolName,
+            name: s?.schoolName,
             address: s.address,
             email: s.contactEmail,
             phone: s.contactPhone,
