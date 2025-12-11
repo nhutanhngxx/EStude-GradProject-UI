@@ -133,7 +133,7 @@ const SearchableSelect = ({ teachers, value, onChange, placeholder }) => {
 const Modal = ({ title, children, onClose }) =>
   createPortal(
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-11/12 max-w-6xl max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-11/12 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-600">
         <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-6 py-4 sticky top-0 bg-white dark:bg-gray-800 z-10">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {title}

@@ -11,6 +11,16 @@ const ClassDetailModal = ({ classData, teacherId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [classDetails, setClassDetails] = useState(null);
 
+  const gradeMapping = {
+    GRADE_6: "Khối 6",
+    GRADE_7: "Khối 7",
+    GRADE_8: "Khối 8",
+    GRADE_9: "Khối 9",
+    GRADE_10: "Khối 10",
+    GRADE_11: "Khối 11",
+    GRADE_12: "Khối 12",
+  };
+
   useEffect(() => {
     loadClassDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,7 +70,7 @@ const ClassDetailModal = ({ classData, teacherId, onClose }) => {
                 isDarkMode ? "text-gray-400" : "text-gray-600"
               }`}
             >
-              Khối {classData.gradeLevel}
+              {gradeMapping[classData.gradeLevel] || "Không xác định"}
             </p>
           </div>
           <button

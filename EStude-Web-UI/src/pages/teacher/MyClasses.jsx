@@ -147,23 +147,23 @@ export default function MyClasses() {
     return options;
   }, [schoolTerms]);
 
-  // Tự động chọn học kỳ hiện tại (ngày 11/12/2025)
-  useEffect(() => {
-    if (selectedTermName || termNameOptions.length === 0) return;
+  // Tự động chọn học kỳ hiện tại
+  // useEffect(() => {
+  //   if (selectedTermName || termNameOptions.length === 0) return;
 
-    const today = new Date("2025-12-11");
-    const currentTerm = schoolTerms.find((term) => {
-      const begin = new Date(term.beginDate);
-      const end = new Date(term.endDate);
-      return today >= begin && today <= end;
-    });
+  //   const today = new Date("2025-12-11");
+  //   const currentTerm = schoolTerms.find((term) => {
+  //     const begin = new Date(term.beginDate);
+  //     const end = new Date(term.endDate);
+  //     return today >= begin && today <= end;
+  //   });
 
-    if (currentTerm) {
-      setSelectedTermName(currentTerm.termName);
-    } else if (termNameOptions.length > 0) {
-      setSelectedTermName(termNameOptions[0].termName);
-    }
-  }, [termNameOptions, schoolTerms, selectedTermName]);
+  //   if (currentTerm) {
+  //     setSelectedTermName(currentTerm.termName);
+  //   } else if (termNameOptions.length > 0) {
+  //     setSelectedTermName(termNameOptions[0].termName);
+  //   }
+  // }, [termNameOptions, schoolTerms, selectedTermName]);
 
   // Flatten classes để dễ lọc
   const flattenedClasses = useMemo(() => {

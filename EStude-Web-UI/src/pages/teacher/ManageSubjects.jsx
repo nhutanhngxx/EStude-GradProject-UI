@@ -38,6 +38,7 @@ export default function ManageSubjects() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -348,72 +349,77 @@ export default function ManageSubjects() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left: Table */}
         <div className="flex-1 overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
               <tr>
-                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100">
-                  <div className="flex items-center gap-2">
-                    <Layers size={16} /> Tên môn
-                  </div>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  ID
                 </th>
-                <th className="p-3 border-b border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-center">
-                  Thao tác
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.subjects.name") || "Tên môn học"}
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.subjects.description") || "Mô tả"}
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  {t("admin.subjects.actions") || "Thao tác"}
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {subjects.length > 0 ? (
-                [...subjects]
-                  .sort((a, b) => a.name.localeCompare(b.name, "vi"))
-                  .map((subject) => (
-                    <tr
-                      key={subject.subjectId}
-                      className="border-b border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                    >
-                      <td className="p-3 text-gray-900 dark:text-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-1 md:gap-0">
-                        <span className="font-medium">{subject.name}</span>
-                        {subject.description && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                            {subject.description}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-4">
-                          <button
-                            className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:underline text-sm"
-                            title="Xem chi tiết"
-                            onClick={() => {
-                              setSelectedSubject(subject);
-                              setName(subject.name);
-                              setDescription(subject.description || "");
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            <Eye size={16} /> Xem
-                          </button>
-                          {/* <button
-                            className="flex items-center gap-1 text-red-600 dark:text-red-400 hover:underline text-sm"
-                            title="Xóa"
-                            onClick={() =>
-                              handleDeleteSubject(subject.subjectId)
-                            }
-                          >
-                            <Trash2 size={16} /> Xóa
-                          </button> */}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-              ) : (
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {loading ? (
                 <tr>
                   <td
-                    colSpan="2"
-                    className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm"
+                    colSpan="4"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
-                    Chưa có môn học nào.
+                    {t("common.loading") || "Đang tải..."}
                   </td>
                 </tr>
+              ) : currentSubjects.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="4"
+                    className="px-6 py-8 text-center text-gray-500 dark:text-gray-400"
+                  >
+                    {t("admin.subjects.noData") || "Không có dữ liệu"}
+                  </td>
+                </tr>
+              ) : (
+                currentSubjects.map((subject) => (
+                  <tr
+                    key={subject.subjectId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-gray-100">
+                      {subject.subjectId}
+                    </td>
+                    <td className="px-6 py-2 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {subject.name}
+                    </td>
+                    <td className="px-6 py-2 text-sm text-gray-600 dark:text-gray-400">
+                      {subject.description || "-"}
+                    </td>
+                    <td className="px-6 py-2 text-center">
+                      <div className="flex justify-center gap-2">
+                        <button
+                          onClick={() => openModal("edit", subject)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          title={t("common.edit") || "Sửa"}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => openModal("delete", subject)}
+                          className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                          title={t("common.delete") || "Xóa"}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

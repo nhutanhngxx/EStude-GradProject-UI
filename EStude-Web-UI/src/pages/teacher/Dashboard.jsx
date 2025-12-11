@@ -653,7 +653,7 @@ const TeacherDashboard = () => {
       {/* Cards thống kê */}
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[...Array(5)].map((_, idx) => (
+          {[...Array(3)].map((_, idx) => (
             <div
               key={idx}
               className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm animate-pulse"
