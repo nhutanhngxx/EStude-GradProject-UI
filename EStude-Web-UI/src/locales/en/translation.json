@@ -58,6 +58,7 @@
   },
 
   "dashboard": {
+    "questionBankAnalytics": "Question Bank Analytics",
     "overview": "Overview",
     "welcome": "Welcome to the admin dashboard",
     "createReport": "Create Report",

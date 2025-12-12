@@ -579,10 +579,10 @@ const ManageSchedules = () => {
   };
 
   return (
-    <div className="p-6 bg-transparent dark:bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="bg-bg-transparent dark:bg-transparent p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Quản lý lịch học (Giáo vụ)
           </h1>
           <p className="text-gray-600 dark:text-gray-400">

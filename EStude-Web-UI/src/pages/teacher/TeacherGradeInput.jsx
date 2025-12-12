@@ -1,27 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import {
   Search,
   Save,
   FileDown,
   FileUp,
-  X,
   ListChecks,
   Loader2,
-  ChevronRight,
-  ChevronDown,
+  Filter,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import teacherService from "../../services/teacherService";
 import studentService from "../../services/studentService";
 import subjectGradeService from "../../services/subjectGradeService";
-import aiService from "../../services/aiService";
 import { useToast } from "../../contexts/ToastContext";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import classSubjectService from "../../services/classSubjectService";
 
 export default function TeacherGradeInput() {
   const { showToast } = useToast();
+  const { darkMode } = useContext(ThemeContext);
   const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // State
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
   const [students, setStudents] = useState([]);
@@ -29,57 +32,89 @@ export default function TeacherGradeInput() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSavingAll, setIsSavingAll] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedTerm, setExpandedTerm] = useState(null);
-  const [expandedSubject, setExpandedSubject] = useState(null);
-
-  // console.log("user: ", user);
-
-  const [filters, setFilters] = useState({
-    termName: "all",
-    subject: "all",
-    className: "all",
-    keyword: "",
-  });
   const [isImporting, setIsImporting] = useState(false);
-
   const [commentModal, setCommentModal] = useState({
     isOpen: false,
     studentId: null,
     value: "",
   });
 
-  // useEffect(() => {
-  //   const fetchMyClasses = async () => {
-  //     const result = await teacherService.getClassSubjectByTeacherId(
-  //       user.userId
-  //     );
-  //     if (result) setClasses(result);
-  //   };
-  //   fetchMyClasses();
-  // }, [user.userId]);
+  const [filters, setFilters] = useState({
+    termName: "all",
+    subject: "all",
+  });
 
+  // Hàm normalize chuỗi (loại bỏ dấu tiếng Việt)
+  const normalizeString = (str) => {
+    if (!str) return "";
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Loại bỏ dấu
+      .toLowerCase() // Chuyển thành chữ thường
+      .trim();
+  };
+
+  // Kiểm tra điểm có hợp lệ (0-10) hay không
+  const isValidScore = (score) => {
+    if (score === "" || score === null) return true; // Để trống là hợp lệ
+    const num = Number(score);
+    return !isNaN(num) && num >= 0 && num <= 10;
+  };
+
+  // Lấy danh sách điểm không hợp lệ của một học sinh
+  const getInvalidScores = (student) => {
+    const g = grades[student.userId];
+    if (!g) return [];
+
+    const invalid = [];
+
+    // Kiểm tra điểm thường xuyên
+    g.regularScores?.forEach((score, idx) => {
+      if (score !== "" && !isValidScore(score)) {
+        invalid.push(`Điểm thường xuyên ${idx + 1}: ${score}`);
+      }
+    });
+
+    // Kiểm tra điểm giữa kỳ
+    if (g.midtermScore !== "" && !isValidScore(g.midtermScore)) {
+      invalid.push(`Điểm giữa kỳ: ${g.midtermScore}`);
+    }
+
+    // Kiểm tra điểm cuối kỳ
+    if (g.finalScore !== "" && !isValidScore(g.finalScore)) {
+      invalid.push(`Điểm cuối kỳ: ${g.finalScore}`);
+    }
+
+    return invalid;
+  };
+
+  // Lấy danh sách học sinh có điểm không hợp lệ
+  const getStudentsWithInvalidScores = () => {
+    return filteredStudents.filter(
+      (student) => getInvalidScores(student).length > 0
+    );
+  };
+
+  // Fetch classes
   useEffect(() => {
     const fetchMyClasses = async () => {
       try {
         let rawData;
 
         if (isAdmin) {
-          // Giáo vụ: lấy TẤT CẢ lớp-môn của trường
           rawData = await classSubjectService.getAllClassSubjects();
         } else {
-          // Giáo viên thường: chỉ lấy lớp mình dạy
           rawData = await teacherService.getClassSubjectByTeacherId(
             user.userId
           );
         }
 
         if (!rawData || !Array.isArray(rawData)) {
-          console.warn("Dữ liệu lớp không hợp lệ hoặc rỗng");
+          console.warn("Dữ liệu lớp không hợp lệ");
           setClasses([]);
           return;
         }
 
-        // Chuẩn hóa dữ liệu về format thống nhất mà component đang dùng
         const normalizedClasses = rawData.map((item) => ({
           classId: item.classId,
           className: item.className,
@@ -87,7 +122,6 @@ export default function TeacherGradeInput() {
             item.subject?.name || item.subjectName || "Không xác định",
           termName: item.term?.name || item.termName || "Không xác định",
           classSubjectId: item.classSubjectId,
-          // Các field phụ nếu cần sau này
           teacher: item.teacher || null,
         }));
 
@@ -108,15 +142,7 @@ export default function TeacherGradeInput() {
     setIsAdmin(user?.isAdmin === true);
   }, [user]);
 
-  const formatDateVN = (dateString) => {
-    if (!dateString) return "";
-    const d = new Date(dateString);
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
-  };
-
+  // Fetch grades
   const fetchGrades = async (classId, classSubjectId) => {
     const studentsRes = await studentService.getStudentsByClass(classId);
     if (!studentsRes) return;
@@ -153,43 +179,7 @@ export default function TeacherGradeInput() {
     setGrades(initGrades);
   };
 
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const groupedClasses = Object.values(
-    classes.reduce((acc, cls) => {
-      const key = `${cls.className}-${cls.subjectName}-${cls.termName}`;
-      if (!acc[key]) {
-        acc[key] = {
-          key,
-          classId: cls.classId,
-          className: cls.className ?? "-",
-          subjectName: cls.subjectName,
-          termName: cls.termName,
-          classSubjectId: cls.classSubjectId,
-        };
-      }
-      return acc;
-    }, {})
-  );
-
-  const filteredClasses = groupedClasses.filter((cls) => {
-    const matchesTerm =
-      filters.termName === "all" || cls.termName === filters.termName;
-    const matchesSubject =
-      filters.subject === "all" ||
-      cls.subjectName.toLowerCase().includes(filters.subject.toLowerCase());
-    const matchesClass =
-      filters.className === "all" ||
-      cls.className.toLowerCase().includes(filters.className.toLowerCase());
-    const matchesKeyword =
-      !filters.keyword.trim() ||
-      cls.className.toLowerCase().includes(filters.keyword.toLowerCase()) ||
-      cls.subjectName.toLowerCase().includes(filters.keyword.toLowerCase());
-    return matchesTerm && matchesSubject && matchesClass && matchesKeyword;
-  });
-
+  // Handle change
   const handleChange = (userId, field, value, index = null) => {
     setGrades((prev) => {
       const studentGrade = { ...prev[userId] };
@@ -208,9 +198,40 @@ export default function TeacherGradeInput() {
     });
   };
 
+  // Save grade - với kiểm tra điểm hợp lệ
   const saveGrade = async (student, { showToastMsg = true } = {}) => {
     const g = grades[student.userId];
-    if (!g) return;
+    if (!g) return false;
+
+    // Kiểm tra xem có ít nhất một trường được điền hay không
+    const hasRegularScores = g.regularScores.some(
+      (score) => score !== "" && score != null
+    );
+    const hasMidtermScore = g.midtermScore !== "" && g.midtermScore != null;
+    const hasFinalScore = g.finalScore !== "" && g.finalScore != null;
+
+    // Nếu tất cả các trường đều rỗng, báo lỗi
+    if (!hasRegularScores && !hasMidtermScore && !hasFinalScore) {
+      if (showToastMsg) {
+        showToast(
+          `Không thể lưu điểm cho ${student.fullName} vì chưa có điểm nào được nhập!`,
+          "error"
+        );
+      }
+      return false;
+    }
+
+    // Kiểm tra điểm có hợp lệ hay không (0-10)
+    const invalidScores = getInvalidScores(student);
+    if (invalidScores.length > 0) {
+      if (showToastMsg) {
+        showToast(
+          `Không thể lưu điểm cho ${student.fullName} vì có điểm không hợp lệ (phải từ 0-10)!`,
+          "error"
+        );
+      }
+      return false;
+    }
 
     const payload = {
       studentId: student.userId,
@@ -224,14 +245,13 @@ export default function TeacherGradeInput() {
     const res = await subjectGradeService.saveGrade(payload);
     if (res && showToastMsg) {
       showToast(`Đã lưu điểm cho ${student.fullName}`, "success");
-    } else {
+    } else if (showToastMsg) {
       showToast(`Lưu điểm cho ${student.fullName} thất bại!`, "error");
     }
-    // await aiService.predictSubjectsForStudent(student.userId);
-    // await aiService.predictStudentGPA(student.userId);
     return res;
   };
 
+  // Save all
   const handleSaveAll = async () => {
     setIsSavingAll(true);
     try {
@@ -239,7 +259,6 @@ export default function TeacherGradeInput() {
         students.map((s) => saveGrade(s, { showToastMsg: false }))
       );
       showToast("Đã lưu toàn bộ điểm của lớp", "success");
-      // await fetchGrades(selectedClass.classId, selectedClass.classSubjectId);
       fetchGrades(selectedClass.classId, selectedClass.classSubjectId);
     } catch (err) {
       console.error(err);
@@ -249,6 +268,7 @@ export default function TeacherGradeInput() {
     }
   };
 
+  // Save one
   const handleSaveOne = async (student) => {
     try {
       await saveGrade(student);
@@ -259,6 +279,7 @@ export default function TeacherGradeInput() {
     }
   };
 
+  // Import Excel
   const handleImportExcel = async (event) => {
     if (!selectedClass) {
       showToast("Vui lòng chọn một lớp trước khi nhập điểm!", "error");
@@ -289,66 +310,29 @@ export default function TeacherGradeInput() {
             return;
           }
 
-          const regularScores = [
-            row["TX1"] !== undefined && row["TX1"] !== ""
-              ? Number(row["TX1"])
-              : "",
-            row["TX2"] !== undefined && row["TX2"] !== ""
-              ? Number(row["TX2"])
-              : "",
-            row["TX3"] !== undefined && row["TX3"] !== ""
-              ? Number(row["TX3"])
-              : "",
-            row["TX4"] !== undefined && row["TX4"] !== ""
-              ? Number(row["TX4"])
-              : "",
-            row["TX5"] !== undefined && row["TX5"] !== ""
-              ? Number(row["TX5"])
-              : "",
-          ];
-
-          const midtermScore =
-            row["GiữaKỳ"] !== undefined && row["GiữaKỳ"] !== ""
-              ? Number(row["GiữaKỳ"])
-              : "";
-          const finalScore =
-            row["CuốiKỳ"] !== undefined && row["CuốiKỳ"] !== ""
-              ? Number(row["CuốiKỳ"])
-              : "";
-          const comment = row["NhậnXét"] || "";
-
-          const isValidScore = (score) =>
-            score === "" ||
-            (typeof score === "number" && score >= 0 && score <= 10);
-          if (
-            regularScores.every(isValidScore) &&
-            isValidScore(midtermScore) &&
-            isValidScore(finalScore)
-          ) {
-            newGrades[student.userId] = {
-              ...newGrades[student.userId],
-              regularScores,
-              midtermScore,
-              finalScore,
-              comment,
-              lockedRegular: regularScores.map((score) => !!score),
-              lockedMidterm: !!midtermScore,
-              lockedFinal: !!finalScore,
-              lockedComment: !!comment,
-            };
-          } else {
-            errorCount++;
-          }
+          newGrades[student.userId] = {
+            ...newGrades[student.userId],
+            regularScores: [
+              row["TX1"] ? Number(row["TX1"]) : "",
+              row["TX2"] ? Number(row["TX2"]) : "",
+              row["TX3"] ? Number(row["TX3"]) : "",
+              row["TX4"] ? Number(row["TX4"]) : "",
+              row["TX5"] ? Number(row["TX5"]) : "",
+            ],
+            midtermScore: row["GiữaKỳ"] ? Number(row["GiữaKỳ"]) : "",
+            finalScore: row["CuốiKỳ"] ? Number(row["CuốiKỳ"]) : "",
+            comment: row["NhậnXét"] || "",
+          };
         });
 
         setGrades(newGrades);
         if (errorCount > 0) {
           showToast(
-            `Nhập điểm thành công, nhưng có ${errorCount} dòng lỗi do mã học sinh không hợp lệ hoặc điểm không đúng định dạng!`,
+            `Nhập thành công nhưng ${errorCount} học sinh không tìm thấy`,
             "warning"
           );
         } else {
-          showToast("Nhập điểm từ file thành công!", "success");
+          showToast("Nhập dữ liệu thành công!", "success");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -361,6 +345,7 @@ export default function TeacherGradeInput() {
     }
   };
 
+  // Export Excel
   const handleExportExcel = () => {
     const data = students.map((s) => {
       const g = grades[s.userId] || {};
@@ -405,321 +390,578 @@ export default function TeacherGradeInput() {
     );
   };
 
+  // Format date
+  const formatDateVN = (dateString) => {
+    if (!dateString) return "";
+    const d = new Date(dateString);
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  // Get unique terms and subjects
   const uniqueTerms = [...new Set(classes.map((cls) => cls.termName))];
   const uniqueSubjects = [...new Set(classes.map((cls) => cls.subjectName))];
-  const uniqueClasses = [...new Set(classes.map((cls) => cls.className))];
+
+  // Filter classes - chỉ hiển thị khi cả termName và subject không phải "all"
+  const isFilterValid = filters.termName !== "all" && filters.subject !== "all";
+
+  const filteredClasses = isFilterValid
+    ? classes.filter((cls) => {
+        const matchesTerm = cls.termName === filters.termName;
+        const matchesSubject =
+          cls.subjectName.toLowerCase() === filters.subject.toLowerCase();
+        return matchesTerm && matchesSubject;
+      })
+    : [];
+
+  // Filter students
+  const normalizedSearchTerm = normalizeString(searchTerm);
+  const filteredStudents = students.filter(
+    (s) =>
+      normalizeString(s.fullName).includes(normalizedSearchTerm) ||
+      normalizeString(s.studentCode || "").includes(normalizedSearchTerm)
+  );
+
+  // Lấy danh sách học sinh có điểm không hợp lệ
+  const studentsWithInvalidScores = getStudentsWithInvalidScores();
 
   return (
-    <div className="flex min-h-full bg-gray-100 dark:bg-gray-900">
-      {/* Sidebar */}
-      <div className="pt-2 pl-2 min-h-full">
-        <div className="w-full md:w-64 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 p-4 flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Bộ lọc
-          </h2>
-
-          {/* Search Input */}
-          <div className="relative">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Tìm lớp hoặc môn..."
-              value={filters.keyword}
-              onChange={(e) => handleFilterChange("keyword", e.target.value)}
-              className="pl-10 pr-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-            />
-          </div>
-
-          {/* Term Filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              Học kỳ
-            </label>
-            <select
-              value={filters.termName}
-              onChange={(e) => handleFilterChange("termName", e.target.value)}
-              className="mt-1 px-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-            >
-              <option value="all">Tất cả</option>
-              {uniqueTerms.map((termName, idx) => (
-                <option key={idx} value={termName}>
-                  {termName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Subject Filter */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              Môn học
-            </label>
-            <select
-              value={filters.subject}
-              onChange={(e) => handleFilterChange("subject", e.target.value)}
-              className="mt-1 px-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-            >
-              <option value="all">Tất cả</option>
-              {uniqueSubjects.map((subject, idx) => (
-                <option key={idx} value={subject}>
-                  {subject}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Class Filter */}
-          {/* <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
-              Lớp học
-            </label>
-            <select
-              value={filters.className}
-              onChange={(e) => handleFilterChange("className", e.target.value)}
-              className="mt-1 px-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-            >
-              <option value="all">Tất cả</option>
-              {uniqueClasses.map((className, idx) => (
-                <option key={idx} value={className}>
-                  {className}
-                </option>
-              ))}
-            </select>
-          </div> */}
-
-          {/* Class List Tree */}
-          <div className="flex-1 overflow-y-auto">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-              Danh sách lớp
-            </h3>
-
-            {filteredClasses.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">
-                Không có lớp nào phù hợp.
-              </p>
-            ) : (
-              <ul className="space-y-1">
-                {Object.entries(
-                  filteredClasses.reduce((acc, cls) => {
-                    if (!acc[cls.termName]) acc[cls.termName] = {};
-                    if (!acc[cls.termName][cls.subjectName])
-                      acc[cls.termName][cls.subjectName] = [];
-                    acc[cls.termName][cls.subjectName].push(cls);
-                    return acc;
-                  }, {})
-                ).map(([term, subjects]) => (
-                  <li key={term}>
-                    {/* Term */}
-                    <div
-                      className="cursor-pointer font-medium text-gray-700 dark:text-gray-200 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
-                      onClick={() =>
-                        setExpandedTerm((prev) => (prev === term ? null : term))
-                      }
-                    >
-                      <span>{term}</span>
-                      {expandedTerm === term ? (
-                        <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                      )}
-                    </div>
-
-                    {/* Subject */}
-                    {expandedTerm === term && (
-                      <ul className="ml-4 mt-1 space-y-1">
-                        {Object.entries(subjects).map(([subject, classes]) => (
-                          <li key={subject}>
-                            <div
-                              className="cursor-pointer font-medium text-gray-600 dark:text-gray-300 p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-between"
-                              onClick={() =>
-                                setExpandedSubject((prev) =>
-                                  prev === subject ? null : subject
-                                )
-                              }
-                            >
-                              <span>{subject}</span>
-                              {expandedSubject === subject ? (
-                                <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                              )}
-                            </div>
-
-                            {/* Class */}
-                            {expandedSubject === subject && (
-                              <ul className="ml-4 mt-1 space-y-1">
-                                {classes.map((cls) => (
-                                  <li
-                                    key={cls.key}
-                                    onClick={() => {
-                                      setSelectedClass(cls);
-                                      fetchGrades(
-                                        cls.classId,
-                                        cls.classSubjectId
-                                      );
-                                    }}
-                                    className={`p-2 rounded-lg cursor-pointer transition text-sm ${
-                                      selectedClass?.key === cls.key
-                                        ? "bg-green-100 dark:bg-green-700 text-green-800 dark:text-white"
-                                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                                    }`}
-                                  >
-                                    LỚP {cls.className}
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+    <div
+      className={`min-h-screen p-4 sm:p-6 lg:p-8 ${
+        darkMode ? "bg-gray-900" : "bg-gray-50"
+      }`}
+    >
+      {/* Header */}
+      <div className="mb-6">
+        <h1
+          className={`text-3xl sm:text-4xl font-bold mb-2 ${
+            darkMode ? "text-white" : "text-gray-900"
+          }`}
+        >
+          Nhập Điểm
+        </h1>
+        <p
+          className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-600"}`}
+        >
+          Quản lý và nhập điểm cho học sinh
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 p-2 overflow-auto">
-        {selectedClass ? (
-          <div className="bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ListChecks
-                  className="text-blue-600 dark:text-blue-400"
-                  size={20}
-                />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Nhập điểm - {selectedClass.className} -{" "}
-                  {selectedClass.subjectName} ({selectedClass.termName})
-                </h2>
-              </div>
-            </div>
+      {/* Filter Section */}
+      <div
+        className={`rounded-xl border p-4 sm:p-6 mb-6 ${
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <h2
+          className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+            darkMode ? "text-gray-200" : "text-gray-900"
+          }`}
+        >
+          <Filter className="w-5 h-5" />
+          Bộ Lọc
+        </h2>
 
-            {/* Toolbar */}
-            <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleSaveAll}
-                  disabled={isSavingAll}
-                  className={`flex items-center gap-1 px-3 py-1 rounded border transition
-                    ${
-                      isSavingAll
-                        ? "bg-gray-400 cursor-not-allowed text-white"
-                        : "border-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200"
-                    }`}
-                >
-                  {isSavingAll ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Đang lưu...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save size={16} />
-                      <span>Lưu tất cả</span>
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={handleExportExcel}
-                  className="flex items-center gap-1 px-3 py-1 rounded border border-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200 transition"
-                >
-                  <FileDown size={16} />
-                  <span>Xuất bảng điểm</span>
-                </button>
-                <label
-                  className={`flex items-center gap-1 px-3 py-1 rounded border border-gray-200 transition ${
-                    isImporting
-                      ? "bg-gray-400 cursor-not-allowed text-white"
-                      : "bg-white dark:bg-gray-700 hover:bg-gray-100 hover:dark:bg-gray-600 text-green-600 dark:text-gray-200"
+        <div className="flex items-center gap-3 flex-wrap">
+          <select
+            value={filters.termName}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, termName: e.target.value }))
+            }
+            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-gray-200 hover:border-gray-500"
+                : "bg-white border-gray-300 text-gray-900 hover:border-gray-400"
+            }`}
+          >
+            <option value="all">📚 Chọn Học Kỳ</option>
+            {uniqueTerms.map((term) => (
+              <option key={term} value={term}>
+                {term}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.subject}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, subject: e.target.value }))
+            }
+            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-gray-200 hover:border-gray-500"
+                : "bg-white border-gray-300 text-gray-900 hover:border-gray-400"
+            }`}
+          >
+            <option value="all">📖 Chọn Môn Học</option>
+            {uniqueSubjects.map((subject) => (
+              <option key={subject} value={subject}>
+                {subject}
+              </option>
+            ))}
+          </select>
+
+          {/* Info text */}
+          {isFilterValid && (
+            <div
+              className={`ml-auto text-sm font-medium px-3 py-2 rounded-lg ${
+                darkMode
+                  ? "bg-blue-900/30 text-blue-300"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {filteredClasses.length} lớp
+            </div>
+          )}
+        </div>
+
+        {/* Message when not selected */}
+        {!isFilterValid && (
+          <div
+            className={`mt-4 p-3 rounded-lg text-sm ${
+              darkMode
+                ? "bg-yellow-900/20 text-yellow-300 border border-yellow-700/30"
+                : "bg-yellow-100 text-yellow-800 border border-yellow-300"
+            }`}
+          >
+            Vui lòng chọn cả <strong>Học Kỳ</strong> và <strong>Môn Học</strong>{" "}
+            để xem danh sách lớp
+          </div>
+        )}
+      </div>
+
+      {/* Class Selection */}
+      {isFilterValid && filteredClasses.length > 0 && (
+        <div
+          className={`rounded-xl border p-4 sm:p-6 mb-6 ${
+            darkMode
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}
+        >
+          <h2
+            className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
+              darkMode ? "text-gray-200" : "text-gray-900"
+            }`}
+          >
+            <ListChecks className="w-5 h-5" />
+            Chọn Lớp Học ({filteredClasses.length})
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {filteredClasses.map((cls) => (
+              <button
+                key={cls.classSubjectId}
+                onClick={() => {
+                  setSelectedClass(cls);
+                  fetchGrades(cls.classId, cls.classSubjectId);
+                  setSearchTerm("");
+                }}
+                className={`p-3 rounded-lg border-2 transition-all duration-200 text-left text-sm ${
+                  selectedClass?.classSubjectId === cls.classSubjectId
+                    ? darkMode
+                      ? "bg-blue-900/40 border-blue-600 ring-1 ring-blue-500"
+                      : "bg-blue-100 border-blue-500 ring-1 ring-blue-400"
+                    : darkMode
+                    ? "bg-gray-700/50 border-gray-600 hover:border-gray-500 hover:bg-gray-700"
+                    : "bg-gray-50 border-gray-300 hover:bg-gray-100 hover:border-gray-400"
+                }`}
+              >
+                <div
+                  className={`font-semibold line-clamp-1 ${
+                    darkMode ? "text-blue-300" : "text-blue-900"
                   }`}
                 >
-                  <FileUp size={16} />
-                  <span>{isImporting ? "Đang nhập..." : "Nhập bảng điểm"}</span>
-                  <input
-                    type="file"
-                    accept=".xlsx"
-                    onChange={handleImportExcel}
-                    className="hidden"
-                    disabled={isImporting}
-                  />
-                </label>
+                  {cls.className}
+                </div>
+                <div
+                  className={`text-xs mt-1 line-clamp-1 ${
+                    darkMode ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  {cls.subjectName}
+                </div>
+                <div
+                  className={`text-xs mt-1 opacity-75 ${
+                    darkMode ? "text-gray-500" : "text-gray-500"
+                  }`}
+                >
+                  {cls.termName}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State - khi lọc hợp lệ nhưng không có lớp */}
+      {isFilterValid && filteredClasses.length === 0 && (
+        <div
+          className={`rounded-xl border p-12 text-center mb-6 ${
+            darkMode
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}
+        >
+          <AlertCircle
+            className={`w-12 h-12 mx-auto mb-4 ${
+              darkMode ? "text-gray-500" : "text-gray-400"
+            }`}
+          />
+          <p
+            className={`text-lg font-medium ${
+              darkMode ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
+            Không có lớp nào trong lựa chọn này
+          </p>
+        </div>
+      )}
+
+      {/* Grade Input Section */}
+      {selectedClass ? (
+        <div
+          className={`rounded-xl border ${
+            darkMode
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}
+        >
+          {/* Header */}
+          <div
+            className={`px-4 sm:px-6 py-4 border-b ${
+              darkMode
+                ? "border-gray-700 bg-gray-800/50"
+                : "border-gray-200 bg-gray-50/50"
+            }`}
+          >
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h2
+                  className={`text-lg font-semibold ${
+                    darkMode ? "text-gray-200" : "text-gray-900"
+                  }`}
+                >
+                  {selectedClass.className} - {selectedClass.subjectName}
+                </h2>
+                <p
+                  className={`text-sm mt-1 ${
+                    darkMode ? "text-gray-400" : "text-gray-600"
+                  }`}
+                >
+                  {selectedClass.termName}
+                </p>
               </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Tìm theo tên hoặc mã học sinh..."
-                  className="pl-8 pr-3 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <Search
-                  className="absolute left-2 top-1.5 text-gray-400"
-                  size={16}
-                />
+              <div
+                className={`text-sm font-medium px-3 py-2 rounded-lg ${
+                  darkMode
+                    ? "bg-blue-900/30 text-blue-300"
+                    : "bg-blue-100 text-blue-700"
+                }`}
+              >
+                {students.length} học sinh
               </div>
             </div>
+          </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto rounded-lg border border-gray-300 dark:border-gray-600">
-              <table
-                className="min-w-max w-full text-sm text-left table-auto border-separate"
-                style={{ borderSpacing: 0 }}
+          {/* Toolbar */}
+          <div
+            className={`px-4 sm:px-6 py-4 border-b ${
+              darkMode ? "border-gray-700" : "border-gray-200"
+            } flex items-center justify-between gap-3 flex-wrap`}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleSaveAll}
+                disabled={isSavingAll || students.length === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  isSavingAll || students.length === 0
+                    ? darkMode
+                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : darkMode
+                    ? "bg-green-600/20 text-green-300 border border-green-600/50 hover:bg-green-600/30"
+                    : "bg-green-100 text-green-700 border border-green-300 hover:bg-green-200"
+                }`}
               >
-                <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                {isSavingAll ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Lưu Tất Cả</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={handleExportExcel}
+                disabled={students.length === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all border ${
+                  students.length === 0
+                    ? darkMode
+                      ? "bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed"
+                      : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                    : darkMode
+                    ? "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <FileDown className="w-4 h-4" />
+                <span>Xuất Excel</span>
+              </button>
+
+              <label
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all border cursor-pointer ${
+                  isImporting
+                    ? darkMode
+                      ? "bg-gray-700 text-gray-500 border-gray-600 cursor-not-allowed"
+                      : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed"
+                    : darkMode
+                    ? "bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <FileUp className="w-4 h-4" />
+                <span>{isImporting ? "Đang nhập..." : "Nhập Excel"}</span>
+                <input
+                  type="file"
+                  accept=".xlsx"
+                  onChange={handleImportExcel}
+                  className="hidden"
+                  disabled={isImporting}
+                />
+              </label>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search
+                className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                  darkMode ? "text-gray-500" : "text-gray-400"
+                }`}
+              />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm theo tên hoặc mã..."
+                className={`pl-10 pr-4 py-2 rounded-lg border text-sm transition-all ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-500"
+                    : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* Warning Banner - Hiển thị cảnh báo khi có điểm không hợp lệ */}
+          {studentsWithInvalidScores.length > 0 && (
+            <div
+              className={`px-4 sm:px-6 py-4 border-b ${
+                darkMode ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <div
+                className={`p-4 rounded-lg flex items-start gap-3 ${
+                  darkMode
+                    ? "bg-red-900/20 border border-red-700/50 text-red-300"
+                    : "bg-red-100 border border-red-300 text-red-800"
+                }`}
+              >
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold mb-2">
+                    ⚠️ Phát hiện {studentsWithInvalidScores.length} học sinh có
+                    điểm không hợp lệ (phải từ 0-10):
+                  </p>
+                  <ul className="text-sm space-y-1 max-h-40 overflow-y-auto">
+                    {studentsWithInvalidScores.map((student) => (
+                      <li key={student.userId}>
+                        • <strong>{student.fullName}</strong>:{" "}
+                        {getInvalidScores(student).join(", ")}
+                      </li>
+                    ))}
+                  </ul>
+                  <p
+                    className={`text-xs mt-3 ${
+                      darkMode ? "text-red-400" : "text-red-700"
+                    }`}
+                  >
+                    Vui lòng chỉnh sửa các điểm trên trước khi lưu.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className={`w-full text-sm border-collapse`}>
+              <thead
+                className={`${darkMode ? "bg-gray-700/50" : "bg-gray-100"}`}
+              >
+                <tr>
+                  <th
+                    className={`px-4 py-3 text-left font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    #
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-left font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Mã đăng nhập
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-left font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Tên Học Sinh
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-left font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Ngày Sinh
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-center font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Thường Xuyên
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-center font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Giữa Kỳ
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-center font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Cuối Kỳ
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-center font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Trung Bình
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-left font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Nhận Xét
+                  </th>
+                  <th
+                    className={`px-4 py-3 text-center font-semibold border-b ${
+                      darkMode
+                        ? "border-gray-700 text-gray-300"
+                        : "border-gray-200 text-gray-900"
+                    }`}
+                  >
+                    Hành Động
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.length === 0 ? (
                   <tr>
-                    <th className="px-3 py-2 min-w-[40px]">#</th>
-                    <th className="px-3 py-2 min-w-[100px]">Mã học sinh</th>
-                    <th className="px-3 py-2 min-w-[150px]">Tên học sinh</th>
-                    <th className="px-3 py-2 min-w-[100px]">Ngày sinh</th>
-                    <th className="px-3 py-2 min-w-[300px]">
-                      Điểm thường xuyên
-                    </th>
-                    <th className="px-3 py-2 min-w-[80px]">Giữa kỳ</th>
-                    <th className="px-3 py-2 min-w-[80px]">Cuối kỳ</th>
-                    <th className="px-3 py-2 min-w-[80px]">Trung bình</th>
-                    <th className="px-3 py-2 min-w-[80px]">Nhận xét</th>
-                    <th className="px-3 py-2 min-w-[60px]"></th>
+                    <td colSpan="10" className="px-4 py-6">
+                      <div
+                        className={`flex flex-col items-center justify-center gap-2 ${
+                          darkMode ? "text-gray-400" : "text-gray-600"
+                        }`}
+                      >
+                        <AlertCircle className="w-8 h-8" />
+                        <p>Không tìm thấy học sinh phù hợp</p>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {students
-                    .filter(
-                      (s) =>
-                        s.fullName
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase()) ||
-                        (s.studentCode || "")
-                          .toLowerCase()
-                          .includes(searchTerm.toLowerCase())
-                    )
-                    .map((s, index) => {
-                      const g = grades[s.userId] || {};
-                      return (
-                        <tr
-                          key={s.userId}
-                          className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                ) : (
+                  filteredStudents.map((student, index) => {
+                    const g = grades[student.userId] || {};
+                    const hasInvalidScore =
+                      getInvalidScores(student).length > 0;
+
+                    return (
+                      <tr
+                        key={student.userId}
+                        className={`border-b transition-colors ${
+                          hasInvalidScore
+                            ? darkMode
+                              ? "bg-red-900/10 hover:bg-red-900/20 border-red-700/30"
+                              : "bg-red-50 hover:bg-red-100 border-red-200"
+                            : darkMode
+                            ? "border-gray-700 hover:bg-gray-700/30"
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
+                      >
+                        <td
+                          className={`px-4 py-3 text-sm ${
+                            darkMode ? "text-gray-400" : "text-gray-600"
+                          }`}
                         >
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            {index + 1}
-                          </td>
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            {s.studentCode}
-                          </td>
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            {s.fullName}
-                          </td>
-                          <td className="px-3 py-2 text-gray-900 dark:text-gray-100">
-                            {formatDateVN(s.dob)}
-                          </td>
-                          <td className="px-3 py-2">
+                          {index + 1}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-sm font-medium ${
+                            darkMode ? "text-gray-300" : "text-gray-900"
+                          }`}
+                        >
+                          {student.studentCode}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-sm font-medium ${
+                            darkMode ? "text-gray-300" : "text-gray-900"
+                          }`}
+                        >
+                          {student.fullName}
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-sm ${
+                            darkMode ? "text-gray-400" : "text-gray-600"
+                          }`}
+                        >
+                          {formatDateVN(student.dob)}
+                        </td>
+                        <td className={`px-4 py-3`}>
+                          <div className="flex gap-1 justify-center flex-wrap">
                             {[0, 1, 2, 3, 4].map((i) => (
                               <input
                                 key={i}
@@ -731,117 +973,204 @@ export default function TeacherGradeInput() {
                                 disabled={!isAdmin && g.lockedRegular?.[i]}
                                 onChange={(e) =>
                                   handleChange(
-                                    s.userId,
+                                    student.userId,
                                     "regularScores",
                                     e.target.value,
                                     i
                                   )
                                 }
-                                className="w-16 mx-1 px-1 py-0.5 border rounded text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
+                                className={`w-12 h-9 px-2 rounded border text-center text-sm transition-all ${
+                                  hasInvalidScore &&
+                                  !isValidScore(g.regularScores?.[i])
+                                    ? darkMode
+                                      ? "bg-red-700 border-red-600 text-red-100"
+                                      : "bg-red-200 border-red-400 text-red-900"
+                                    : darkMode
+                                    ? "bg-gray-700 border-gray-600 text-gray-100"
+                                    : "bg-white border-gray-300 text-gray-900"
+                                } focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
                               />
                             ))}
-                          </td>
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.1"
-                              value={g.midtermScore ?? ""}
-                              disabled={!isAdmin && g.lockedMidterm}
-                              onChange={(e) =>
-                                handleChange(
-                                  s.userId,
-                                  "midtermScore",
-                                  e.target.value
-                                )
-                              }
-                              className="w-16 px-1 py-0.5 border rounded text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
-                            />
-                          </td>
-
-                          <td className="px-3 py-2">
-                            <input
-                              type="number"
-                              min="0"
-                              max="10"
-                              step="0.1"
-                              value={g.finalScore ?? ""}
-                              disabled={!isAdmin && g.lockedFinal}
-                              onChange={(e) =>
-                                handleChange(
-                                  s.userId,
-                                  "finalScore",
-                                  e.target.value
-                                )
-                              }
-                              className="w-16 px-1 py-0.5 border rounded text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed"
-                            />
-                          </td>
-                          <td className="px-3 py-2">
-                            <div className="w-16 min-h-[28px] px-1 py-0.5 border rounded text-center bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400 disabled:bg-gray-100 disabled:dark:bg-gray-600 disabled:cursor-not-allowed">
-                              {g.actualAverage ?? "\u00A0"}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <div
-                              onClick={() =>
-                                setCommentModal({
-                                  isOpen: true,
-                                  studentId: s.userId,
-                                  value: g.comment ?? "",
-                                })
-                              }
-                              className="cursor-pointer w-full rounded text-gray-900 dark:text-gray-100 overflow-hidden whitespace-nowrap text-ellipsis"
-                              style={{ maxWidth: "200px" }}
-                            >
-                              {g.comment ? g.comment : "Thêm"}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2">
-                            <button
-                              onClick={() => handleSaveOne(s)}
-                              className="flex items-center gap-1 px-3 py-1 text-green-600 dark:text-green-400 rounded transition"
-                            >
-                              <Save size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
+                          </div>
+                        </td>
+                        <td className={`px-4 py-3`}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={g.midtermScore ?? ""}
+                            disabled={!isAdmin && g.lockedMidterm}
+                            onChange={(e) =>
+                              handleChange(
+                                student.userId,
+                                "midtermScore",
+                                e.target.value
+                              )
+                            }
+                            className={`w-16 h-9 px-2 rounded border text-center text-sm transition-all ${
+                              hasInvalidScore && !isValidScore(g.midtermScore)
+                                ? darkMode
+                                  ? "bg-red-700 border-red-600 text-red-100"
+                                  : "bg-red-200 border-red-400 text-red-900"
+                                : darkMode
+                                ? "bg-gray-700 border-gray-600 text-gray-100"
+                                : "bg-white border-gray-300 text-gray-900"
+                            } focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          />
+                        </td>
+                        <td className={`px-4 py-3`}>
+                          <input
+                            type="number"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value={g.finalScore ?? ""}
+                            disabled={!isAdmin && g.lockedFinal}
+                            onChange={(e) =>
+                              handleChange(
+                                student.userId,
+                                "finalScore",
+                                e.target.value
+                              )
+                            }
+                            className={`w-16 h-9 px-2 rounded border text-center text-sm transition-all ${
+                              hasInvalidScore && !isValidScore(g.finalScore)
+                                ? darkMode
+                                  ? "bg-red-700 border-red-600 text-red-100"
+                                  : "bg-red-200 border-red-400 text-red-900"
+                                : darkMode
+                                ? "bg-gray-700 border-gray-600 text-gray-100"
+                                : "bg-white border-gray-300 text-gray-900"
+                            } focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                          />
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-center text-sm font-medium ${
+                            darkMode ? "text-blue-300" : "text-blue-700"
+                          }`}
+                        >
+                          {g.actualAverage || "-"}
+                        </td>
+                        <td className={`px-4 py-3`}>
+                          <button
+                            onClick={() =>
+                              setCommentModal({
+                                isOpen: true,
+                                studentId: student.userId,
+                                value: g.comment ?? "",
+                              })
+                            }
+                            className={`px-3 py-1 text-sm rounded transition-all truncate max-w-[100px] ${
+                              g.comment
+                                ? darkMode
+                                  ? "bg-blue-900/30 text-blue-300"
+                                  : "bg-blue-100 text-blue-700"
+                                : darkMode
+                                ? "text-gray-400 hover:text-gray-300"
+                                : "text-gray-600 hover:text-gray-900"
+                            }`}
+                          >
+                            {g.comment || "Thêm"}
+                          </button>
+                        </td>
+                        <td className={`px-4 py-3 text-center`}>
+                          <button
+                            onClick={() => handleSaveOne(student)}
+                            className={`inline-flex items-center justify-center w-8 h-8 rounded transition-all ${
+                              darkMode
+                                ? "bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                                : "bg-green-100 text-green-700 hover:bg-green-200"
+                            }`}
+                            title="Lưu"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500 dark:text-gray-400">
-              Vui lòng chọn một lớp để nhập điểm.
-            </p>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className={`rounded-xl border p-12 text-center ${
+            darkMode
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}
+        >
+          <AlertCircle
+            className={`w-12 h-12 mx-auto mb-4 ${
+              darkMode ? "text-gray-500" : "text-gray-400"
+            }`}
+          />
+          <p
+            className={`text-lg font-medium ${
+              darkMode ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
+            Vui lòng chọn một lớp để nhập điểm
+          </p>
+        </div>
+      )}
 
       {/* Comment Modal */}
       {commentModal.isOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-900 rounded-lg w-full max-w-md p-5 shadow-lg">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">
-              Nhận xét cho học sinh
-            </h3>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className={`rounded-xl shadow-2xl w-full max-w-md p-6 ${
+              darkMode ? "bg-gray-800" : "bg-white"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3
+                className={`text-lg font-semibold ${
+                  darkMode ? "text-gray-200" : "text-gray-900"
+                }`}
+              >
+                Nhận Xét
+              </h3>
+              <button
+                onClick={() =>
+                  setCommentModal({ isOpen: false, studentId: null, value: "" })
+                }
+                className={`p-1 rounded transition-all ${
+                  darkMode
+                    ? "hover:bg-gray-700 text-gray-400"
+                    : "hover:bg-gray-100 text-gray-500"
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
             <textarea
               value={commentModal.value}
               onChange={(e) =>
                 setCommentModal((prev) => ({ ...prev, value: e.target.value }))
               }
-              className="w-full h-32 p-3 rounded bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+              placeholder="Nhập nhận xét..."
+              className={`w-full h-32 p-3 rounded-lg border resize-none transition-all text-sm ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-500"
+                  : "bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400"
+              } focus:outline-none focus:ring-2 focus:ring-blue-500`}
             />
-            <div className="mt-4 flex justify-end gap-2">
+
+            <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={() =>
                   setCommentModal({ isOpen: false, studentId: null, value: "" })
                 }
-                className="px-4 py-1 border rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                className={`px-4 py-2 rounded-lg font-medium transition-all border ${
+                  darkMode
+                    ? "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"
+                    : "bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200"
+                }`}
               >
                 Hủy
               </button>
@@ -858,7 +1187,11 @@ export default function TeacherGradeInput() {
                     value: "",
                   });
                 }}
-                className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className={`px-4 py-2 rounded-lg font-medium transition-all text-white ${
+                  darkMode
+                    ? "bg-blue-600 hover:bg-blue-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
                 Lưu
               </button>

@@ -48,6 +48,7 @@
     "homeroomClass": "Lớp chủ nhiệm"
   },
   "dashboard": {
+    "questionBankAnalytics": "Phân tích ngân hàng câu hỏi",
     "manageAccounts": "Quản lý tài khoản",
     "manageClasses": "Quản lý lớp học",
     "manageNotifications": "Quản lý thông báo",

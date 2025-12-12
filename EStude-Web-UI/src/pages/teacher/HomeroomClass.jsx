@@ -108,14 +108,14 @@ const HomeroomClass = () => {
   };
 
   return (
-    <div className="p-6 bg-transparent text-gray-900 dark:text-gray-100">
+    <div className="bg-bg-transparent dark:bg-transparent p-4 sm:p-6 lg:p-8">
       {/* <div className="max-w-7xl"> */}
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
           {/* <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" /> */}
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
               {t("teacher.homeroom.title") || "Lớp học chủ nhiệm"}
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">

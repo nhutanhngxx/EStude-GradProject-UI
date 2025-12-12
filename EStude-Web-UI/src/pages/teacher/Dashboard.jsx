@@ -26,13 +26,16 @@ import { ThemeContext } from "../../contexts/ThemeContext";
 import {
   Users,
   BookOpen,
-  Bell,
-  FileBarChart,
   Clock,
   GraduationCap,
-  ChartLine,
   ChartColumn,
   BarChart,
+  TrendingUp,
+  FileText,
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  ArrowRight,
 } from "lucide-react";
 import Pagination from "../../components/common/Pagination";
 import TeacherAnalytics from "../../components/analytics/TeacherAnalytics";
@@ -49,6 +52,98 @@ ChartJS.register(
   Legend
 );
 
+// Component StatCard dengan design modern
+const StatCard = ({
+  title,
+  value,
+  icon,
+  bgColor,
+  onClick,
+  note,
+  isLoading,
+}) => {
+  return (
+    <div
+      onClick={onClick}
+      className={`rounded-xl border-0 shadow-md hover:shadow-lg transition-all duration-300 p-5 sm:p-6 cursor-pointer group ${bgColor} backdrop-blur-sm`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+            {title}
+          </p>
+          {isLoading ? (
+            <div className="mt-2 h-8 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          ) : (
+            <p className="text-3xl sm:text-4xl font-bold mt-2 text-gray-900 dark:text-white group-hover:scale-105 transition-transform">
+              {value}
+            </p>
+          )}
+          {note && (
+            <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+              {note}
+            </p>
+          )}
+        </div>
+        <div className="p-3 sm:p-4 rounded-lg bg-white/20 dark:bg-white/10 text-lg sm:text-xl">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Component Modal Dialog
+const ModalDialog = ({ isOpen, title, children, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">{children}</div>
+      </div>
+    </div>
+  );
+};
+
+// Component Empty State
+const EmptyState = ({ message, icon: Icon }) => {
+  return (
+    <div className="flex flex-col items-center justify-center py-12">
+      {Icon && (
+        <Icon className="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
+      )}
+      <p className="text-gray-500 dark:text-gray-400 text-center">{message}</p>
+    </div>
+  );
+};
+
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -61,140 +156,44 @@ const TeacherDashboard = () => {
   const [weeklySchedules, setWeeklySchedules] = useState([]);
   const [gradeStats, setGradeStats] = useState([]);
   const [homeroomClassId, setHomeroomClassId] = useState(null);
-  const [activityFilter, setActivityFilter] = useState("today");
   const [currentPage, setCurrentPage] = useState(1);
   const [currentAssignmentPage, setCurrentAssignmentPage] = useState(1);
   const [currentClassPage, setCurrentClassPage] = useState(1);
+  const [modalType, setModalType] = useState(null);
+
   const itemsPerPage = 10;
   const assignmentsPerPage = 10;
   const classesPerPage = 10;
-  const [modalType, setModalType] = useState(null); // null | "assignments" | "students" | "classes" | "grades"
-
-  const openModal = (type) => setModalType(type);
-  const closeModal = () => setModalType(null);
 
   const barChartRef = useRef(null);
-  const lineChartRef = useRef(null);
-  const subjectChartRef = useRef(null);
   const gradeChartRef = useRef(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
   const teacherId = user.userId;
 
-  // Debug: Check if user has homeroom class
-  console.log("👤 User data:", user);
-  console.log("🏫 Is Homeroom Teacher:", user.homeroomTeacher);
-  console.log("👨‍🏫 Teacher ID:", teacherId);
+  // console.log("user: ", user);
 
-  // Fetch homeroom class ID if user is homeroom teacher
+  // Fetch homeroom class
   useEffect(() => {
     const fetchHomeroomClass = async () => {
-      console.log(
-        "🚀 useEffect triggered - homeroomTeacher:",
-        user.homeroomTeacher,
-        "teacherId:",
-        teacherId
-      );
-
-      if (!user.homeroomTeacher || !teacherId) {
-        console.log(
-          "❌ Skipping fetch - homeroomTeacher:",
-          user.homeroomTeacher,
-          "teacherId:",
-          teacherId
-        );
-        return;
-      }
+      if (!user.homeroomTeacher || !teacherId) return;
 
       try {
-        console.log("🔍 Fetching homeroom class for teacher:", teacherId);
         const homeroomData = await homeroomService.getHomeroomStudents();
-
-        console.log("📦 Homeroom API response:", homeroomData);
-        console.log("📦 Response type:", typeof homeroomData);
-        console.log("📦 Is Array?:", Array.isArray(homeroomData));
-
-        // API returns an array with class data
         if (Array.isArray(homeroomData) && homeroomData.length > 0) {
-          const homeroomClass = homeroomData[0];
-          console.log("📦 Homeroom class data:", homeroomClass);
-
-          const classId = homeroomClass?.classId;
-
-          if (classId) {
-            setHomeroomClassId(classId);
-            console.log("✅ Homeroom Class ID found:", classId);
-            console.log("✅ Class name:", homeroomClass.name);
-            console.log("✅ Student count:", homeroomClass.students?.length);
-          } else {
-            console.log(
-              "⚠️ No classId found in homeroom data. Keys:",
-              Object.keys(homeroomClass || {})
-            );
-          }
-        } else if (Array.isArray(homeroomData) && homeroomData.length === 0) {
-          console.log(
-            "⚠️ API returned empty array - Teacher has no homeroom class assigned"
-          );
-        } else {
-          console.log("⚠️ Unexpected response format:", homeroomData);
+          const classId = homeroomData[0]?.classId;
+          if (classId) setHomeroomClassId(classId);
         }
       } catch (error) {
-        console.error("❌ Error fetching homeroom class:", error);
-        console.error(
-          "❌ Error details:",
-          error.response?.data || error.message
-        );
+        console.error("Error fetching homeroom class:", error);
       }
     };
 
     fetchHomeroomClass();
   }, [user.homeroomTeacher, teacherId]);
 
-  // Phân trang cho học sinh
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const paginatedStudents = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return students.slice(startIndex, endIndex);
-  }, [students, currentPage, itemsPerPage]);
-
-  // Phân trang cho bài tập
-  const handleAssignmentPageChange = (page) => {
-    setCurrentAssignmentPage(page);
-  };
-
-  const paginatedAssignments = useMemo(() => {
-    const startIndex = (currentAssignmentPage - 1) * assignmentsPerPage;
-    const endIndex = startIndex + assignmentsPerPage;
-    return assignments.slice(startIndex, endIndex);
-  }, [assignments, currentAssignmentPage, assignmentsPerPage]);
-
-  // Phân trang cho lớp học
-  const handleClassPageChange = (page) => {
-    setCurrentClassPage(page);
-  };
-
-  const paginatedClasses = useMemo(() => {
-    const startIndex = (currentClassPage - 1) * classesPerPage;
-    const endIndex = startIndex + classesPerPage;
-    return classes.slice(startIndex, endIndex);
-  }, [classes, currentClassPage, classesPerPage]);
-
-  const gradeLevelMap = {
-    GRADE_6: "Khối 6",
-    GRADE_7: "Khối 7",
-    GRADE_8: "Khối 8",
-    GRADE_9: "Khối 9",
-    GRADE_10: "Khối 10",
-    GRADE_11: "Khối 11",
-    GRADE_12: "Khối 12",
-  };
-
+  // Fetch weekly schedules
   useEffect(() => {
     const fetchWeeklySchedules = async () => {
       if (!teacherId) return;
@@ -221,13 +220,14 @@ const TeacherDashboard = () => {
 
         setWeeklySchedules(thisWeekSchedules);
       } catch (error) {
-        console.error("Lỗi khi tải lịch tuần này:", error);
+        console.error("Error fetching weekly schedules:", error);
       }
     };
 
     fetchWeeklySchedules();
   }, [teacherId]);
 
+  // Fetch main data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -296,7 +296,6 @@ const TeacherDashboard = () => {
 
         const gradeStatsResults = await Promise.all(gradeStatsPromises);
 
-        // Group by class and subject
         const groupedStats = Object.values(
           gradeStatsResults.reduce((acc, stat) => {
             const key = `${stat.classId}-${stat.subjectName}`;
@@ -321,7 +320,6 @@ const TeacherDashboard = () => {
           }, {})
         );
 
-        // Calculate average grade
         groupedStats.forEach((g) => {
           g.averageGrade =
             g.termCount > 0 ? (g.totalGrade / g.termCount).toFixed(1) : "N/A";
@@ -329,7 +327,7 @@ const TeacherDashboard = () => {
 
         setGradeStats(groupedStats);
 
-        // Create class map for assignments
+        // Fetch assignments
         const classMap = new Map(
           classRes.map((cls) => [cls.classId, cls.name])
         );
@@ -343,20 +341,17 @@ const TeacherDashboard = () => {
                 .filter((a) => a.teacher?.userId === teacherId)
                 .map((a) => ({
                   ...a,
-                  className: classMap.get(cs.classId) || "Không xác định",
+                  className: classMap.get(cs.classId) || "N/A",
                   subjectName: cs.subject.name,
                   termName: cs.term.name,
                 }));
             })
         );
 
-        // console.log("assignmentPromises: ", assignmentPromises);
-
         const assignmentResults = await Promise.all(assignmentPromises);
         setAssignments(assignmentResults.flat());
-        console.log("ass: ", assignmentResults);
       } catch (error) {
-        console.error("Lỗi khi tải dữ liệu:", error);
+        console.error("Error loading data:", error);
         showToast("Không thể tải dữ liệu!", "error");
       } finally {
         setLoading(false);
@@ -366,6 +361,27 @@ const TeacherDashboard = () => {
     if (schoolId && teacherId) fetchData();
   }, [schoolId, teacherId, showToast]);
 
+  // Pagination
+  const handlePageChange = (page) => setCurrentPage(page);
+  const handleAssignmentPageChange = (page) => setCurrentAssignmentPage(page);
+  const handleClassPageChange = (page) => setCurrentClassPage(page);
+
+  const paginatedStudents = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return students.slice(startIndex, startIndex + itemsPerPage);
+  }, [students, currentPage]);
+
+  const paginatedAssignments = useMemo(() => {
+    const startIndex = (currentAssignmentPage - 1) * assignmentsPerPage;
+    return assignments.slice(startIndex, startIndex + assignmentsPerPage);
+  }, [assignments, currentAssignmentPage]);
+
+  const paginatedClasses = useMemo(() => {
+    const startIndex = (currentClassPage - 1) * classesPerPage;
+    return classes.slice(startIndex, startIndex + classesPerPage);
+  }, [classes, currentClassPage]);
+
+  // Chart data
   const getNewStudentsByMonth = () => {
     const now = new Date();
     const months = Array(6)
@@ -398,122 +414,6 @@ const TeacherDashboard = () => {
     return { labels: months.map((m) => m.label), data };
   };
 
-  const getPublishedAssignmentsThisWeek = () => {
-    const now = new Date();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay() + 1); // Thứ 2
-    weekStart.setHours(0, 0, 0, 0);
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6); // Chủ nhật
-    weekEnd.setHours(23, 59, 59, 999);
-
-    return assignments.filter(
-      (a) =>
-        a.isPublished &&
-        a.createdAt &&
-        new Date(a.createdAt) >= weekStart &&
-        new Date(a.createdAt) <= weekEnd
-    ).length;
-  };
-
-  const getAssignmentsByWeek = () => {
-    const now = new Date();
-    const weeks = Array(4)
-      .fill()
-      .map((_, i) => {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - i * 7);
-        return {
-          label: `Tuần ${4 - i}`,
-          start: new Date(weekStart.setHours(0, 0, 0, 0)),
-          end: new Date(weekStart.setDate(weekStart.getDate() + 6)),
-        };
-      })
-      .reverse();
-
-    const data = weeks.map(
-      ({ start, end }) =>
-        assignments.filter((a) => {
-          if (!a.createdAt) return false;
-          const createdDate = new Date(a.createdAt);
-          return createdDate >= start && createdDate <= end;
-        }).length
-    );
-
-    return { labels: weeks.map((w) => w.label), data };
-  };
-
-  const cards = [
-    {
-      title: "Lớp học quản lý",
-      value: classes.length.toString(),
-      icon: <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />,
-      path: "/teacher/classes",
-      note: classes.length === 0 ? "*Dữ liệu mẫu" : "",
-      bgLight: "bg-blue-100",
-      bgDark: "dark:bg-blue-900",
-      showDetails: true,
-    },
-    {
-      title: "Buổi dạy tuần này",
-      value: weeklySchedules.length.toString(),
-      icon: <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />,
-      path: "/teacher/schedule",
-      note: weeklySchedules.length === 0 ? "*Chưa có lịch tuần này" : "",
-      bgLight: "bg-green-100",
-      bgDark: "dark:bg-green-900",
-      showDetails: true,
-    },
-    {
-      title: "Tổng học sinh",
-      value: students.length.toString(),
-      icon: (
-        <GraduationCap className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-      ),
-      path: "/teacher/users",
-      note: students.length === 0 ? "*Dữ liệu mẫu" : "",
-      bgLight: "bg-yellow-100",
-      bgDark: "dark:bg-yellow-900",
-      showDetails: true,
-    },
-    // {
-    //   title: "Bài tập trong tuần",
-    //   value: getPublishedAssignmentsThisWeek().toString(),
-    //   icon: <FileBarChart className="w-6 h-6 text-red-600 dark:text-red-400" />,
-    //   path: "/teacher/assignments",
-    //   note:
-    //     getPublishedAssignmentsThisWeek() === 0
-    //       ? "*Chưa có bài tập tuần này"
-    //       : "",
-    //   bgLight: "bg-red-100",
-    //   bgDark: "dark:bg-red-900",
-    //   showDetails: true,
-    // },
-    // {
-    //   title: "ĐTB môn theo lớp",
-    //   value: (() => {
-    //     const validGrades = gradeStats.filter(
-    //       (stat) => stat.averageGrade !== "N/A" && !isNaN(stat.averageGrade)
-    //     );
-    //     if (validGrades.length === 0) return "N/A";
-    //     const total = validGrades.reduce(
-    //       (sum, stat) => sum + Number(stat.averageGrade),
-    //       0
-    //     );
-    //     return (total / validGrades.length).toFixed(1);
-    //   })(),
-    //   icon: (
-    //     <BarChart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-    //   ),
-    //   path: "",
-    //   note: gradeStats.length === 0 ? "*Chưa có dữ liệu điểm" : "",
-    //   bgLight: "bg-purple-100",
-    //   bgDark: "dark:bg-purple-900",
-    //   showDetails: true,
-    // },
-  ];
-
   const newStudentsData = getNewStudentsByMonth();
   const barData = {
     labels: newStudentsData.labels,
@@ -521,49 +421,44 @@ const TeacherDashboard = () => {
       {
         label: "Học sinh mới",
         data: newStudentsData.data,
-        backgroundColor: "#3b82f6",
-      },
-    ],
-  };
-
-  const assignmentData = getAssignmentsByWeek();
-  const lineData = {
-    labels: assignmentData.labels,
-    datasets: [
-      {
-        label: "Bài tập đã giao",
-        data: assignmentData.data,
-        borderColor: "#10b981",
-        backgroundColor: "rgba(16, 185, 129, 0.3)",
-        tension: 0.3,
-      },
-    ],
-  };
-
-  const subjectClassData = {
-    labels: subjects.map((s) => s.name),
-    datasets: [
-      {
-        label: "Số lớp",
-        data: subjects.map((s) => s.classCount || 0),
-        backgroundColor: "#f59e0b",
-        borderColor: "#d97706",
-        borderWidth: 1,
+        backgroundColor: [
+          "#3b82f6",
+          "#06b6d4",
+          "#10b981",
+          "#f59e0b",
+          "#ef4444",
+          "#8b5cf6",
+        ],
+        borderRadius: 8,
+        borderSkipped: false,
       },
     ],
   };
 
   const gradeChartData = {
-    labels: gradeStats.map((stat) => `${stat.className} - ${stat.subjectName}`),
+    labels: gradeStats
+      .slice(0, 8)
+      .map((stat) => `${stat.className}\n${stat.subjectName}`),
     datasets: [
       {
-        label: "Điểm trung bình",
-        data: gradeStats.map((stat) =>
-          stat.averageGrade !== "N/A" ? Number(stat.averageGrade) : 0
-        ),
-        backgroundColor: "#8b5cf6",
-        borderColor: "#7c3aed",
-        borderWidth: 1,
+        label: "Điểm TB",
+        data: gradeStats
+          .slice(0, 8)
+          .map((stat) =>
+            stat.averageGrade !== "N/A" ? Number(stat.averageGrade) : 0
+          ),
+        backgroundColor: [
+          "#3b82f6",
+          "#06b6d4",
+          "#10b981",
+          "#f59e0b",
+          "#ef4444",
+          "#8b5cf6",
+          "#ec4899",
+          "#14b8a6",
+        ],
+        borderRadius: 8,
+        borderSkipped: false,
       },
     ],
   };
@@ -571,33 +466,47 @@ const TeacherDashboard = () => {
   const chartOptions = useMemo(
     () => ({
       responsive: true,
+      maintainAspectRatio: true,
       plugins: {
         legend: {
           display: true,
           position: "top",
-          labels: { color: darkMode ? "#ffffff" : "#1f2937" },
+          labels: {
+            color: darkMode ? "#e5e7eb" : "#374151",
+            font: { size: 12, weight: 500 },
+            padding: 15,
+            usePointStyle: true,
+          },
         },
         tooltip: {
-          callbacks: {
-            label: (context) => {
-              const value = context.raw;
-              return value === 0 ? "N/A" : `${context.dataset.label}: ${value}`;
-            },
-          },
+          backgroundColor: darkMode ? "#1f2937" : "#fff",
+          titleColor: darkMode ? "#fff" : "#000",
+          bodyColor: darkMode ? "#e5e7eb" : "#374151",
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: true,
         },
       },
       scales: {
         x: {
           ticks: {
-            color: darkMode ? "#fff" : "#1f2937",
-            maxRotation: 45,
-            minRotation: 45,
+            color: darkMode ? "#9ca3af" : "#6b7280",
+            font: { size: 11 },
           },
-          grid: { color: darkMode ? "#4b5563" : "#e5e7eb" },
+          grid: {
+            color: darkMode ? "#374151" : "#e5e7eb",
+            drawBorder: false,
+          },
         },
         y: {
-          ticks: { color: darkMode ? "#fff" : "#1f2937" },
-          grid: { color: darkMode ? "#4b5563" : "#e5e7eb" },
+          ticks: {
+            color: darkMode ? "#9ca3af" : "#6b7280",
+            font: { size: 11 },
+          },
+          grid: {
+            color: darkMode ? "#374151" : "#e5e7eb",
+            drawBorder: false,
+          },
           min: 0,
           max: 10,
         },
@@ -606,28 +515,15 @@ const TeacherDashboard = () => {
     [darkMode]
   );
 
-  const activities = [
-    { time: "08:00", action: "Dạy Toán lớp 10A1", date: "2025-09-22" },
-    {
-      time: "09:45",
-      action: "Chấm bài tập Vật Lý lớp 12B",
-      date: "2025-09-22",
-    },
-    { time: "13:00", action: "Soạn bài Ngữ Văn lớp 11C", date: "2025-09-21" },
-    { time: "15:30", action: "Họp tổ chuyên môn", date: "2025-09-20" },
-  ];
-
-  const filteredActivities = activities.filter((act) => {
-    if (activityFilter === "today") return act.date === "2025-09-22";
-    else if (activityFilter === "week") {
-      const today = new Date("2025-09-22");
-      const weekAgo = new Date(today);
-      weekAgo.setDate(today.getDate() - 7);
-      const actDate = new Date(act.date);
-      return actDate >= weekAgo && actDate <= today;
-    }
-    return true;
-  });
+  const gradeLevelMap = {
+    GRADE_6: "Khối 6",
+    GRADE_7: "Khối 7",
+    GRADE_8: "Khối 8",
+    GRADE_9: "Khối 9",
+    GRADE_10: "Khối 10",
+    GRADE_11: "Khối 11",
+    GRADE_12: "Khối 12",
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -638,465 +534,96 @@ const TeacherDashboard = () => {
     });
   };
 
+  const openModal = (type) => setModalType(type);
+  const closeModal = () => setModalType(null);
+
   return (
-    <div className="p-6 bg-transparent text-gray-900 dark:text-gray-100">
-      {/* Tiêu đề */}
-      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Tổng quan</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Tổng quan về lớp học, học sinh và hoạt động của bạn
-          </p>
-        </div>
+    <div className="bg-bg-transparent dark:bg-transparent p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+          Bảng điều khiển
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">
+          Chào mừng trở lại! Đây là tóm tắt hoạt động của bạn trong tuần này.
+        </p>
       </div>
 
-      {/* Cards thống kê */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[...Array(3)].map((_, idx) => (
-            <div
-              key={idx}
-              className="p-4 rounded-lg border bg-white dark:bg-gray-800 shadow-sm animate-pulse"
-            >
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {cards.map((card, idx) => (
-            <div
-              key={idx}
-              onClick={() => !card.showDetails && navigate(card.path)}
-              className={`p-4 rounded-lg border shadow-sm cursor-pointer hover:shadow-md transition ${card.bgLight} ${card.bgDark}`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    {card.title}
-                  </h2>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">
-                    {card.value}
-                  </p>
-                  {card.note && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      {card.note}
-                    </p>
-                  )}
-                  {card.showDetails && (
-                    <button
-                      onClick={() => {
-                        if (card.title === "Bài tập đã giao")
-                          openModal("assignments");
-                        if (card.title === "Tổng học sinh")
-                          openModal("students");
-                        if (card.title === "Lớp học quản lý")
-                          openModal("classes");
-                        if (card.title === "ĐTB môn theo lớp")
-                          openModal("grades");
-                        if (card.title === "Buổi dạy tuần này")
-                          navigate("/teacher/schedules");
-                      }}
-                      className="mt-2 text-sm text-gray-900 dark:text-gray-100 underline hover:text-gray-700 dark:hover:text-gray-300"
-                    >
-                      Xem chi tiết
-                    </button>
-                  )}
-                </div>
-                <div className="p-2 bg-white/20 dark:bg-gray-800/20 rounded-lg">
-                  {card.icon}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <StatCard
+          title="Lớp học quản lý"
+          value={classes.length}
+          icon={
+            <BookOpen className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          }
+          bgColor="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20"
+          onClick={() => openModal("classes")}
+          isLoading={loading}
+        />
+        <StatCard
+          title="Buổi dạy tuần này"
+          value={weeklySchedules.length}
+          icon={
+            <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />
+          }
+          bgColor="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20"
+          onClick={() => navigate("/teacher/schedules")}
+          isLoading={loading}
+        />
+        <StatCard
+          title="Tổng học sinh"
+          value={students.length}
+          icon={
+            <GraduationCap className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+          }
+          bgColor="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20"
+          onClick={() => openModal("students")}
+          isLoading={loading}
+        />
+        <StatCard
+          title="Bài tập đã giao"
+          value={assignments.length}
+          icon={
+            <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+          }
+          bgColor="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20"
+          onClick={() => openModal("assignments")}
+          isLoading={loading}
+        />
+      </div>
 
-      {/* Modal chi tiết điểm trung bình môn theo lớp */}
-      {modalType === "grades" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                Chi tiết điểm trung bình môn theo lớp
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* New Students Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ChartColumn className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            {gradeStats.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-2">Lớp</th>
-                      <th className="px-4 py-2">Môn học</th>
-                      <th className="px-4 py-2">Điểm trung bình</th>
-                      <th className="px-4 py-2">Số học kỳ</th>
-                      <th className="px-4 py-2">Số học sinh có điểm</th>
-                      <th className="px-4 py-2">Tổng số học sinh</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {gradeStats.map((stat) => (
-                      <tr
-                        key={`${stat.classId}-${stat.subjectName}`}
-                        className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <td className="px-4 py-2">{stat.className || "N/A"}</td>
-                        <td className="px-4 py-2">
-                          {stat.subjectName || "N/A"}
-                        </td>
-                        <td className="px-4 py-2">{stat.averageGrade}</td>
-                        <td className="px-4 py-2">{stat.termCount}</td>
-                        <td className="px-4 py-2">{stat.validGradeCount}</td>
-                        <td className="px-4 py-2">{stat.studentCount}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center">
-                Chưa có dữ liệu điểm.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal chi tiết bài tập */}
-      {modalType === "assignments" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Chi tiết bài tập đã giao</h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            {assignments.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed text-sm text-left text-gray-900 dark:text-gray-100">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-3 w-64">Tiêu đề</th>
-                      <th className="px-4 py-3 w-32">Lớp</th>
-                      <th className="px-4 py-3 w-32">Môn học</th>
-                      <th className="px-4 py-3 w-32">Học kỳ</th>
-                      <th className="px-4 py-3 w-36">Ngày tạo</th>
-                      <th className="px-4 py-3 w-36">Ngày hết hạn</th>
-                      <th className="px-4 py-3 w-36">Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedAssignments.map((assignment) => (
-                      <tr
-                        key={assignment.assignmentId}
-                        className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <td className="px-4 py-2">{assignment.title}</td>
-                        <td className="px-4 py-2">
-                          {assignment.className || "N/A"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {assignment.subjectName || "N/A"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {assignment.termName || "N/A"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {formatDate(assignment.createdAt)}
-                        </td>
-                        <td className="px-4 py-2">
-                          {formatDate(assignment.dueDate)}
-                        </td>
-                        <td className="px-4 py-2">
-                          {assignment.isPublished ? (
-                            <span className="text-green-500">Công khai</span>
-                          ) : (
-                            <span className="text-red-500">
-                              Không công khai
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center">
-                Chưa có bài tập nào được giao.
-              </p>
-            )}
-            {assignments.length > assignmentsPerPage && (
-              <div className="mt-4">
-                <Pagination
-                  totalItems={assignments.length}
-                  itemsPerPage={assignmentsPerPage}
-                  currentPage={currentAssignmentPage}
-                  onPageChange={handleAssignmentPageChange}
-                  siblingCount={1}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Modal chi tiết học sinh */}
-      {modalType === "students" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-10/12 h-[70vh] flex flex-col">
-            <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
-              <h2 className="text-xl font-bold">Chi tiết học sinh quản lý</h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto flex-1">
-              {students.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full table-fixed text-sm text-left text-gray-900 dark:text-gray-100">
-                    <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-3 w-48">Tên học sinh</th>
-                        <th className="px-4 py-3 w-72">Email</th>
-                        <th className="px-4 py-3 w-32">Số điện thoại</th>
-                        <th className="px-4 py-3 w-48">Ngày đăng ký</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedStudents.map((student) => (
-                        <tr
-                          key={student.userId}
-                          className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                        >
-                          <td className="px-4 py-2">
-                            {student.fullName || "N/A"}
-                          </td>
-                          <td className="px-4 py-2">
-                            {student.email || "N/A"}
-                          </td>
-                          <td className="px-4 py-2">
-                            {student.numberPhone || "N/A"}
-                          </td>
-                          <td className="px-4 py-2">
-                            {formatDate(student.enrollmentDate)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-center">
-                  Chưa có học sinh nào.
-                </p>
-              )}
-              {students.length > itemsPerPage && (
-                <div className="mt-4">
-                  <Pagination
-                    totalItems={students.length}
-                    itemsPerPage={itemsPerPage}
-                    currentPage={currentPage}
-                    onPageChange={handlePageChange}
-                    siblingCount={1}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal chi tiết lớp học */}
-      {modalType === "classes" && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-10/12 h-[70vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Chi tiết lớp học quản lý</h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            {classes.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-900 dark:text-gray-100">
-                  <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700">
-                    <tr>
-                      <th className="px-4 py-2">Tên lớp</th>
-                      <th className="px-4 py-2">Khối lớp</th>
-                      <th className="px-4 py-2">Số học sinh</th>
-                      <th className="px-4 py-2">Năm học</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedClasses.map((classItem) => (
-                      <tr
-                        key={classItem.classId}
-                        className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <td className="px-4 py-2">{classItem.name || "N/A"}</td>
-                        <td className="px-4 py-2">
-                          {gradeLevelMap[classItem.gradeLevel] || "N/A"}
-                        </td>
-                        <td className="px-4 py-2">
-                          {classItem.classSize ?? 0}
-                        </td>
-                        <td className="px-4 py-2">
-                          {classItem.terms?.length > 0
-                            ? classItem.terms.map((term, index) => (
-                                <span key={term.termId}>
-                                  {term.name}
-                                  {index < classItem.terms.length - 1 && <br />}
-                                </span>
-                              ))
-                            : "N/A"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-500 dark:text-gray-400 text-center">
-                Chưa có lớp học nào.
-              </p>
-            )}
-            {classes.length > classesPerPage && (
-              <div className="mt-4">
-                <Pagination
-                  totalItems={classes.length}
-                  itemsPerPage={classesPerPage}
-                  currentPage={currentClassPage}
-                  onPageChange={handleClassPageChange}
-                  siblingCount={1}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Biểu đồ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <div className="flex items-center gap-2 mb-4">
-            <ChartColumn />
-            <h2 className="text-xl font-semibold">Học sinh mới theo tháng</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Học sinh mới theo tháng
+            </h2>
           </div>
           {loading ? (
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
           ) : (
             <Bar ref={barChartRef} data={barData} options={chartOptions} />
           )}
         </div>
-        {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <div className="flex items-center gap-2 mb-4">
-            <ChartLine />
-            <h2 className="text-xl font-semibold">Bài tập trong các tuần</h2>
-          </div>
-          {loading ? (
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          ) : (
-            <Line ref={lineChartRef} data={lineData} options={chartOptions} />
-          )}
-        </div> */}
-        {/* <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <div className="flex items-center gap-2 mb-4">
-            <ChartColumn />
-            <h2 className="text-xl font-semibold">Số lớp theo môn học</h2>
-          </div>
-          {loading ? (
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-          ) : subjects.length > 0 ? (
-            <Bar
-              ref={subjectChartRef}
-              data={subjectClassData}
-              options={chartOptions}
-            />
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Chưa có dữ liệu môn học
-            </p>
-          )}
-        </div> */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart />
-            <h2 className="text-xl font-semibold">
-              Điểm trung bình môn theo lớp
+
+        {/* Grade Statistics Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <BarChart className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+              Điểm TB môn theo lớp (Top 8)
             </h2>
           </div>
           {loading ? (
-            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
           ) : gradeStats.length > 0 ? (
             <Bar
               ref={gradeChartRef}
@@ -1104,39 +631,322 @@ const TeacherDashboard = () => {
               options={chartOptions}
             />
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              Chưa có dữ liệu điểm
-            </p>
+            <EmptyState message="Chưa có dữ liệu điểm" icon={AlertCircle} />
           )}
         </div>
       </div>
 
-      {/* Teacher Analytics Section */}
-      <div className="mb-6">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Bài tập gần đây
+            </h3>
+            <button
+              onClick={() => openModal("assignments")}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition"
+            >
+              <Eye className="w-5 h-5" />
+            </button>
+          </div>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                ></div>
+              ))}
+            </div>
+          ) : assignments.length > 0 ? (
+            <div className="space-y-3">
+              {assignments.slice(0, 3).map((assignment, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-white truncate">
+                        {assignment.title}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {assignment.className} - {assignment.subjectName}
+                      </p>
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        assignment.isPublished
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                      }`}
+                    >
+                      {assignment.isPublished ? "Công khai" : "Nháp"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message="Chưa có bài tập" />
+          )}
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              Lớp học quản lý
+            </h3>
+            <button
+              onClick={() => openModal("classes")}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition"
+            >
+              <Eye className="w-5 h-5" />
+            </button>
+          </div>
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+                ></div>
+              ))}
+            </div>
+          ) : classes.length > 0 ? (
+            <div className="space-y-3">
+              {classes.slice(0, 3).map((classItem, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {classItem.name}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {gradeLevelMap[classItem.gradeLevel]} •{" "}
+                        {classItem.classSize || 0} học sinh
+                      </p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState message="Chưa có lớp học" />
+          )}
+        </div>
+      </div>
+
+      {/* Analytics Sections */}
+      <div className="space-y-8">
         <TeacherAnalytics teacherId={teacherId} />
+        {homeroomClassId && (
+          <HomeroomAnalytics classId={homeroomClassId} teacherId={teacherId} />
+        )}
       </div>
 
-      {/* Homeroom Analytics Section - Conditionally render if teacher has homeroom class */}
-      {console.log(
-        "🎯 Rendering decision - homeroomClassId:",
-        homeroomClassId,
-        "Type:",
-        typeof homeroomClassId
-      )}
-      {homeroomClassId ? (
-        <div className="mb-6">
-          {console.log(
-            "✅ Rendering HomeroomAnalytics with classId:",
-            homeroomClassId
-          )}
-          <HomeroomAnalytics classId={homeroomClassId} teacherId={teacherId} />
-        </div>
-      ) : (
-        console.log(
-          "❌ NOT rendering HomeroomAnalytics - homeroomClassId is:",
-          homeroomClassId
-        )
-      )}
+      {/* Modals */}
+      <ModalDialog
+        isOpen={modalType === "classes"}
+        title="Danh sách lớp học quản lý"
+        onClose={closeModal}
+      >
+        {classes.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 dark:bg-gray-700/50">
+                <tr>
+                  <th className="px-6 py-3 text-left font-semibold">Tên lớp</th>
+                  <th className="px-6 py-3 text-left font-semibold">
+                    Khối lớp
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold">Số HS</th>
+                  <th className="px-6 py-3 text-left font-semibold">Năm học</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700">
+                {paginatedClasses.map((classItem) => (
+                  <tr
+                    key={classItem.classId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                  >
+                    <td className="px-6 py-3 text-gray-900 dark:text-gray-200">
+                      {classItem.name}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {gradeLevelMap[classItem.gradeLevel]}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {classItem.classSize || 0}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {classItem.terms?.length > 0
+                        ? classItem.terms.map((t) => t.name).join(", ")
+                        : "N/A"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState message="Chưa có lớp học nào" />
+        )}
+        {classes.length > classesPerPage && (
+          <div className="mt-6">
+            <Pagination
+              totalItems={classes.length}
+              itemsPerPage={classesPerPage}
+              currentPage={currentClassPage}
+              onPageChange={handleClassPageChange}
+              siblingCount={1}
+            />
+          </div>
+        )}
+      </ModalDialog>
+
+      <ModalDialog
+        isOpen={modalType === "students"}
+        title="Danh sách học sinh quản lý"
+        onClose={closeModal}
+      >
+        {students.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 dark:bg-gray-700/50">
+                <tr>
+                  <th className="px-6 py-3 text-left font-semibold">Tên HS</th>
+                  <th className="px-6 py-3 text-left font-semibold">Email</th>
+                  <th className="px-6 py-3 text-left font-semibold">Số ĐT</th>
+                  <th className="px-6 py-3 text-left font-semibold">
+                    Ngày đăng ký
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700">
+                {paginatedStudents.map((student) => (
+                  <tr
+                    key={student.userId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                  >
+                    <td className="px-6 py-3 text-gray-900 dark:text-gray-200">
+                      {student.fullName}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400 truncate">
+                      {student.email}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {student.numberPhone || "N/A"}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {formatDate(student.enrollmentDate)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState message="Chưa có học sinh nào" />
+        )}
+        {students.length > itemsPerPage && (
+          <div className="mt-6">
+            <Pagination
+              totalItems={students.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              siblingCount={1}
+            />
+          </div>
+        )}
+      </ModalDialog>
+
+      <ModalDialog
+        isOpen={modalType === "assignments"}
+        title="Danh sách bài tập đã giao"
+        onClose={closeModal}
+      >
+        {assignments.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100 dark:bg-gray-700/50 sticky top-0">
+                <tr>
+                  <th className="px-6 py-3 text-left font-semibold">Tiêu đề</th>
+                  <th className="px-6 py-3 text-left font-semibold">Lớp</th>
+                  <th className="px-6 py-3 text-left font-semibold">Môn</th>
+                  <th className="px-6 py-3 text-left font-semibold">
+                    Ngày tạo
+                  </th>
+                  <th className="px-6 py-3 text-left font-semibold">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y dark:divide-gray-700">
+                {paginatedAssignments.map((assignment) => (
+                  <tr
+                    key={assignment.assignmentId}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition"
+                  >
+                    <td className="px-6 py-3 font-medium text-gray-900 dark:text-gray-200">
+                      {assignment.title}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {assignment.className}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {assignment.subjectName}
+                    </td>
+                    <td className="px-6 py-3 text-gray-600 dark:text-gray-400">
+                      {formatDate(assignment.createdAt)}
+                    </td>
+                    <td className="px-6 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                          assignment.isPublished
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                        }`}
+                      >
+                        {assignment.isPublished ? (
+                          <>
+                            <CheckCircle className="w-3 h-3" />
+                            Công khai
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="w-3 h-3" />
+                            Nháp
+                          </>
+                        )}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState message="Chưa có bài tập nào" />
+        )}
+        {assignments.length > assignmentsPerPage && (
+          <div className="mt-6">
+            <Pagination
+              totalItems={assignments.length}
+              itemsPerPage={assignmentsPerPage}
+              currentPage={currentAssignmentPage}
+              onPageChange={handleAssignmentPageChange}
+              siblingCount={1}
+            />
+          </div>
+        )}
+      </ModalDialog>
     </div>
   );
 };
