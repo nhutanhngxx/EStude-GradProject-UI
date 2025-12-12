@@ -206,7 +206,7 @@ const ManageClasses = () => {
   // User info
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
-  const isAdmin = user.admin === true;
+  const isAdmin = user.isAdmin === true;
 
   // === TẢI DỮ LIỆU ===
 

@@ -105,7 +105,7 @@ export default function TeacherGradeInput() {
   }, [user.userId, isAdmin, showToast]);
 
   useEffect(() => {
-    setIsAdmin(user?.admin === true);
+    setIsAdmin(user?.isAdmin === true);
   }, [user]);
 
   const formatDateVN = (dateString) => {

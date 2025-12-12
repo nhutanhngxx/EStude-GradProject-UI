@@ -43,7 +43,7 @@ export default function TeacherSidebar() {
   }, []);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const isAdmin = user.admin === true;
+  const isAdmin = user.isAdmin === true;
 
   const menuItems = [
     { key: "overview", path: "/teacher/dashboard", icon: <Home size={20} /> },
