@@ -714,50 +714,81 @@ const ManageSchedules = () => {
             <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
               <Filter size={20} /> Bộ lọc lịch học
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                placeholder="Từ ngày"
-              />
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-                placeholder="Đến ngày"
-              />
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-              >
-                <option value="">Loại lịch</option>
-                <option value="REGULAR">Thường</option>
-                <option value="EXAM">Thi</option>
-                <option value="MAKEUP">Bù</option>
-              </select>
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-              >
-                <option value="">Trạng thái</option>
-                <option value="SCHEDULED">Đã lên</option>
-                <option value="CANCELLED">Hủy</option>
-                <option value="COMPLETED">Hoàn tất</option>
-                <option value="SUSPENDED">Tạm ngưng</option>
-              </select>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Ngày bắt đầu */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Ngày bắt đầu
+                </label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                  placeholder="Từ ngày"
+                />
+              </div>
+
+              {/* Ngày kết thúc */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Ngày kết thúc
+                </label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                  placeholder="Đến ngày"
+                />
+              </div>
+
+              {/* Loại lịch */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Loại lịch
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                >
+                  <option value="">Chọn loại</option>
+                  <option value="REGULAR">Lịch Thường</option>
+                  <option value="EXAM">Lịch Thi</option>
+                  <option value="MAKEUP">Lịch Học bù</option>
+                </select>
+              </div>
+
+              {/* Trạng thái */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Trạng thái
+                </label>
+                <select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+                >
+                  <option value="">Chọn trạng thái</option>
+                  <option value="SCHEDULED">Lịch đã lên</option>
+                  <option value="CANCELLED">Lịch đã hủy</option>
+                  <option value="COMPLETED">Lịch hoàn tất</option>
+                  <option value="SUSPENDED">Lịch tạm ngưng</option>
+                </select>
+              </div>
+
+              {/* Nút xóa bộ lọc */}
+              <div className="flex items-end">
+                <button
+                  onClick={handleClearFilters}
+                  className="flex justify-center items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
+                >
+                  <Trash2 size={18} />
+                  Xóa bộ lọc
+                </button>
+              </div>
             </div>
-            <button
-              onClick={handleClearFilters}
-              className="flex justify-content-center items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <Trash2 size={18} />
-              Xóa bộ lọc
-            </button>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-gray-200 dark:border-gray-600">
@@ -828,8 +859,9 @@ const ManageSchedules = () => {
                 </div>
                 <div className="mt-4">
                   <Pagination
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
                     currentPage={currentPage}
-                    totalPages={totalPages}
                     onPageChange={handlePageChange}
                   />
                 </div>
