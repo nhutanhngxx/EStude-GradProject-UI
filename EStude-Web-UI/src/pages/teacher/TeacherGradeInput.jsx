@@ -455,14 +455,14 @@ export default function TeacherGradeInput() {
           darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
         }`}
       >
-        <h2
+        {/* <h2
           className={`text-lg font-semibold mb-4 flex items-center gap-2 ${
             darkMode ? "text-gray-200" : "text-gray-900"
           }`}
         >
           <Filter className="w-5 h-5" />
           Bộ Lọc
-        </h2>
+        </h2> */}
 
         <div className="flex items-center gap-3 flex-wrap">
           <select

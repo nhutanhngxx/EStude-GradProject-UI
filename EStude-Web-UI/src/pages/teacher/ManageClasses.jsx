@@ -4,15 +4,26 @@ import React, {
   useMemo,
   useCallback,
   useRef,
+  useContext,
 } from "react";
 import { createPortal } from "react-dom";
-import { Eye, PlusCircle, Save, Trash2, Users, X, Search } from "lucide-react";
+import {
+  Eye,
+  PlusCircle,
+  Save,
+  Trash2,
+  Users,
+  X,
+  Search,
+  AlertCircle,
+} from "lucide-react";
 import classService from "../../services/classService";
 import classSubjectService from "../../services/classSubjectService";
 import teacherService from "../../services/teacherService";
 import subjectService from "../../services/subjectService";
 import StudentManagement from "./StudentManagement";
 import { useToast } from "../../contexts/ToastContext";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import ConfirmModal from "../../components/common/ConfirmModal";
 
 // Component SearchableSelect
@@ -176,6 +187,7 @@ const gradeMapping = {
 
 const ManageClasses = () => {
   const { showToast } = useToast();
+  const { darkMode } = useContext(ThemeContext);
 
   // State chung
   const [classes, setClasses] = useState([]);
@@ -584,33 +596,78 @@ const ManageClasses = () => {
       </div>
 
       {/* Bộ lọc */}
-      <div className="flex flex-wrap gap-4 items-center mb-6">
-        <select
-          value={selectedTermName ?? ""}
-          onChange={(e) => setSelectedTermName(e.target.value || null)}
-          className="px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-        >
-          <option value="">Chọn học kỳ</option>
-          {termNameOptions.map((opt) => (
-            <option key={opt.termName} value={opt.termName}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+      <div
+        className={`rounded-xl border p-4 sm:p-6 mb-6 ${
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Học kỳ */}
+          <select
+            value={selectedTermName ?? ""}
+            onChange={(e) => setSelectedTermName(e.target.value || null)}
+            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-gray-200 hover:border-gray-500"
+                : "bg-white border-gray-300 text-gray-900 hover:border-gray-400"
+            }`}
+          >
+            <option value="">📚 Chọn Học Kỳ</option>
+            {termNameOptions.map((opt) => (
+              <option key={opt.termName} value={opt.termName}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
 
-        <div className="relative flex-1 max-w-md">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Tìm lớp hoặc môn học..."
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            className="pl-10 pr-4 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-          />
+          {/* Tìm kiếm */}
+          <div className="relative flex-1 max-w-md">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Tìm lớp hoặc môn học..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className={`pl-10 pr-4 py-2.5 w-full border rounded-lg text-sm transition-all ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 hover:border-gray-500 focus:border-gray-500"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-gray-400"
+              } focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400`}
+            />
+          </div>
+
+          {/* Info text */}
+          {selectedTermName && (
+            <div
+              className={`ml-auto text-sm font-medium px-3 py-2 rounded-lg ${
+                darkMode
+                  ? "bg-blue-900/30 text-blue-300"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {filteredClasses.length} lớp
+            </div>
+          )}
         </div>
+
+        {/* Message when not selected */}
+        {selectedTermName === null && (
+          <div
+            className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${
+              darkMode
+                ? "bg-yellow-900/20 text-yellow-300 border border-yellow-700/30"
+                : "bg-yellow-100 text-yellow-800 border border-yellow-300"
+            }`}
+          >
+            <AlertCircle size={18} />
+            <span>
+              Vui lòng chọn <strong>Học Kỳ</strong> để xem danh sách lớp học
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Danh sách lớp */}

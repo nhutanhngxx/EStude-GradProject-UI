@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useContext } from "react";
 import classSubjectService from "../../services/classSubjectService";
 import classService from "../../services/classService";
 import ClassStudentModal from "./ClassStudentModal";
@@ -10,7 +10,9 @@ import {
   FileText,
   CheckSquare,
   Search,
+  AlertCircle,
 } from "lucide-react";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import Pagination from "../../components/common/Pagination";
 import AttendanceModal from "./AttendanceModal";
 import AssignmentListModal from "./AssignmentListModal";
@@ -40,6 +42,7 @@ export default function MyClasses() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState(null);
+  const { darkMode } = useContext(ThemeContext);
 
   // Bộ lọc theo tên học kỳ (giống ManageClasses)
   const [selectedTermName, setSelectedTermName] = useState(null);
@@ -239,55 +242,100 @@ export default function MyClasses() {
       </div>
 
       {/* Bộ lọc */}
-      <div className="flex flex-wrap gap-4 items-center mb-6">
-        {/* Học kỳ */}
-        <div className="flex items-center gap-2">
+      <div
+        className={`rounded-xl border p-4 sm:p-6 mb-6 ${
+          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+        }`}
+      >
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Học kỳ */}
           <select
             value={selectedTermName ?? ""}
             onChange={(e) => setSelectedTermName(e.target.value || null)}
-            className="px-3 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
+            className={`px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              darkMode
+                ? "bg-gray-700 border-gray-600 text-gray-200 hover:border-gray-500"
+                : "bg-white border-gray-300 text-gray-900 hover:border-gray-400"
+            }`}
           >
-            <option value="">Chọn học kỳ</option>
+            <option value="">📚 Chọn Học Kỳ</option>
             {termNameOptions.map((option) => (
               <option key={option.termName} value={option.termName}>
                 {option.label}
               </option>
             ))}
           </select>
+
+          {/* Tên lớp */}
+          <div className="relative flex-1 max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Tìm tên lớp..."
+              onChange={(e) => debouncedSetClassKeyword(e.target.value)}
+              className={`pl-10 pr-3 py-2.5 w-full border rounded-lg text-sm transition-all ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 hover:border-gray-500 focus:border-gray-500"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-gray-400"
+              } focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400`}
+            />
+          </div>
+
+          {/* Môn học */}
+          <div className="relative flex-1 max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Tìm môn học..."
+              onChange={(e) => debouncedSetSubjectKeyword(e.target.value)}
+              className={`pl-10 pr-3 py-2.5 w-full border rounded-lg text-sm transition-all ${
+                darkMode
+                  ? "bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400 hover:border-gray-500 focus:border-gray-500"
+                  : "bg-white border-gray-300 text-gray-900 placeholder-gray-400 hover:border-gray-400 focus:border-gray-400"
+              } focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400`}
+            />
+          </div>
+
+          {/* Info text */}
+          {selectedTermName && (
+            <div
+              className={`ml-auto text-sm font-medium px-3 py-2 rounded-lg ${
+                darkMode
+                  ? "bg-blue-900/30 text-blue-300"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {filteredClasses.length} lớp
+            </div>
+          )}
         </div>
 
-        {/* Tên lớp */}
-        <div className="relative flex-1 max-w-xs">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Tìm tên lớp (VD: 12A1, 11A2...)"
-            onChange={(e) => debouncedSetClassKeyword(e.target.value)}
-            className="pl-10 pr-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-          />
-        </div>
-
-        {/* Môn học */}
-        <div className="relative flex-1 max-w-xs">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Tìm môn học (VD: Toán, Lý...)"
-            onChange={(e) => debouncedSetSubjectKeyword(e.target.value)}
-            className="pl-10 pr-3 py-2 w-full border rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-400"
-          />
-        </div>
+        {/* Message when not selected */}
+        {selectedTermName === null && (
+          <div
+            className={`mt-4 p-3 rounded-lg text-sm flex items-center gap-2 ${
+              darkMode
+                ? "bg-yellow-900/20 text-yellow-300 border border-yellow-700/30"
+                : "bg-yellow-100 text-yellow-800 border border-yellow-300"
+            }`}
+          >
+            <AlertCircle size={18} />
+            <span>
+              Vui lòng chọn <strong>Học Kỳ</strong> để xem danh sách lớp
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Danh sách lớp */}
       {selectedTermName === null ? (
-        <p className="text-gray-500 dark:text-gray-400 mt-4">
+        <p className="text-gray-500 dark:text-gray-400 mt-10 text-center">
           Vui lòng chọn học kỳ để xem danh sách lớp học.
         </p>
       ) : isLoading ? (
