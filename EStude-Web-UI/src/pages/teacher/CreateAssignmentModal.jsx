@@ -342,7 +342,7 @@ export default function CreateAssignmentModal({
       const termBeginDate = new Date(classSubject.term.beginDate);
       const termEndDate = new Date(classSubject.term.endDate);
 
-      if (currentDate < termBeginDate || currentDate > termEndDate) {
+      if (currentDate > termEndDate) {
         toast.showToast("Không thể tạo vì lớp học đã hoàn thành!", "error");
         return;
       }
