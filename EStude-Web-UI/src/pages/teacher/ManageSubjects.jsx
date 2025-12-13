@@ -162,17 +162,12 @@ export default function ManageSubjects() {
     XLSX.writeFile(wb, "mau-mon-hoc.xlsx");
   };
 
-  const handleFileChange = async (e) => {
-    // ... (giữ nguyên hàm import Excel của bạn)
-    // (Bạn có thể copy nguyên hàm cũ vào đây)
-  };
-
   return (
     <div className="bg-bg-transparent dark:bg-transparent p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-            Quản lý môn học {isAdmin && "(Giáo vụ)"}
+            Danh sách môn học {isAdmin && "(Giáo vụ)"}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-sm">
             Quản lý danh sách môn học trong trường.
