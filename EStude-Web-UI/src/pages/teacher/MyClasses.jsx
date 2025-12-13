@@ -25,6 +25,17 @@ const formatDateVN = (dateString) => {
     .padStart(2, "0")}/${d.getFullYear()}`;
 };
 
+// Kiểm tra xem lớp học có ở tương lai không (chưa bắt đầu)
+const isClassInFuture = (beginDate) => {
+  if (!beginDate) return false;
+  const classBeginDate = new Date(beginDate);
+  // Set thời gian về đầu ngày để so sánh công bằng
+  classBeginDate.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return classBeginDate > today;
+};
+
 export default function MyClasses() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const [classes, setClasses] = useState([]);
@@ -323,51 +334,95 @@ export default function MyClasses() {
                   )}`}
                 </p>
 
+                {/* Thông báo nếu lớp ở tương lai */}
+                {isClassInFuture(cls.beginDate) && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    Lớp học chưa bắt đầu. Các chức năng nhập điểm, điểm danh sẽ
+                    được kích hoạt khi lớp bắt đầu.
+                  </p>
+                )}
+
                 <div className="mt-auto flex flex-wrap gap-2">
                   <button
                     onClick={() => {
-                      setSelectedClass({
-                        classId: cls.classId,
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: cls.termId,
-                        termName: cls.termName,
-                        classSubjectId: cls.classSubjectId,
-                      });
-                      setIsModalOpen(true);
+                      if (!isClassInFuture(cls.beginDate)) {
+                        setSelectedClass({
+                          classId: cls.classId,
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: cls.termId,
+                          termName: cls.termName,
+                          classSubjectId: cls.classSubjectId,
+                        });
+                        setIsModalOpen(true);
+                      }
                     }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    disabled={isClassInFuture(cls.beginDate)}
+                    title={
+                      isClassInFuture(cls.beginDate)
+                        ? "Lớp học chưa bắt đầu"
+                        : "Nhập điểm cho học sinh"
+                    }
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition ${
+                      isClassInFuture(cls.beginDate)
+                        ? "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700/50 cursor-not-allowed opacity-60"
+                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                    }`}
                   >
                     <Users size={16} /> <span>Nhập điểm</span>
                   </button>
 
                   <button
                     onClick={() => {
-                      setSelectedClass({
-                        classId: cls.classId,
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: cls.termId,
-                        classSubjectId: cls.classSubjectId,
-                      });
-                      setIsAttendanceOpen(true);
+                      if (!isClassInFuture(cls.beginDate)) {
+                        setSelectedClass({
+                          classId: cls.classId,
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: cls.termId,
+                          classSubjectId: cls.classSubjectId,
+                        });
+                        setIsAttendanceOpen(true);
+                      }
                     }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    disabled={isClassInFuture(cls.beginDate)}
+                    title={
+                      isClassInFuture(cls.beginDate)
+                        ? "Lớp học chưa bắt đầu"
+                        : "Ghi nhận điểm danh"
+                    }
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition ${
+                      isClassInFuture(cls.beginDate)
+                        ? "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700/50 cursor-not-allowed opacity-60"
+                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                    }`}
                   >
                     <CheckSquare size={16} /> <span>Điểm danh</span>
                   </button>
 
                   <button
                     onClick={() => {
-                      setSelectedClass({
-                        className: cls.className,
-                        subjectName: cls.subjectName,
-                        termId: cls.termId,
-                        classSubjectId: cls.classSubjectId,
-                      });
-                      setIsAssignmentListOpen(true);
+                      if (!isClassInFuture(cls.beginDate)) {
+                        setSelectedClass({
+                          className: cls.className,
+                          subjectName: cls.subjectName,
+                          termId: cls.termId,
+                          classSubjectId: cls.classSubjectId,
+                        });
+                        setIsAssignmentListOpen(true);
+                      }
                     }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                    disabled={isClassInFuture(cls.beginDate)}
+                    title={
+                      isClassInFuture(cls.beginDate)
+                        ? "Lớp học chưa bắt đầu"
+                        : "Quản lý bài tập"
+                    }
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition ${
+                      isClassInFuture(cls.beginDate)
+                        ? "border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700/50 cursor-not-allowed opacity-60"
+                        : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                    }`}
                   >
                     <FileText size={16} /> <span>Bài tập</span>
                   </button>

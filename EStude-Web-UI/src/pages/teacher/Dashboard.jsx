@@ -731,7 +731,7 @@ const TeacherDashboard = () => {
                         {classItem.classSize || 0} học sinh
                       </p>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+                    {/* <ArrowRight className="w-5 h-5 text-gray-400 dark:text-gray-600" /> */}
                   </div>
                 </div>
               ))}
