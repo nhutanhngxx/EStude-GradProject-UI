@@ -34,7 +34,7 @@ const StudentManagement = ({ classId }) => {
     onConfirm: null,
   });
 
-    // Lấy schoolId từ user
+  // Lấy schoolId từ user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const schoolId = user.school?.schoolId;
 
@@ -52,25 +52,37 @@ const StudentManagement = ({ classId }) => {
     if (schoolId) fetchStudents();
   }, [schoolId]);
 
-
   const fetchEnrollments = async () => {
     try {
       const res = await enrollmentService.getAllEnrollments();
+
+      // ✅ Validate response
+      if (!Array.isArray(res)) {
+        console.error("API không trả về mảng:", res);
+        setAllEnrollments([]);
+        setStudentsInClass([]);
+        return;
+      }
+
       setAllEnrollments(res);
+
+      // ✅ FIX: Map đúng với flat response structure
       const filtered = res
-        .filter((e) => e.clazz.classId === classId)
+        .filter((e) => e?.classId === parseInt(classId)) // ✅ Dùng e.classId thay vì e.clazz.classId
         .map((e) => ({
           enrollmentId: e.enrollmentId,
-          userId: e.student.userId,
-          fullName: e.student.fullName,
-          dob: e.student.dob,
-          studentCode: e.student.studentCode,
-          email: e.student.email,
+          userId: e.studentId, // ✅ Dùng e.studentId
+          fullName: e.studentName, // ✅ Dùng e.studentName
+          dob: e.dob || null, // ✅ Fallback nếu không có
+          studentCode: e.studentCode, // ✅ Dùng e.studentCode
+          email: e.studentEmail, // ✅ Dùng e.studentEmail
         }));
       setStudentsInClass(filtered);
     } catch (err) {
       console.error("Lỗi khi tải danh sách học sinh:", err);
       showToast("Lỗi khi tải danh sách học sinh!", "error");
+      setAllEnrollments([]);
+      setStudentsInClass([]);
     }
   };
 
@@ -190,7 +202,7 @@ const StudentManagement = ({ classId }) => {
 
   const filteredStudents = allStudents.filter(
     (s) =>
-      !allEnrollments.some((e) => e.student.userId === s.userId) &&
+      !allEnrollments.some((e) => e.studentId === s.userId) &&
       s.fullName.toLowerCase().includes(searchText.toLowerCase())
   );
 
@@ -251,12 +263,14 @@ const StudentManagement = ({ classId }) => {
 
           if (
             student &&
-            !allEnrollments.some((e) => e.student.userId === student.userId)
+            !allEnrollments.some((e) => e.studentId === student.userId)
           ) {
             validStudentIds.push(student.userId);
           } else {
             errorCount++;
-            console.warn(`⚠️ Hàng ${index + 2}: Mã "${code}" không khớp với dữ liệu!`);
+            console.warn(
+              `⚠️ Hàng ${index + 2}: Mã "${code}" không khớp với dữ liệu!`
+            );
           }
         });
 
@@ -292,7 +306,6 @@ const StudentManagement = ({ classId }) => {
     reader.readAsArrayBuffer(file);
     event.target.value = "";
   };
-
 
   const handleExportExcel = () => {
     const data = studentsInClass.map((s) => ({

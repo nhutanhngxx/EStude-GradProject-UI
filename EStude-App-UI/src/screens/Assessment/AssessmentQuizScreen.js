@@ -23,7 +23,43 @@ const themeColors = {
   card: "#FFFFFF",
   text: "#333333",
 };
+const getPerformanceColor = (level) => {
+  switch (level) {
+    case "NEEDS_IMPROVEMENT":
+      return "#FF5722";
+    case "EXCELLENT":
+      return "#4CAF50";
+    case "GOOD":
+      return "#8BC34A";
+    case "AVERAGE":
+      return "#FF9800";
+    case "BELOW_AVERAGE":
+      return "#FF5722";
+    case "POOR":
+      return "#F44336";
+    default:
+      return "#999";
+  }
+};
 
+const getPerformanceLabel = (level) => {
+  switch (level) {
+    case "NEEDS_IMPROVEMENT":
+      return "Cần cải thiện";
+    case "EXCELLENT":
+      return "Xuất sắc";
+    case "GOOD":
+      return "Tốt";
+    case "AVERAGE":
+      return "Trung bình";
+    case "BELOW_AVERAGE":
+      return "Yếu";
+    case "POOR":
+      return "Kém";
+    default:
+      return level;
+  }
+};
 export default function AssessmentQuizScreen({ route, navigation }) {
   const {
     assessmentId,
@@ -442,9 +478,16 @@ export default function AssessmentQuizScreen({ route, navigation }) {
                   </View>
 
                   <View style={styles.resultModalRow}>
-                    <Ionicons name="star" size={20} color="#666" />
+                    <Ionicons
+                      name="star"
+                      size={20}
+                      color={getPerformanceColor(
+                        submissionResult.performanceLevel
+                      )}
+                    />
                     <Text style={styles.resultModalText}>
-                      Mức độ: {submissionResult.performanceLevel}
+                      Mức độ:{" "}
+                      {getPerformanceLabel(submissionResult.performanceLevel)}
                     </Text>
                   </View>
 

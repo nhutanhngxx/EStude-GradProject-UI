@@ -73,6 +73,13 @@ export default function HomeStudentScreen({ navigation }) {
               );
 
               const classSubject = detail?.data?.classSubject || {};
+
+              // Fix: Map đúng field name từ Backend
+              const subjectName =
+                classSubject?.subject?.subjectName ||
+                classSubject?.subject?.name ||
+                "Toán";
+
               const teacherName =
                 classSubject?.teacher?.fullName ||
                 detail?.data?.teacher?.fullName ||
@@ -81,15 +88,17 @@ export default function HomeStudentScreen({ navigation }) {
               const subjectInfo = {
                 classSubjectId:
                   classSubject?.classSubjectId || a.classSubjectId || null,
-                classId: classSubject?.classId || a.classId || null,
-                className: classSubject?.className || a.className || "Chưa rõ",
-                name: classSubject?.subject?.name || "Không rõ",
+                classId: classSubject?.clazz?.classId || a.classId || null,
+                className:
+                  classSubject?.clazz?.className || a.className || "Chưa rõ",
+                name: subjectName,
                 semester: classSubject?.semester || "HK1 2025 - 2026",
                 beginDate: classSubject?.beginDate || "2025-09-05",
                 endDate: classSubject?.endDate || "2026-01-15",
                 teacherName,
-                description: `${classSubject?.subject?.name || "Không rõ"} - ${classSubject?.className || "Không rõ"
-                  }`,
+                description: `${subjectName} - ${
+                  classSubject?.clazz?.className || "Không rõ"
+                }`,
               };
 
               return {
@@ -216,17 +225,18 @@ export default function HomeStudentScreen({ navigation }) {
         const formatted = todaySchedules.map((s) => ({
           id: s.scheduleId,
           subject: s.classSubject?.subjectName || "Không rõ",
-          time: `Tiết ${s.startPeriod}${s.endPeriod && s.endPeriod !== s.startPeriod
-            ? `-${s.endPeriod}`
-            : ""
-            }`,
+          time: `Tiết ${s.startPeriod}${
+            s.endPeriod && s.endPeriod !== s.startPeriod
+              ? `-${s.endPeriod}`
+              : ""
+          }`,
           room: s.room || "Không rõ",
           status:
             s.status === "SCHEDULED"
               ? "upcoming"
               : s.status === "ONGOING"
-                ? "in_progress"
-                : "done",
+              ? "in_progress"
+              : "done",
         }));
 
         setTodayPlan(formatted);
@@ -506,13 +516,17 @@ export default function HomeStudentScreen({ navigation }) {
     }
   };
 
-const quickActions = [
-  { id: "qa1", label: "Môn học", iconName: "book", color: "#00cc66" },      // xanh lá chủ đạo
-  // { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#00cc66" }, // nếu dùng
-  { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#66d98c" }, // xanh lá nhạt hơn
-  { id: "qa4", label: "Đánh giá", iconName: "check-square-o", color: "#00994d" }, // xanh lá đậm
-];
-
+  const quickActions = [
+    { id: "qa1", label: "Môn học", iconName: "book", color: "#00cc66" }, // xanh lá chủ đạo
+    // { id: "qa2", label: "Nộp bài", iconName: "upload", color: "#00cc66" }, // nếu dùng
+    { id: "qa3", label: "Lịch học", iconName: "calendar", color: "#66d98c" }, // xanh lá nhạt hơn
+    {
+      id: "qa4",
+      label: "Đánh giá",
+      iconName: "check-square-o",
+      color: "#00994d",
+    }, // xanh lá đậm
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -532,13 +546,17 @@ const quickActions = [
 
         {/* Tác vụ nhanh */}
         <View style={styles.card}>
-          <View style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5
-          }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
             <Ionicons name="flash" size={22} color="#4CAF50" />
-            <Text style={[styles.cardTitle, {color: "#1B5E20"}]}>Các tác vụ nhanh</Text>
+            <Text style={[styles.cardTitle, { color: "#1B5E20" }]}>
+              Các tác vụ nhanh
+            </Text>
           </View>
           <View style={styles.quickActionRow}>
             {quickActions.map((action) => (
@@ -664,13 +682,17 @@ const quickActions = [
           />
         ) : (
           <View style={styles.card}>
-            <View style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5
-            }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+              }}
+            >
               <Ionicons name="calendar" size={22} color="#4CAF50" />
-              <Text style={[styles.cardTitle, { color: "#1B5E20" }]}>Lịch học hôm nay</Text>
+              <Text style={[styles.cardTitle, { color: "#1B5E20" }]}>
+                Lịch học hôm nay
+              </Text>
             </View>
             <Text style={{ color: "#777", marginTop: 8 }}>
               Không có lịch học hôm nay

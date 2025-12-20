@@ -51,7 +51,15 @@ export default function ExamDoingScreen({ navigation, route }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
 
-  // console.log("exam: ", exam);
+  // Debug logging
+  console.log("📝 === ASSIGNMENT DOING SCREEN DEBUG ===");
+  console.log("📝 Exam object:", exam);
+  console.log("📝 Has questions?", !!exam?.questions);
+  console.log("📝 Questions count:", exam?.questions?.length || 0);
+  console.log("📝 Questions array:", exam?.questions);
+  console.log("📝 First question:", exam?.questions?.[0]);
+  console.log("📝 Active tab:", activeTab);
+  console.log("📝 Submitted:", submitted);
 
   const autoSubmittedRef = useRef(false);
 
@@ -417,7 +425,7 @@ export default function ExamDoingScreen({ navigation, route }) {
                 <Text>Không có dữ liệu phân tích AI.</Text>
               </View>
             )
-          ) : (
+          ) : exam?.questions && exam.questions.length > 0 ? (
             exam.questions.map((q, idx) => (
               <View key={q.questionId} style={styles.questionBlock}>
                 <Text style={styles.questionText}>
@@ -426,125 +434,192 @@ export default function ExamDoingScreen({ navigation, route }) {
                   {q.answers && q.answers.length > 1 && "(Chọn nhiều)"}
                 </Text>
 
-                {q.options.map((opt) => {
-                  const selected = answers[q.questionId]?.includes(
-                    opt.optionText
-                  );
-                  return (
-                    <TouchableOpacity
-                      key={opt.optionId}
-                      disabled={submitted}
-                      style={[styles.option, selected && styles.optionSelected]}
-                      onPress={() => handleSelect(q, opt.optionText)}
-                    >
-                      <Text
+                {q.options && q.options.length > 0 ? (
+                  q.options.map((opt) => {
+                    const selected = answers[q.questionId]?.includes(
+                      opt.optionText
+                    );
+                    return (
+                      <TouchableOpacity
+                        key={opt.optionId}
+                        disabled={submitted}
                         style={[
-                          styles.optionText,
-                          selected && styles.optionTextSelected,
+                          styles.option,
+                          selected && styles.optionSelected,
                         ]}
+                        onPress={() => handleSelect(q, opt.optionText)}
                       >
-                        {opt.optionText}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={[
+                            styles.optionText,
+                            selected && styles.optionTextSelected,
+                          ]}
+                        >
+                          {opt.optionText}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text
+                    style={{ color: "#999", fontStyle: "italic", padding: 12 }}
+                  >
+                    Câu hỏi này không có đáp án.
+                  </Text>
+                )}
               </View>
             ))
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 20,
+              }}
+            >
+              <Ionicons name="alert-circle-outline" size={64} color="#999" />
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: "#666",
+                  marginTop: 12,
+                  textAlign: "center",
+                }}
+              >
+                Không có câu hỏi nào trong bài tập này.
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: "#999",
+                  marginTop: 8,
+                  textAlign: "center",
+                }}
+              >
+                Vui lòng liên hệ giáo viên để được hỗ trợ.
+              </Text>
+            </View>
           )}
         </ScrollView>
       ) : activeTab === "Overview" ? (
         <ScrollView style={{ flex: 1, padding: 12 }}>
-          {exam.questions.map((q, idx) => {
-            const isAnswered =
-              Array.isArray(answers[q.questionId]) &&
-              answers[q.questionId].length > 0;
-            const fb = aiFeedback.find(
-              (f) => Number(f.question_id) === idx + 1
-            );
+          {exam?.questions && exam.questions.length > 0 ? (
+            exam.questions.map((q, idx) => {
+              const isAnswered =
+                Array.isArray(answers[q.questionId]) &&
+                answers[q.questionId].length > 0;
+              const fb = aiFeedback.find(
+                (f) => Number(f.question_id) === idx + 1
+              );
 
-            return (
-              <View key={q.questionId} style={styles.questionBlock}>
-                <Text
-                  style={[
-                    styles.questionText,
-                    submitted && fb && !fb.is_correct && { color: "#C62828" },
-                  ]}
-                >
-                  <Text style={styles.questionNumber}>Câu {idx + 1}:</Text>{" "}
-                  {q.questionText}
-                </Text>
-
-                <View
-                  style={[
-                    styles.answerBox,
-                    {
-                      backgroundColor: isAnswered
-                        ? `${themeColors.primary}20`
-                        : "#f5f5f5",
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    },
-                  ]}
-                >
+              return (
+                <View key={q.questionId} style={styles.questionBlock}>
                   <Text
                     style={[
-                      styles.answerText,
-                      {
-                        color:
-                          submitted && fb
-                            ? fb.is_correct
-                              ? "#2e7d32"
-                              : "#c62828"
-                            : isAnswered
-                            ? themeColors.secondary
-                            : "#666",
-                        fontWeight: submitted && fb ? "bold" : "500",
-                        flexShrink: 1,
-                      },
+                      styles.questionText,
+                      submitted && fb && !fb.is_correct && { color: "#C62828" },
                     ]}
                   >
-                    {isAnswered
-                      ? "Đã chọn: " + answers[q.questionId].join(", ")
-                      : "Bạn chưa có đáp án nào."}
+                    <Text style={styles.questionNumber}>Câu {idx + 1}:</Text>{" "}
+                    {q.questionText}
                   </Text>
 
-                  {submitted && fb && (
-                    <Text
-                      style={{
-                        color: fb.is_correct ? "#2e7d32" : "#c62828",
-                        fontWeight: "bold",
-                        marginLeft: 8,
-                      }}
-                    >
-                      {fb.is_correct ? "Đúng" : "Sai"}
-                    </Text>
-                  )}
-                </View>
-
-                {submitted && fb && (
                   <View
                     style={[
-                      styles.feedbackBox,
+                      styles.answerBox,
                       {
-                        backgroundColor: fb.is_correct ? "#e8f5e9" : "#ffebee",
+                        backgroundColor: isAnswered
+                          ? `${themeColors.primary}20`
+                          : "#f5f5f5",
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
                       },
                     ]}
                   >
                     <Text
-                      style={{
-                        color: fb.is_correct ? "#2e7d32" : "#c62828",
-                        fontStyle: "italic",
-                        fontSize: 14,
-                      }}
+                      style={[
+                        styles.answerText,
+                        {
+                          color:
+                            submitted && fb
+                              ? fb.is_correct
+                                ? "#2e7d32"
+                                : "#c62828"
+                              : isAnswered
+                              ? themeColors.secondary
+                              : "#666",
+                          fontWeight: submitted && fb ? "bold" : "500",
+                          flexShrink: 1,
+                        },
+                      ]}
                     >
-                      {fb.feedback}
+                      {isAnswered
+                        ? "Đã chọn: " + answers[q.questionId].join(", ")
+                        : "Bạn chưa có đáp án nào."}
                     </Text>
+
+                    {submitted && fb && (
+                      <Text
+                        style={{
+                          color: fb.is_correct ? "#2e7d32" : "#c62828",
+                          fontWeight: "bold",
+                          marginLeft: 8,
+                        }}
+                      >
+                        {fb.is_correct ? "Đúng" : "Sai"}
+                      </Text>
+                    )}
                   </View>
-                )}
-              </View>
-            );
-          })}
+
+                  {submitted && fb && (
+                    <View
+                      style={[
+                        styles.feedbackBox,
+                        {
+                          backgroundColor: fb.is_correct
+                            ? "#e8f5e9"
+                            : "#ffebee",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={{
+                          color: fb.is_correct ? "#2e7d32" : "#c62828",
+                          fontStyle: "italic",
+                          fontSize: 14,
+                        }}
+                      >
+                        {fb.feedback}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 20,
+              }}
+            >
+              <Ionicons name="alert-circle-outline" size={64} color="#999" />
+              <Text
+                style={{
+                  fontSize: 16,
+                  color: "#666",
+                  marginTop: 12,
+                  textAlign: "center",
+                }}
+              >
+                Không có câu hỏi nào trong bài tập này.
+              </Text>
+            </View>
+          )}
         </ScrollView>
       ) : (
         <ScrollView style={{ flex: 1 }}>

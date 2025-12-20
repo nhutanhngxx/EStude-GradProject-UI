@@ -13,12 +13,17 @@ import assignmentService from "../../services/assignmentService";
 
 export default function ChiTietBaiTapScreen({ route, navigation }) {
   const { assignment: initialAssignment, isExam } = route.params;
-  const [assignmentDetail, setAssignmentDetail] = useState(assignment);
+  const [assignmentDetail, setAssignmentDetail] = useState(null);
   const { user } = useContext(AuthContext);
 
   const assignment = assignmentDetail || initialAssignment;
 
-  // console.log("assignment:", assignment);
+  console.log("📋 === ASSIGNMENT DETAIL SCREEN DEBUG ===");
+  console.log("📋 Initial assignment:", initialAssignment);
+  console.log("📋 Assignment detail:", assignmentDetail);
+  console.log("📋 Final assignment:", assignment);
+  console.log("📋 Has questions?", !!assignment?.questions);
+  console.log("📋 Questions count:", assignment?.questions?.length || 0);
 
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState([]);
@@ -32,12 +37,16 @@ export default function ChiTietBaiTapScreen({ route, navigation }) {
         const res = await assignmentService.getAssignmentById(
           assignment.assignmentId
         );
-        // console.log("assignmentDetail:", res.data);
+        console.log("📥 API Response:", res);
+        console.log("📥 Has questions?", !!res?.questions);
+        console.log("📥 Questions count:", res?.questions?.length || 0);
+
         if (res) {
-          setAssignmentDetail(res.data);
+          // assignmentService.getAssignmentById trả về trực tiếp object, không phải res.data
+          setAssignmentDetail(res);
         }
       } catch (err) {
-        // console.error("Lỗi khi lấy thông tin bài tập:", err);
+        console.error("❌ Lỗi khi lấy thông tin bài tập:", err);
         setLoading(false);
       } finally {
         setLoading(false);

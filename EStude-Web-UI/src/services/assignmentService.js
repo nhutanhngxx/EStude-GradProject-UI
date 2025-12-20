@@ -49,7 +49,7 @@ const assignmentService = {
       const result = await response.json();
       return result;
     } catch (error) {
-      // console.error("Lỗi khi lấy thông tin bài tập:", error);
+      console.error("Lỗi khi lấy thông tin bài tập:", error);
       return null;
     }
   },

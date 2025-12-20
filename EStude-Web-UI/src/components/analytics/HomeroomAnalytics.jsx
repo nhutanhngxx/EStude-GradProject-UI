@@ -421,13 +421,13 @@ const HomeroomAnalytics = ({ classId, teacherId }) => {
                       <p className="text-lg font-bold text-green-500">
                         {student.overall_score?.toFixed(1) || "0.0"}
                       </p>
-                      <button
+                      {/* <button
                         onClick={() => handleViewStudent(student)}
                         className="mt-1 text-xs text-blue-500 hover:underline flex items-center gap-1"
                       >
                         <Eye className="w-3 h-3" />
                         Chi tiết
-                      </button>
+                      </button> */}
                     </div>
                   </li>
                 ))}

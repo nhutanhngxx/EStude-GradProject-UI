@@ -6,30 +6,38 @@ const endpoints = {
   getEnrollmentsByClass: "/api/classes/{classId}/enrollments",
 };
 
-const accessToken = localStorage.getItem("accessToken");
 const enrollmentService = {
   getAllEnrollments: async () => {
     try {
+      // ✅ FIX: Lấy token fresh mỗi lần gọi API
+      const accessToken = localStorage.getItem("accessToken");
+
       const response = await fetch(
         `${config.BASE_URL}${endpoints.enrollBatch}`,
         {
           method: "GET",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`, // ✅ THÊM Authorization
+          },
         }
       );
       if (!response.ok) {
         throw new Error("Lấy danh sách học sinh tham gia lớp học thất bại");
       }
       const result = await response.json();
-      return result;
+      return result; // ✅ Trả về mảng trực tiếp từ server
     } catch (error) {
       console.error("Lỗi khi lấy danh sách học sinh tham gia lớp học:", error);
-      return null;
+      return []; // ✅ Trả về [] thay vì null
     }
   },
 
   enrollStudentsBatch: async (classId, studentIds) => {
     try {
+      // ✅ FIX: Lấy token fresh
+      const accessToken = localStorage.getItem("accessToken");
+
       const response = await fetch(
         `${config.BASE_URL}${endpoints.enrollBatch}?classId=${classId}`,
         {
@@ -38,21 +46,24 @@ const enrollmentService = {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
           },
-          body: JSON.stringify(studentIds), // BE nhận mảng studentIds
+          body: JSON.stringify(studentIds),
         }
       );
       if (!response.ok) {
         throw new Error("Gán học sinh vào lớp thất bại");
       }
-      return await response.json(); // BE trả về List<Enrollment>
+      return await response.json();
     } catch (error) {
       console.error("Lỗi khi gán học sinh vào lớp:", error);
-      return null;
+      throw error; // ✅ Throw error để caller xử lý
     }
   },
 
   unenrollStudent: async (enrollmentId) => {
     try {
+      // ✅ FIX: Lấy token fresh
+      const accessToken = localStorage.getItem("accessToken");
+
       const response = await fetch(
         `${config.BASE_URL}${endpoints.unenrollStudent.replace(
           "{enrollmentId}",
@@ -66,27 +77,25 @@ const enrollmentService = {
           },
         }
       );
-      console.log(
-        `${config.BASE_URL}${endpoints.unenrollStudent.replace(
-          "{enrollmentId}",
-          enrollmentId
-        )}`
-      );
 
       if (!response.ok) {
         throw new Error("Xóa học sinh khỏi lớp thất bại");
       }
+
+      // ✅ Handle 204 No Content
+      if (response.status === 204) {
+        return true;
+      }
+
       try {
         const result = await response.json();
-        console.log("result:", result);
-
         return result;
       } catch {
-        return true;
+        return true; // No JSON body
       }
     } catch (error) {
       console.error("Lỗi khi xóa học sinh khỏi lớp:", error);
-      return null;
+      throw error; // ✅ Throw error để caller xử lý
     }
   },
 };
